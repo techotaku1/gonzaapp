@@ -1,18 +1,26 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-delius), Georgia, serif;
+  /* Font definitions */
+  --font-display: var(--font-delius), cursive;
+  --font-table-text: var(--font-lexend), sans-serif;
+  --font-table-numeric: var(--font-stix), serif;
 }
 
-/* Base Styles */
+/* Font feature settings */
+@theme {
+  --font-table-numeric--font-feature-settings: 'tnum' 1, 'zero' 1;
+  --font-table-text--font-feature-settings: 'kern' 1;
+}
+
+/* Base styles */
 @layer base {
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--color-gray-400, currentColor);
   }
 
   button:not(:disabled),
@@ -25,11 +33,24 @@
   h3,
   h4,
   h5,
-  h6 {
-    font-family: var(--font-delius);
+  h6,
+  button:not([class*='table']) {
+    @apply font-display;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .table-text-field {
+    font-family: var(--font-table-text);
+    font-optical-sizing: auto;
+    font-weight: 300;
   }
 
-  button:not([class*='table']) {
-    font-family: var(--font-delius);
+  .table-numeric-field {
+    font-family: var(--font-table-numeric);
+    font-optical-sizing: auto;
+    font-weight: 600;
+    text-align: right;
   }
 }

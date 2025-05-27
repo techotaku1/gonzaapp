@@ -8,11 +8,12 @@ export function calculateFormulas(record: TransactionRecord) {
   // 4x1000
   const impuesto4x1000 = precioNetoAjustado * -0.004;
 
-  // Ganancia Bruta
+  // Ganancia Bruta (incluyendo comisión Rappi del 1% cuando aplica)
+  const rappiComision = record.rappi ? record.precioNeto * 0.01 : 0;
   const gananciaBruta =
     record.tarifaServicio +
     impuesto4x1000 +
-    (record.rappi ? record.precioNeto * 0.01 : 0);
+    rappiComision;
 
   return {
     precioNetoAjustado,

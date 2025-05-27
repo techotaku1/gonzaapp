@@ -352,8 +352,12 @@ export default function TransactionTable({
             className={`${
               type === 'checkbox'
                 ? 'h-4 w-4 rounded border-gray-300'
-                : `rounded border p-2 ${getWidth()}`
-            } ${isMoneyField ? 'text-right' : ''}`}
+                : `rounded border p-2 ${getWidth()} ${
+                    type === 'number' || isMoneyField
+                      ? 'table-numeric-field'
+                      : 'table-text-field'
+                  }`
+            }`}
           />
         </div>
       );
@@ -478,7 +482,7 @@ export default function TransactionTable({
                           <td className="px-6 py-4 whitespace-nowrap">
                             {renderInput(rowWithFormulas, 'pagado', 'checkbox')}
                           </td>
-                          <td className="sticky left-0 z-10 bg-white px-6 py-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="checkbox"
                               checked={selectedRows.has(row.id)}

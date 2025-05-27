@@ -11,9 +11,7 @@ import type { TransactionRecord } from '~/types';
 
 export async function getTransactions(): Promise<TransactionRecord[]> {
   try {
-    const results = await db.query.transactions.findMany({
-      orderBy: (transactions, { desc }) => [desc(transactions.fecha)],
-    });
+    const results = await db.query.transactions.findMany();
 
     return results.map((record) => ({
       ...record,

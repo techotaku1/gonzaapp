@@ -1,6 +1,10 @@
 import TransactionTable from '~/components/TransactionTable';
 import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
 
+// Añadir configuración de no caché
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function HomePage() {
   const initialData = await getTransactions();
 

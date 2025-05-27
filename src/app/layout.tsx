@@ -1,5 +1,5 @@
 import '~/styles/globals.css';
-import { Inter, Playfair_Display, Delius } from 'next/font/google';
+import { Delius, Lexend, STIX_Two_Text } from 'next/font/google';
 
 import { type Metadata } from 'next';
 
@@ -9,12 +9,6 @@ export const metadata: Metadata = {
   icons: [{ rel: 'icon', url: './favicon.ico' }],
 };
 
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-});
-
 const delius = Delius({
   weight: '400',
   subsets: ['latin'],
@@ -22,10 +16,18 @@ const delius = Delius({
   variable: '--font-delius',
 });
 
-const playfair = Playfair_Display({
+const lexend = Lexend({
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-playfair',
+  variable: '--font-lexend',
+  weight: ['300'], // Light weight for text fields
+});
+
+const stixTwoText = STIX_Two_Text({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-stix',
+  weight: ['500'], // Semibold for numeric fields
 });
 
 export default function RootLayout({
@@ -34,9 +36,9 @@ export default function RootLayout({
   return (
     <html
       lang="es"
-      className={`${inter.variable} ${playfair.variable} ${delius.variable}`}
+      className={`${delius.variable} ${lexend.variable} ${stixTwoText.variable}`}
     >
-      <body className="font-sans">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
