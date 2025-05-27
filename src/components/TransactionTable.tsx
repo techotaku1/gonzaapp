@@ -367,7 +367,7 @@ export default function TransactionTable({
           case 'boletasRegistradas':
             return 'w-[100px]';
           case 'placa':
-            return 'w-[70px] h-[1.5rem]';
+            return 'w-[80px]';
           case 'nombre':
           case 'observaciones':
             return 'w-[100px]';
@@ -456,7 +456,7 @@ export default function TransactionTable({
             onChange={(e) =>
               handleInputChange(row.id, field, e.target.value.toUpperCase())
             }
-            className="table-text-field h-[1.5rem] w-[70px] cursor-pointer overflow-hidden rounded border px-0.5 py-0.5 text-center text-xl font-bold text-ellipsis uppercase hover:overflow-visible hover:text-clip"
+            className="placa-field w-[80px] cursor-pointer overflow-hidden rounded border hover:overflow-visible hover:text-clip"
           />
         </div>
       );

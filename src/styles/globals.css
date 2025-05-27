@@ -70,12 +70,27 @@
     -moz-appearance: textfield;
   }
 
+  .placa-field {
+    @apply flex items-center justify-center;
+    font-family: var(--font-table-text);
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-size: 0.8rem;
+    line-height: 1;
+    height: 2rem;
+    padding: 0.15rem 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: black;
+    text-align: center;
+    margin: 0 auto;
+  }
+
   .table-numeric-field::-webkit-inner-spin-button,
   .table-numeric-field::-webkit-outer-spin-button {
-    margin: 0;
     appearance: none;
     -webkit-appearance: none;
-    -moz-appearance: none;
+    margin: 0;
   }
 
   .table-select-field {
