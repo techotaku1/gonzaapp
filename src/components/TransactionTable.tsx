@@ -363,7 +363,7 @@ export default function TransactionTable({
           case 'tarifaServicio':
             return 'w-[80px]';
           case 'tipoVehiculo':
-            return 'w-[70px]';
+            return 'w-[90px]';
           case 'boletasRegistradas':
             return 'w-[100px]';
           case 'placa':

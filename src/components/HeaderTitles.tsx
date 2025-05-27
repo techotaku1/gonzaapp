@@ -26,25 +26,21 @@ export const tableHeaders = [
 
 export default function HeaderTitles() {
   return (
-    <thead className="bg-gray-50 text-[15px] text-black">
-      <tr>
-        {tableHeaders.map((header) => {
-          const noBorderRight = [
-            'Comisión Extra', // Headers que no deben tener borde derecho
-          ].includes(header);
-
-          return (
-            <th
-              key={header}
-              scope="col"
-              className={`table-header text-center whitespace-nowrap ${
-                noBorderRight ? 'border-r-0' : ''
-              }`}
-            >
-              {header}
-            </th>
-          );
-        })}
+    <thead className="bg-gray-50 text-[16px] text-black">
+      <tr className="border-collapse">
+        {tableHeaders.map((header) => (
+          <th
+            key={header}
+            scope="col"
+            style={{
+              minWidth: header === 'Trámite' ? '80px' : 'auto',
+              position: 'relative',
+            }}
+            className="table-header border-r border-gray-200 whitespace-nowrap"
+          >
+            {header}
+          </th>
+        ))}
       </tr>
     </thead>
   );
