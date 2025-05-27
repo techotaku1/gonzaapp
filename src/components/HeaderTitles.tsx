@@ -1,7 +1,6 @@
 export const tableHeaders = [
   'Fecha',
   'Trámite',
-  'Matrícula',
   'Pagado',
   'Boleta',
   'Boletas Registradas',
@@ -17,8 +16,8 @@ export const tableHeaders = [
   'Asesor',
   'Novedad',
   'Precio Neto',
-  'Comisión Extra',
   'Tarifa Servicio',
+  'Comisión Extra',
   '4x1000',
   'Ganancia Bruta',
   'Rappi',

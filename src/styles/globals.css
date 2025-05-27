@@ -44,7 +44,7 @@
   .table-text-field {
     font-family: var(--font-table-text);
     font-optical-sizing: auto;
-    font-weight: 300;
+    font-weight: 700; /* Cambiado de 300 a 500 para más bold */
   }
 
   .table-numeric-field {

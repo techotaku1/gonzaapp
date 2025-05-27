@@ -11,7 +11,6 @@ export const transactions = pgTable('transactions', {
   id: varchar('id').primaryKey(),
   fecha: date('fecha').notNull(),
   tramite: varchar('tramite').notNull(),
-  matricula: varchar('matricula'),
   pagado: boolean('pagado').notNull().default(false),
   boleta: boolean('boleta').notNull().default(false),
   boletasRegistradas: decimal('boletas_registradas', {

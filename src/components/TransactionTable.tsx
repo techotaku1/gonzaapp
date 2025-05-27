@@ -151,7 +151,6 @@ export default function TransactionTable({
     const newRow: Omit<TransactionRecord, 'id'> = {
       fecha: colombiaDate,
       tramite: '',
-      matricula: null,
       pagado: false,
       boleta: false,
       boletasRegistradas: 0,
@@ -452,15 +451,17 @@ export default function TransactionTable({
                       </tr>
                     )}
                     {dateRecords.map((row) => {
-                      // Use formulas in rendering
                       const {
                         precioNetoAjustado,
+                        tarifaServicioAjustada,
                         impuesto4x1000,
                         gananciaBruta,
                       } = calculateFormulas(row);
+
                       const rowWithFormulas = {
                         ...row,
                         precioNeto: precioNetoAjustado,
+                        tarifaServicio: tarifaServicioAjustada,
                         impuesto4x1000,
                         gananciaBruta,
                       };
@@ -475,9 +476,6 @@ export default function TransactionTable({
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {renderInput(rowWithFormulas, 'tramite')}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {renderInput(rowWithFormulas, 'matricula')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {renderInput(rowWithFormulas, 'pagado', 'checkbox')}
@@ -503,7 +501,7 @@ export default function TransactionTable({
                           <td className="px-6 py-4 whitespace-nowrap">
                             {renderInput(rowWithFormulas, 'emitidoPor')}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          <td className="px-6 py-4 text-xl whitespace-nowrap">
                             {renderInput(rowWithFormulas, 'placa')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -545,6 +543,13 @@ export default function TransactionTable({
                             )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
+                            {renderInput(
+                              rowWithFormulas,
+                              'tarifaServicio',
+                              'number'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <input
                               type="checkbox"
                               checked={row.comisionExtra}
@@ -557,13 +562,6 @@ export default function TransactionTable({
                               }
                               className="h-4 w-4 rounded border-gray-300"
                             />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {renderInput(
-                              rowWithFormulas,
-                              'tarifaServicio',
-                              'number'
-                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {renderInput(

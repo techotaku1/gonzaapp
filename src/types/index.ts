@@ -2,7 +2,6 @@ export interface TransactionRecord {
   id: string;
   fecha: Date;
   tramite: string;
-  matricula: string | null;
   pagado: boolean;
   boleta: boolean;
   boletasRegistradas: number;

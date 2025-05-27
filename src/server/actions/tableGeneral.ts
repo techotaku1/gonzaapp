@@ -37,7 +37,6 @@ export async function updateRecords(
         const updateData = {
           fecha: record.fecha.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD
           tramite: record.tramite,
-          matricula: record.matricula ?? null,
           pagado: record.pagado,
           boleta: record.boleta,
           boletasRegistradas: record.boletasRegistradas.toString(),
@@ -95,7 +94,6 @@ export async function createRecord(
       id: recordId,
       fecha, // Now fecha is guaranteed to be string
       tramite: record.tramite,
-      matricula: record.matricula ?? null,
       pagado: record.pagado,
       boleta: record.boleta,
       boletasRegistradas: record.boletasRegistradas.toString(),

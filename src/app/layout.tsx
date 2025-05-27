@@ -20,7 +20,7 @@ const lexend = Lexend({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-lexend',
-  weight: ['300'], // Light weight for text fields
+  weight: ['700'], // Cambiado a weight 500 para texto más bold
 });
 
 const stixTwoText = STIX_Two_Text({
