@@ -30,7 +30,9 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
   }
 }
 
-export async function updateRecords(records: TransactionRecord[]): Promise<{ success: boolean; error?: string }> {
+export async function updateRecords(
+  records: TransactionRecord[]
+): Promise<{ success: boolean; error?: string }> {
   try {
     await Promise.all(
       records.map(async (record) => {
@@ -74,12 +76,15 @@ export async function updateRecords(records: TransactionRecord[]): Promise<{ suc
     console.error('Error updating records:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update records',
+      error:
+        error instanceof Error ? error.message : 'Failed to update records',
     };
   }
 }
 
-export async function createRecord(record: Omit<TransactionRecord, 'id'>): Promise<{ success: boolean; error?: string }> {
+export async function createRecord(
+  record: Omit<TransactionRecord, 'id'>
+): Promise<{ success: boolean; error?: string }> {
   try {
     const recordId = crypto.randomUUID();
     const fecha = record.fecha.toISOString().split('T')[0];

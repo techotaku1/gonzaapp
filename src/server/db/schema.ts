@@ -1,4 +1,11 @@
-import { pgTable, varchar, boolean, date, integer, decimal } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  varchar,
+  boolean,
+  date,
+  integer,
+  decimal,
+} from 'drizzle-orm/pg-core';
 
 export const transactions = pgTable('transactions', {
   id: varchar('id').primaryKey(),
@@ -7,7 +14,10 @@ export const transactions = pgTable('transactions', {
   matricula: varchar('matricula'),
   pagado: boolean('pagado').notNull().default(false),
   boleta: boolean('boleta').notNull().default(false),
-  boletasRegistradas: decimal('boletas_registradas', { precision: 12, scale: 2 }).notNull(),
+  boletasRegistradas: decimal('boletas_registradas', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
   emitidoPor: varchar('emitido_por').notNull(),
   placa: varchar('placa').notNull(),
   tipoDocumento: varchar('tipo_documento').notNull(),
@@ -21,9 +31,18 @@ export const transactions = pgTable('transactions', {
   novedad: varchar('novedad'),
   precioNeto: decimal('precio_neto', { precision: 12, scale: 2 }).notNull(),
   comisionExtra: boolean('comision_extra').notNull().default(false),
-  tarifaServicio: decimal('tarifa_servicio', { precision: 12, scale: 2 }).notNull(),
-  impuesto4x1000: decimal('impuesto_4x1000', { precision: 12, scale: 2 }).notNull(),
-  gananciaBruta: decimal('ganancia_bruta', { precision: 12, scale: 2 }).notNull(),
+  tarifaServicio: decimal('tarifa_servicio', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
+  impuesto4x1000: decimal('impuesto_4x1000', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
+  gananciaBruta: decimal('ganancia_bruta', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
   rappi: boolean('rappi').notNull().default(false),
   observaciones: varchar('observaciones'),
 });
