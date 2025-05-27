@@ -312,6 +312,7 @@ export default function TransactionTable({
           case 'observaciones':
             return 'w-[100px]'; // Reducido de 120px
           case 'tramite':
+            return 'w-[70px]';
           case 'emitidoPor':
             return 'w-[100px]';
           case 'ciudad':
@@ -352,7 +353,8 @@ export default function TransactionTable({
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-field w-[120px] rounded border"
+            className="table-select-field w-[120px] overflow-hidden rounded border text-ellipsis"
+            title={value as string} // Agregar tooltip al select
           >
             <option value="">Seleccionar...</option>
             {emitidoPorOptions.map((option) => (
@@ -377,6 +379,7 @@ export default function TransactionTable({
                     : type
             }
             value={formatValue(value)}
+            title={formatValue(value)} // Agregar tooltip a todos los inputs
             onChange={(e) => {
               let newValue: InputValue;
               if (field === 'cilindraje') {
@@ -396,7 +399,7 @@ export default function TransactionTable({
             className={`${
               type === 'checkbox'
                 ? 'h-3 w-3 rounded border-gray-300'
-                : `flex items-center justify-center rounded border px-0.5 py-0.5 text-center text-[10px] ${getWidth()} ${
+                : `flex items-center justify-center overflow-hidden rounded border px-0.5 py-0.5 text-center text-[10px] text-ellipsis ${getWidth()} ${
                     field === 'cilindraje'
                       ? '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
                       : ''
@@ -406,7 +409,7 @@ export default function TransactionTable({
                       : type === 'number' || isMoneyField
                         ? 'table-numeric-field'
                         : 'table-text-field'
-                  } ${field === 'asesor' || field === 'nombre' ? 'hover:cursor-help' : ''}`
+                  } hover:overflow-visible hover:text-clip`
             }`}
           />
         </div>

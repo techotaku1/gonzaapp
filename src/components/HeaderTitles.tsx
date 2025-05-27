@@ -26,17 +26,11 @@ export const tableHeaders = [
 
 export default function HeaderTitles() {
   return (
-    <thead className="bg-gray-50 text-[13px] text-black">
+    <thead className="bg-gray-50 text-[14px] text-black">
       <tr>
-        {tableHeaders.map((header, index) => {
-          const isNumericHeader = [
-            'Precio Neto',
-            'Tarifa Servicio',
-            '4x1000',
-            'Ganancia Bruta',
-            'Boletas Registradas',
-            'Cilindraje',
-            '#',
+        {tableHeaders.map((header) => {
+          const noBorderRight = [
+            'Comisión Extra', // Headers que no deben tener borde derecho
           ].includes(header);
 
           return (
@@ -44,8 +38,8 @@ export default function HeaderTitles() {
               key={header}
               scope="col"
               className={`table-header text-center whitespace-nowrap ${
-                isNumericHeader ? 'text-center' : 'text-center'
-              } ${index === tableHeaders.length - 1 ? 'border-r-0' : ''}`}
+                noBorderRight ? 'border-r-0' : ''
+              }`}
             >
               {header}
             </th>
