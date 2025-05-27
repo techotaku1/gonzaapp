@@ -1,47 +1,56 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import type { TransactionRecord } from '~/types';
 
+interface SaveResult {
+  success: boolean;
+  error?: string;
+}
+
 export function useDebouncedSave(
-  onSave: (records: TransactionRecord[]) => Promise<{ success: boolean; error?: string }>,
+  onSave: (records: TransactionRecord[]) => Promise<SaveResult>,
   onSuccess: () => void,
   delay = 3000
 ) {
-  const [pendingSave, setPendingSave] = useState<{
-    records: TransactionRecord[];
-    timeoutId: NodeJS.Timeout;
-  } | null>(null);
+  // Use refs to avoid dependency issues
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const recordsRef = useRef<TransactionRecord[]>([]);
 
-  const save = useCallback((records: TransactionRecord[]) => {
-    const currentTimeoutId = pendingSave?.timeoutId;
-    if (currentTimeoutId) {
-      clearTimeout(currentTimeoutId);
-    }
-
-    const timeoutId = setTimeout(async () => {
-      try {
-        const result = await onSave(records);
-        if (result.success) {
-          onSuccess();
-        }
-      } catch (error) {
-        console.error('Error al guardar:', error);
-      } finally {
-        setPendingSave(null);
-      }
-    }, delay);
-
-    setPendingSave({ records, timeoutId });
-  }, [delay, onSave, onSuccess, pendingSave?.timeoutId]);
-
-  // Limpiar el timeout al desmontar
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (pendingSave?.timeoutId) {
-        clearTimeout(pendingSave.timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
-  }, [pendingSave]);
+  }, []);
+
+  const save = useCallback(
+    (records: TransactionRecord[]) => {
+      // Cancel any pending save
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Store latest records
+      recordsRef.current = records;
+
+      // Create new timeout
+      timeoutRef.current = setTimeout(async () => {
+        try {
+          const result = await onSave(recordsRef.current);
+          if (result.success) {
+            onSuccess();
+          }
+        } catch (error) {
+          console.error('Error al guardar:', error);
+        } finally {
+          timeoutRef.current = null;
+        }
+      }, delay);
+    },
+    [delay, onSave, onSuccess]
+  );
 
   return save;
 }
