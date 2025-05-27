@@ -2,14 +2,14 @@ import {
   pgTable,
   varchar,
   boolean,
-  date,
+  timestamp,
   integer,
   decimal,
 } from 'drizzle-orm/pg-core';
 
 export const transactions = pgTable('transactions', {
   id: varchar('id').primaryKey(),
-  fecha: date('fecha').notNull(),
+  fecha: timestamp('fecha').notNull(), // Cambiado de date a timestamp
   tramite: varchar('tramite').notNull(),
   pagado: boolean('pagado').notNull().default(false),
   boleta: boolean('boleta').notNull().default(false),

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';
@@ -11,7 +11,10 @@ import type { TransactionRecord } from '~/types';
 
 export async function getTransactions(): Promise<TransactionRecord[]> {
   try {
-    const results = await db.query.transactions.findMany();
+    const results = await db
+      .select()
+      .from(transactions)
+      .orderBy(desc(transactions.fecha)); // Ordenar por fecha descendente
 
     return results.map((record) => ({
       ...record,
@@ -28,6 +31,49 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
   }
 }
 
+export async function createRecord(
+  record: TransactionRecord // Cambiar para aceptar el ID
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const newRecord = {
+      id: record.id, // Usar el ID proporcionado
+      fecha: new Date(record.fecha),
+      tramite: record.tramite,
+      pagado: record.pagado,
+      boleta: record.boleta,
+      boletasRegistradas: record.boletasRegistradas.toString(),
+      emitidoPor: record.emitidoPor,
+      placa: record.placa,
+      tipoDocumento: record.tipoDocumento,
+      numeroDocumento: record.numeroDocumento,
+      nombre: record.nombre,
+      cilindraje: record.cilindraje ?? null,
+      tipoVehiculo: record.tipoVehiculo ?? null,
+      celular: record.celular ?? null,
+      ciudad: record.ciudad,
+      asesor: record.asesor,
+      novedad: record.novedad ?? null,
+      precioNeto: record.precioNeto.toString(),
+      comisionExtra: record.comisionExtra,
+      tarifaServicio: record.tarifaServicio.toString(),
+      impuesto4x1000: record.impuesto4x1000.toString(),
+      gananciaBruta: record.gananciaBruta.toString(),
+      rappi: record.rappi,
+      observaciones: record.observaciones ?? null,
+    };
+
+    await db.insert(transactions).values(newRecord);
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating record:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create record',
+    };
+  }
+}
+
 export async function updateRecords(
   records: TransactionRecord[]
 ): Promise<{ success: boolean; error?: string }> {
@@ -35,7 +81,7 @@ export async function updateRecords(
     await Promise.all(
       records.map(async (record) => {
         const updateData = {
-          fecha: record.fecha.toISOString().split('T')[0], // Convert Date to YYYY-MM-DD
+          fecha: new Date(record.fecha), // Convertir a Date antes de guardar
           tramite: record.tramite,
           pagado: record.pagado,
           boleta: record.boleta,
@@ -67,6 +113,7 @@ export async function updateRecords(
       })
     );
 
+    // Solo revalidar el path, no recargar la página
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -75,56 +122,6 @@ export async function updateRecords(
       success: false,
       error:
         error instanceof Error ? error.message : 'Failed to update records',
-    };
-  }
-}
-
-export async function createRecord(
-  record: Omit<TransactionRecord, 'id'>
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const recordId = crypto.randomUUID();
-    const fecha = record.fecha.toISOString().split('T')[0];
-
-    if (!fecha) {
-      throw new Error('Invalid date');
-    }
-
-    const newRecord = {
-      id: recordId,
-      fecha, // Now fecha is guaranteed to be string
-      tramite: record.tramite,
-      pagado: record.pagado,
-      boleta: record.boleta,
-      boletasRegistradas: record.boletasRegistradas.toString(),
-      emitidoPor: record.emitidoPor,
-      placa: record.placa,
-      tipoDocumento: record.tipoDocumento,
-      numeroDocumento: record.numeroDocumento,
-      nombre: record.nombre,
-      cilindraje: record.cilindraje ?? null,
-      tipoVehiculo: record.tipoVehiculo ?? null,
-      celular: record.celular ?? null,
-      ciudad: record.ciudad,
-      asesor: record.asesor,
-      novedad: record.novedad ?? null,
-      precioNeto: record.precioNeto.toString(),
-      comisionExtra: record.comisionExtra,
-      tarifaServicio: record.tarifaServicio.toString(),
-      impuesto4x1000: record.impuesto4x1000.toString(),
-      gananciaBruta: record.gananciaBruta.toString(),
-      rappi: record.rappi,
-      observaciones: record.observaciones ?? null,
-    } as const; // Make the object type literal
-
-    await db.insert(transactions).values(newRecord);
-    revalidatePath('/');
-    return { success: true };
-  } catch (error) {
-    console.error('Error creating record:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create record',
     };
   }
 }

@@ -98,7 +98,10 @@ export default function TransactionTable({
     const colombiaDate = new Date(
       now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
     );
+    const offset = colombiaDate.getTimezoneOffset();
+    colombiaDate.setMinutes(colombiaDate.getMinutes() - offset);
 
+    const newRowId = crypto.randomUUID(); // Generar ID aquí
     const newRow: Omit<TransactionRecord, 'id'> = {
       fecha: colombiaDate,
       tramite: '',
@@ -125,10 +128,12 @@ export default function TransactionTable({
       observaciones: null,
     };
 
-    const result = await createRecord(newRow);
+    const result = await createRecord({ ...newRow, id: newRowId }); // Pasar el ID al crear
     if (result.success) {
-      const newRowWithId = { ...newRow, id: crypto.randomUUID() };
-      setData([newRowWithId, ...data]);
+      const newRowWithId = { ...newRow, id: newRowId };
+      setData((prevData) => [newRowWithId, ...prevData]);
+      // Forzar un guardado inmediato del nuevo registro
+      await handleSaveOperation([newRowWithId, ...data]);
     } else {
       console.error('Error creating new record:', result.error);
     }
@@ -138,8 +143,11 @@ export default function TransactionTable({
     async (records: TransactionRecord[]): Promise<SaveResult> => {
       try {
         setIsSaving(true);
+        // Solo guardar el registro que ha cambiado
         const result = await onUpdateRecordAction(records);
         if (result.success) {
+          // Actualizar el estado local después de guardar exitosamente
+          setData(records);
           setUnsavedChanges(false);
         }
         return result;
@@ -161,7 +169,7 @@ export default function TransactionTable({
   const debouncedSave = useDebouncedSave(
     handleSaveOperation,
     handleSaveSuccess,
-    1000 // Reducido a 1 segundo
+    2000 // Aumentado a 2 segundos para dar más tiempo de agrupación
   );
 
   // Type-safe input change handler
@@ -205,10 +213,15 @@ export default function TransactionTable({
 
   const handleSaveChanges = async () => {
     try {
-      await onUpdateRecordAction(data);
-      setUnsavedChanges(false);
+      setIsSaving(true);
+      const result = await onUpdateRecordAction(data);
+      if (result.success) {
+        setUnsavedChanges(false);
+      }
     } catch (error) {
       console.error('Error saving changes:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -245,10 +258,14 @@ export default function TransactionTable({
           return '';
         }
 
-        // Handle date values
+        // Handle date values with time
         if (type === 'date' && val instanceof Date) {
-          const dateStr = val.toISOString().split('T')[0];
-          return dateStr ?? '';
+          const date = new Date(val);
+          // Ajustar al horario de Bogotá
+          const colombiaDate = new Date(
+            date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+          );
+          return colombiaDate.toISOString().slice(0, 16);
         }
 
         // Handle money fields
@@ -291,7 +308,9 @@ export default function TransactionTable({
       return (
         <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
           <input
-            type={isMoneyField ? 'text' : type}
+            type={
+              isMoneyField ? 'text' : type === 'date' ? 'datetime-local' : type
+            }
             value={formatValue(value)}
             checked={type === 'checkbox' ? Boolean(value) : undefined}
             onChange={(e) => {
@@ -325,22 +344,22 @@ export default function TransactionTable({
     [handleInputChange]
   );
 
-  // Group records by date with null safety and maintain insertion order
+  // Group records by date while maintaining insertion order
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
 
-    // No need to sort here, data is already in the correct order
+    // Process records in original order
     data.forEach((record) => {
       const dateKey: string =
         record.fecha instanceof Date && !isNaN(record.fecha.getTime())
           ? (record.fecha.toISOString().split('T')[0] ?? '')
           : '';
       const existingGroup = groups.get(dateKey) ?? [];
-      // Add new records to the beginning of the array
-      groups.set(dateKey, [record, ...existingGroup]);
+      // Add new records at the end to maintain oldest-to-newest order
+      groups.set(dateKey, [...existingGroup, record]);
     });
 
-    // Convert to array and sort dates in reverse chronological order
+    // Sort dates in reverse chronological order (newest first)
     return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
       dateB.localeCompare(dateA)
     );
