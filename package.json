@@ -22,9 +22,11 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
     "@t3-oss/env-nextjs": "^0.13.4",
+    "@types/lodash": "^4.17.17",
     "drizzle-orm": "^0.43.1",
     "esbuild": "^0.25.4",
     "globals": "^16.2.0",
+    "lodash": "^4.17.21",
     "next": "^15.3.2",
     "postgres": "^3.4.7",
     "react": "^19.1.0",
