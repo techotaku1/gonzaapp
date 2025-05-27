@@ -27,7 +27,9 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
     }));
   } catch (error) {
     console.error('Error fetching transactions:', error);
-    throw new Error('Failed to fetch transactions');
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to fetch transactions';
+    throw new Error(errorMessage);
   }
 }
 

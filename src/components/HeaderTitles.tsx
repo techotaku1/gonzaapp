@@ -26,7 +26,7 @@ export const tableHeaders = [
 
 export default function HeaderTitles() {
   return (
-    <thead className="bg-gray-50 text-[10px] text-black">
+    <thead className="bg-gray-50 text-[13px] text-black">
       <tr>
         {tableHeaders.map((header, index) => {
           const isNumericHeader = [
@@ -43,8 +43,8 @@ export default function HeaderTitles() {
             <th
               key={header}
               scope="col"
-              className={`table-header whitespace-nowrap ${
-                isNumericHeader ? 'text-right' : 'text-center'
+              className={`table-header text-center whitespace-nowrap ${
+                isNumericHeader ? 'text-center' : 'text-center'
               } ${index === tableHeaders.length - 1 ? 'border-r-0' : ''}`}
             >
               {header}

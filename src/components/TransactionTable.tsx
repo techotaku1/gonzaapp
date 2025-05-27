@@ -313,21 +313,57 @@ export default function TransactionTable({
             return 'w-[100px]'; // Reducido de 120px
           case 'tramite':
           case 'emitidoPor':
+            return 'w-[100px]';
           case 'ciudad':
+            return 'w-[70px]';
           case 'asesor':
-            return 'w-[80px]'; // Reducido de 100px
+            return 'w-[100px]'; // Reducido de 100px
           case 'tipoDocumento':
+            return 'w-[40px]';
           case 'fecha':
-            return 'w-[80px]';
+            return 'w-[100px]';
           case 'numeroDocumento':
           case 'celular':
             return 'w-[65px]';
           case 'cilindraje':
-            return 'w-[65px]';
+            return 'w-[50px]';
           default:
             return 'w-[50px]';
         }
       };
+
+      const emitidoPorOptions = [
+        'Panel Juan',
+        'Previ usuario',
+        'Previ pública',
+        'Previ Sonia',
+        'Bolivar suj',
+        'Axa Sebas',
+        'Axa Yuli',
+        'Axa gloria',
+        'Axa Maryuri',
+        'Mundial nave',
+        'Mundial fel',
+        'No Emitir',
+        'Certificado tradicion',
+      ] as const;
+
+      if (field === 'emitidoPor') {
+        return (
+          <select
+            value={value as string}
+            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
+            className="table-select-field w-[120px] rounded border"
+          >
+            <option value="">Seleccionar...</option>
+            {emitidoPorOptions.map((option) => (
+              <option key={option} value={option} className="text-center">
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      }
 
       return (
         <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
@@ -358,9 +394,9 @@ export default function TransactionTable({
             className={`${
               type === 'checkbox'
                 ? 'h-3 w-3 rounded border-gray-300'
-                : `flex items-center rounded border px-0.5 py-0.5 text-[10px] ${getWidth()} ${
+                : `flex items-center justify-center rounded border px-0.5 py-0.5 text-center text-[10px] ${getWidth()} ${
                     field === 'placa'
-                      ? 'table-text-field h-[1.5rem] text-center leading-[1.5rem] uppercase'
+                      ? 'table-text-field h-[1.5rem] leading-[1.5rem] uppercase'
                       : type === 'number' || isMoneyField
                         ? 'table-numeric-field'
                         : 'table-text-field'
@@ -684,7 +720,7 @@ export default function TransactionTable({
                     >
                       {renderInput(rowWithFormulas, 'emitidoPor')}
                     </td>
-                    <td className="table-cell items-center px-0.5 py-0.5 whitespace-nowrap">
+                    <td className="table-cell whitespace-nowrap">
                       {renderInput(rowWithFormulas, 'placa')}
                     </td>
                     <td
