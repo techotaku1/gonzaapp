@@ -4,13 +4,11 @@
   /* Font definitions */
   --font-display: var(--font-delius), cursive;
   --font-table-text: var(--font-lexend), sans-serif;
-  --font-table-numeric: var(--font-stix), serif;
 }
 
 /* Font feature settings */
 @theme {
-  --font-table-numeric--font-feature-settings: 'tnum' 1, 'zero' 1;
-  --font-table-text--font-feature-settings: 'kern' 1;
+  --font-table-text--font-feature-settings: 'kern' 1, 'tnum' 1;
 }
 
 /* Base styles */
@@ -42,22 +40,68 @@
 /* Custom utilities */
 @layer utilities {
   .table-text-field {
+    @apply flex items-center;
     font-family: var(--font-table-text);
     font-optical-sizing: auto;
-    font-weight: 700; /* Cambiado de 300 a 500 para más bold */
+    font-weight: 500;
+    font-size: 0.65rem;
+    line-height: 1;
+    height: 1.5rem;
+    padding: 0.15rem 0.5rem;
+    color: black;
   }
 
   .table-numeric-field {
-    font-family: var(--font-table-numeric);
+    @apply flex items-center;
+    font-family: var(--font-table-text);
     font-optical-sizing: auto;
-    font-weight: 400;
-    font-size: 1.2rem;
+    font-weight: 500;
+    font-size: 0.65rem;
     text-align: right;
+    color: black;
+    line-height: 1;
+    height: 1.5rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .table-cell {
+    @apply border-r border-gray-200 px-2;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    color: black;
+  }
+
+  .table-header {
+    @apply border-r border-gray-200 bg-gray-50 px-2;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-family: var(--font-table-text);
+    font-weight: 700;
+    color: black;
+  }
+
+  .table-checkbox-cell {
+    @apply border-r border-gray-200 px-2;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    display: table-cell;
+    vertical-align: middle;
+  }
+
+  .table-checkbox-wrapper {
+    @apply flex items-center justify-center;
+    height: 1.5rem;
+    min-width: 2rem;
   }
 
   .font-lexend {
     font-family: var(--font-lexend);
     font-optical-sizing: auto;
-    font-weight: 700;
+    font-weight: 500;
+    font-size: 0.65rem;
+    line-height: 1;
   }
 }

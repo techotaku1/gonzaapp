@@ -293,19 +293,39 @@ export default function TransactionTable({
       // Calcular el ancho basado en el tipo de campo
       const getWidth = () => {
         switch (field) {
+          case 'impuesto4x1000':
+            return 'w-[60px]'; // Aumentado el ancho para 4x1000
+          case 'gananciaBruta':
+            return 'w-[90px]'; // Aumentado el ancho para ganancia bruta
+          case 'novedad':
+            return 'w-[100px]'; // Aumentado el ancho para novedad
+          case 'precioNeto':
+          case 'tarifaServicio':
+            return 'w-[70px]';
+          case 'tipoVehiculo':
+            return 'w-[70px]'; // Ajustado para coincidir con el header
+          case 'boletasRegistradas':
+            return 'w-[120px]'; // Mismo ancho que el header
+          case 'placa':
+            return 'w-[70px] h-[1.5rem]'; // Altura fija para alinear
           case 'nombre':
           case 'observaciones':
-            return 'min-w-[250px]';
+            return 'w-[100px]'; // Reducido de 120px
           case 'tramite':
           case 'emitidoPor':
           case 'ciudad':
           case 'asesor':
-            return 'min-w-[180px]';
+            return 'w-[80px]'; // Reducido de 100px
           case 'tipoDocumento':
-          case 'placa':
-            return 'min-w-[120px]';
+          case 'fecha':
+            return 'w-[80px]';
+          case 'numeroDocumento':
+          case 'celular':
+            return 'w-[65px]';
+          case 'cilindraje':
+            return 'w-[65px]';
           default:
-            return 'min-w-[100px]';
+            return 'w-[50px]';
         }
       };
 
@@ -317,6 +337,11 @@ export default function TransactionTable({
             }
             value={formatValue(value)}
             checked={type === 'checkbox' ? Boolean(value) : undefined}
+            title={
+              field === 'asesor' || field === 'nombre'
+                ? formatValue(value)
+                : undefined
+            }
             onChange={(e) => {
               let newValue: InputValue;
               if (isMoneyField) {
@@ -332,14 +357,14 @@ export default function TransactionTable({
             }}
             className={`${
               type === 'checkbox'
-                ? 'h-4 w-4 rounded border-gray-300'
-                : `rounded border p-2 ${getWidth()} ${
+                ? 'h-3 w-3 rounded border-gray-300'
+                : `flex items-center rounded border px-0.5 py-0.5 text-[10px] ${getWidth()} ${
                     field === 'placa'
-                      ? 'table-text-field text-center uppercase'
+                      ? 'table-text-field h-[1.5rem] text-center leading-[1.5rem] uppercase'
                       : type === 'number' || isMoneyField
                         ? 'table-numeric-field'
                         : 'table-text-field'
-                  }`
+                  } ${field === 'asesor' || field === 'nombre' ? 'hover:cursor-help' : ''}`
             }`}
           />
         </div>
@@ -465,6 +490,24 @@ export default function TransactionTable({
     }
   };
 
+  const renderCheckbox = useCallback(
+    (
+      id: string,
+      field: keyof TransactionRecord,
+      value: boolean,
+      disabled?: boolean
+    ) => (
+      <input
+        type="checkbox"
+        checked={value}
+        disabled={disabled}
+        onChange={(e) => handleInputChange(id, field, e.target.checked)}
+        className="h-4 w-4 rounded border-gray-300 disabled:opacity-50"
+      />
+    ),
+    [handleInputChange]
+  );
+
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
@@ -557,10 +600,10 @@ export default function TransactionTable({
             overflowX: zoom === 1 ? 'auto' : 'scroll',
           }}
         >
-          <table className="w-full text-left text-sm text-gray-500">
+          <table className="w-full border-separate border-spacing-0 text-left text-sm text-gray-500">
             <HeaderTitles />
             <tbody>
-              {paginatedData.map((row) => {
+              {paginatedData.map((row, index) => {
                 const {
                   precioNetoAjustado,
                   tarifaServicioAjustada,
@@ -582,7 +625,7 @@ export default function TransactionTable({
                     className="border-b bg-white hover:bg-gray-50"
                   >
                     {isDeleteMode && (
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-0.5 py-0.5 whitespace-nowrap">
                         <input
                           type="checkbox"
                           checked={rowsToDelete.has(row.id)}
@@ -591,101 +634,181 @@ export default function TransactionTable({
                         />
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 0 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'fecha', 'date')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 1 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'tramite')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.has(row.id)}
-                        onChange={() => handleRowSelect(row.id, row.precioNeto)}
-                        disabled={row.pagado}
-                        className="h-4 w-4 rounded border-gray-300 disabled:opacity-50"
-                      />
+                    <td className="table-checkbox-cell whitespace-nowrap">
+                      <div className="table-checkbox-wrapper">
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.has(row.id)}
+                          onChange={() =>
+                            handleRowSelect(row.id, row.precioNeto)
+                          }
+                          disabled={row.pagado}
+                          className="h-4 w-4 rounded border-gray-300 disabled:opacity-50"
+                        />
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {renderInput(rowWithFormulas, 'pagado', 'checkbox')}
+                    <td className="table-checkbox-cell whitespace-nowrap">
+                      <div className="table-checkbox-wrapper">
+                        {renderCheckbox(row.id, 'pagado', row.pagado)}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 4 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(
                         rowWithFormulas,
                         'boletasRegistradas',
                         'number'
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 5 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'emitidoPor')}
                     </td>
-                    <td className="px-6 py-4 text-xl whitespace-nowrap">
+                    <td className="table-cell items-center px-0.5 py-0.5 whitespace-nowrap">
                       {renderInput(rowWithFormulas, 'placa')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 7 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'tipoDocumento')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 8 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'numeroDocumento')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 9 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'nombre')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 10 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'cilindraje', 'number')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 11 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'tipoVehiculo')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 12 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'celular')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 13 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'ciudad')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 14 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'asesor')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 15 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'novedad')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 16 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'precioNeto', 'number')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 17 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'tarifaServicio', 'number')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={row.comisionExtra}
-                        onChange={(e) =>
-                          handleInputChange(
-                            row.id,
-                            'comisionExtra',
-                            e.target.checked
-                          )
-                        }
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
+                    <td className="table-checkbox-cell whitespace-nowrap">
+                      <div className="table-checkbox-wrapper">
+                        <input
+                          type="checkbox"
+                          checked={row.comisionExtra}
+                          onChange={(e) =>
+                            handleInputChange(
+                              row.id,
+                              'comisionExtra',
+                              e.target.checked
+                            )
+                          }
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 19 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'impuesto4x1000', 'number')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${
+                        index === 20 ? 'border-r-0' : ''
+                      }`}
+                    >
                       {renderInput(rowWithFormulas, 'gananciaBruta', 'number')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="checkbox"
-                        checked={row.rappi}
-                        onChange={(e) =>
-                          handleInputChange(row.id, 'rappi', e.target.checked)
-                        }
-                        className="h-4 w-4 rounded border-gray-300"
-                      />
+                    <td className="table-checkbox-cell whitespace-nowrap">
+                      <div className="table-checkbox-wrapper">
+                        <input
+                          type="checkbox"
+                          checked={row.rappi}
+                          onChange={(e) =>
+                            handleInputChange(row.id, 'rappi', e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td
+                      className={`table-cell whitespace-nowrap ${index === 22 ? 'border-r-0' : ''}`}
+                    >
                       {renderInput(rowWithFormulas, 'observaciones')}
                     </td>
                   </tr>

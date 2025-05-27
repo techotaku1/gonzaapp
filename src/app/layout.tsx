@@ -1,5 +1,5 @@
 import '~/styles/globals.css';
-import { Delius, Lexend, STIX_Two_Text } from 'next/font/google';
+import { Delius, Lexend } from 'next/font/google';
 
 import { type Metadata } from 'next';
 
@@ -20,24 +20,14 @@ const lexend = Lexend({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-lexend',
-  weight: ['700'], // Cambiado a weight 500 para texto más bold
-});
-
-const stixTwoText = STIX_Two_Text({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-stix',
-  weight: ['500'], // Semibold for numeric fields
+  weight: ['500'], // Cambiado a 500 para mantener consistencia
 });
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="es"
-      className={`${delius.variable} ${lexend.variable} ${stixTwoText.variable}`}
-    >
+    <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
       <body>{children}</body>
     </html>
   );
