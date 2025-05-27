@@ -7,6 +7,8 @@ import { createRecord } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
 
+import HeaderTitles from './HeaderTitles';
+
 const ITEMS_PER_PAGE = 50;
 
 interface SaveResult {
@@ -36,6 +38,7 @@ function formatDateHeader(date: string): string {
 }
 
 function getCurrentDate(): string {
+  // Use a fixed date string format to avoid hydration mismatch
   const today = new Date();
   const formatter = new Intl.DateTimeFormat('es-CO', {
     weekday: 'long',
@@ -420,38 +423,7 @@ export default function TransactionTable({
       <div className="overflow-x-auto shadow-md sm:rounded-lg">
         <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
           <table className="w-full text-left text-sm text-gray-500">
-            <thead className="sticky top-0 bg-gray-50 text-xs text-gray-700 uppercase">
-              <tr>
-                <th className="px-6 py-3 whitespace-nowrap">Fecha</th>
-                <th className="px-6 py-3 whitespace-nowrap">Trámite</th>
-                <th className="px-6 py-3 whitespace-nowrap">Matrícula</th>
-                <th className="px-6 py-3 whitespace-nowrap">Pagado</th>
-                <th className="sticky left-0 z-10 bg-gray-50 px-6 py-3">
-                  Boleta
-                </th>
-                <th className="px-6 py-3 whitespace-nowrap">
-                  Boletas Registradas
-                </th>
-                <th className="px-6 py-3 whitespace-nowrap">Emitido Por</th>
-                <th className="px-6 py-3 whitespace-nowrap">Placa</th>
-                <th className="px-6 py-3 whitespace-nowrap">Documento</th>
-                <th className="px-6 py-3 whitespace-nowrap">#</th>
-                <th className="px-6 py-3 whitespace-nowrap">Nombre</th>
-                <th className="px-6 py-3 whitespace-nowrap">Cilindraje</th>
-                <th className="px-6 py-3 whitespace-nowrap">Tipo Vehículo</th>
-                <th className="px-6 py-3 whitespace-nowrap">Celular</th>
-                <th className="px-6 py-3 whitespace-nowrap">Ciudad</th>
-                <th className="px-6 py-3 whitespace-nowrap">Asesor</th>
-                <th className="px-6 py-3 whitespace-nowrap">Novedad</th>
-                <th className="px-6 py-3 whitespace-nowrap">Precio Neto</th>
-                <th className="px-6 py-3 whitespace-nowrap">Comisión Extra</th>
-                <th className="px-6 py-3 whitespace-nowrap">Tarifa Servicio</th>
-                <th className="px-6 py-3 whitespace-nowrap">4x1000</th>
-                <th className="px-6 py-3 whitespace-nowrap">Ganancia Bruta</th>
-                <th className="px-6 py-3 whitespace-nowrap">Rappi</th>
-                <th className="px-6 py-3 whitespace-nowrap">Observaciones</th>
-              </tr>
-            </thead>
+            <HeaderTitles />
             <tbody>
               {Array.from(groupedData.entries()).map(([date, records]) => {
                 const dateRecords = records.filter((r) =>

@@ -1,5 +1,5 @@
 import '~/styles/globals.css';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Inter, Playfair_Display, Delius } from 'next/font/google';
 
 import { type Metadata } from 'next';
 
@@ -15,6 +15,13 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+const delius = Delius({
+  weight: '400',
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-delius',
+});
+
 const playfair = Playfair_Display({
   subsets: ['latin'],
   display: 'swap',
@@ -25,7 +32,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={`${inter.variable} ${playfair.variable}`}>
+    <html
+      lang="es"
+      className={`${inter.variable} ${playfair.variable} ${delius.variable}`}
+    >
       <body className="font-sans">{children}</body>
     </html>
   );
