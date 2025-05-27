@@ -1,0 +1,47 @@
+/* From Uiverse.io by Nawsome */ 
+@keyframes clockwise {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(359deg);
+  }
+}
+
+@keyframes counter-clockwise {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(-359deg);
+  }
+}
+
+.gearbox {
+  position: relative;
+  display: inline-block;
+  width: 80px;
+  height: 80px;
+}
+
+.gearbox::before,
+.gearbox::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 8px solid transparent;
+}
+
+.gearbox::before {
+  border-top-color: #3498db;
+  animation: clockwise 1.2s linear infinite;
+}
+
+.gearbox::after {
+  border-top-color: #e74c3c;
+  animation: counter-clockwise 1.2s linear infinite;
+}

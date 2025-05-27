@@ -1,8 +1,8 @@
 export const tableHeaders = [
   'Fecha',
   'Trámite',
-  'Pagado',
   'Boleta',
+  'Pagado',
   'Boletas Registradas',
   'Emitido Por',
   'Placa',
