@@ -120,9 +120,7 @@
     height: 2rem;
     line-height: 2rem;
     padding: 0.15rem 0.5rem;
-    position: relative; /* Cambiado a relative */
-    top: auto; /* Eliminado el sticky positioning */
-    z-index: 1;
+    position: static; /* Cambiado de relative a static */
     font-family: var(--font-table-text);
     font-weight: 700;
     color: black;
@@ -223,5 +221,8 @@
   }
   .emitido-por-no-emitir {
     @apply bg-red-100 text-red-800;
+  }
+  .emitido-por-panel-evelio {
+    @apply bg-amber-100 text-amber-800;
   }
 }

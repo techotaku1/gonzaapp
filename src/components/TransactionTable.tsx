@@ -394,6 +394,7 @@ export default function TransactionTable({
 
       const emitidoPorOptions = [
         'Panel Juan',
+        'Panel Evelio', // Añadida nueva opción
         'Previ usuario',
         'Previ pública',
         'Previ Sonia',
@@ -408,6 +409,7 @@ export default function TransactionTable({
       ] as const;
 
       const getEmitidoPorClass = (value: string): string => {
+        if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
         if (value.includes('Panel')) return 'emitido-por-panel';
         if (value.includes('Previ')) return 'emitido-por-previ';
         if (value.includes('Bolivar')) return 'emitido-por-bolivar';
@@ -719,10 +721,10 @@ export default function TransactionTable({
         <time className="font-display text-2xl text-white">{currentDate}</time>
       </div>
 
-      {/* Modificar la sección de la tabla para permitir scroll con headers */}
-      <div className="overflow-x-auto shadow-md sm:rounded-lg">
-        <div className="max-h-[calc(100vh-200px)] overflow-auto">
-          <table className="relative w-full border-separate border-spacing-0 text-left text-sm text-gray-500">
+      {/* Modificar la sección de la tabla */}
+      <div className="overflow-hidden rounded-lg bg-white shadow-md">
+        <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
+          <table className="w-full table-auto border-separate border-spacing-0">
             <HeaderTitles />
             <tbody>
               {paginatedData.map((row, index) => {
