@@ -54,4 +54,10 @@
     font-size: 1.2rem;
     text-align: right;
   }
+
+  .font-lexend {
+    font-family: var(--font-lexend);
+    font-optical-sizing: auto;
+    font-weight: 700;
+  }
 }
