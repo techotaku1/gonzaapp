@@ -52,7 +52,6 @@ export default function TransactionTable({
   const [selectedPlates, setSelectedPlates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [showOriginalScrollbar, setShowOriginalScrollbar] = useState(true);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
 
@@ -408,17 +407,32 @@ export default function TransactionTable({
         'No Emitir',
       ] as const;
 
+      const getEmitidoPorClass = (value: string): string => {
+        if (value.includes('Panel')) return 'emitido-por-panel';
+        if (value.includes('Previ')) return 'emitido-por-previ';
+        if (value.includes('Bolivar')) return 'emitido-por-bolivar';
+        if (value.includes('Axa')) return 'emitido-por-axa';
+        if (value.includes('Mundial')) return 'emitido-por-mundial';
+        if (value.includes('No Emitir')) return 'emitido-por-no-emitir';
+        return '';
+      };
+
+      // En la sección donde se renderiza el select de emitidoPor:
       if (field === 'emitidoPor') {
         return (
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-field w-[105px] overflow-hidden rounded border text-ellipsis"
-            title={value as string} // Agregar tooltip al select
+            className={`emitido-por-select w-[105px] overflow-hidden rounded border text-ellipsis ${getEmitidoPorClass(value as string)}`}
+            title={value as string}
           >
             <option value="">Seleccionar...</option>
             {emitidoPorOptions.map((option) => (
-              <option key={option} value={option} className="text-center">
+              <option
+                key={option}
+                value={option}
+                className={`text-center ${getEmitidoPorClass(option)}`}
+              >
                 {option}
               </option>
             ))}
@@ -554,17 +568,17 @@ export default function TransactionTable({
       <button
         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
         disabled={currentPage === 1}
-        className="rounded px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        className="rounded px-4 py-2 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
       >
         Anterior
       </button>
-      <span className="flex items-center px-4 text-sm text-gray-700">
+      <span className="flex items-center px-4 text-sm text-white">
         Página {currentPage} de {totalPages}
       </span>
       <button
         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
         disabled={currentPage === totalPages}
-        className="rounded px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        className="rounded px-4 py-2 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
       >
         Siguiente
       </button>
@@ -574,13 +588,11 @@ export default function TransactionTable({
   const handleZoomOut = () => {
     const newZoom = Math.max(zoom - 0.1, 0.5);
     setZoom(newZoom);
-    setShowOriginalScrollbar(newZoom === 1);
   };
 
   const handleZoomIn = () => {
     const newZoom = Math.min(zoom + 0.1, 1);
     setZoom(newZoom);
-    setShowOriginalScrollbar(newZoom === 1);
   };
 
   const handleDeleteModeToggle = () => {
@@ -692,7 +704,7 @@ export default function TransactionTable({
             >
               -
             </button>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-white">
               {Math.round(zoom * 100)}%
             </span>
             <button
@@ -704,26 +716,13 @@ export default function TransactionTable({
             </button>
           </div>
         </div>
-        <time className="font-display text-2xl text-gray-600">
-          {currentDate}
-        </time>
+        <time className="font-display text-2xl text-white">{currentDate}</time>
       </div>
 
-      <div
-        className={`overflow-x-auto shadow-md sm:rounded-lg ${
-          showOriginalScrollbar ? '' : 'overflow-x-hidden'
-        }`}
-      >
-        <div
-          className="max-h-[calc(100vh-200px)] w-full"
-          style={{
-            transform: `scale(${zoom})`,
-            transformOrigin: 'left top',
-            width: `${(1 / zoom) * 100}%`,
-            overflowX: zoom === 1 ? 'auto' : 'scroll',
-          }}
-        >
-          <table className="w-full border-separate border-spacing-0 text-left text-sm text-gray-500">
+      {/* Modificar la sección de la tabla para permitir scroll con headers */}
+      <div className="overflow-x-auto shadow-md sm:rounded-lg">
+        <div className="max-h-[calc(100vh-200px)] overflow-auto">
+          <table className="relative w-full border-separate border-spacing-0 text-left text-sm text-gray-500">
             <HeaderTitles />
             <tbody>
               {paginatedData.map((row, index) => {

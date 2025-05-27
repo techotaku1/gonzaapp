@@ -3,6 +3,8 @@ import { Delius, Lexend } from 'next/font/google';
 
 import { type Metadata } from 'next';
 
+import Background from '~/components/Background';
+
 export const metadata: Metadata = {
   title: 'GonzaApp',
   description: 'Aplicación de gestión de trámites',
@@ -28,7 +30,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
-      <body>{children}</body>
+      <body className="min-h-screen bg-gradient-to-b from-[#0e2a47] to-[#00459e]">
+        <Background />
+        {children}
+      </body>
     </html>
   );
 }

@@ -117,21 +117,21 @@
 
   .table-header {
     @apply border-r border-gray-200 bg-gray-50;
-    height: 2rem; /* Aumentado para dar más espacio */
-    line-height: 2rem; /* Aumentado para centrar verticalmente */
+    height: 2rem;
+    line-height: 2rem;
     padding: 0.15rem 0.5rem;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    position: relative; /* Cambiado a relative */
+    top: auto; /* Eliminado el sticky positioning */
+    z-index: 1;
     font-family: var(--font-table-text);
     font-weight: 700;
     color: black;
     text-align: center;
     vertical-align: middle;
-    border-bottom: 2px solid #e5e7eb; /* Añadido borde inferior más visible */
-    display: table-cell; /* Añadido para corregir el comportamiento de la celda */
-    box-sizing: border-box; /* Asegurar que los bordes se incluyan en el tamaño */
-    min-width: min-content; /* Asegurar que la celda tenga al menos el ancho del contenido */
+    border-bottom: 2px solid #e5e7eb;
+    display: table-cell;
+    box-sizing: border-box;
+    min-width: min-content;
   }
 
   .table-checkbox-cell {
@@ -191,5 +191,37 @@
 
   .table-date-field::-webkit-datetime-edit-fields-wrapper {
     padding: 0;
+  }
+
+  /* Estilos para el select de emitidoPor */
+  .emitido-por-select {
+    @apply flex items-center justify-center text-center;
+    font-family: var(--font-table-text);
+    font-weight: 500;
+    font-size: 0.65rem;
+    line-height: 1;
+    height: 1.5rem;
+    padding: 0.15rem 0.5rem;
+    margin: 0 auto;
+  }
+
+  /* Colores para cada opción */
+  .emitido-por-panel {
+    @apply bg-blue-100 text-blue-800;
+  }
+  .emitido-por-previ {
+    @apply bg-green-100 text-green-800;
+  }
+  .emitido-por-bolivar {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  .emitido-por-axa {
+    @apply bg-purple-100 text-purple-800;
+  }
+  .emitido-por-mundial {
+    @apply bg-orange-100 text-orange-800;
+  }
+  .emitido-por-no-emitir {
+    @apply bg-red-100 text-red-800;
   }
 }

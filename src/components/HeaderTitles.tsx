@@ -36,7 +36,7 @@ export default function HeaderTitles() {
               minWidth: header === 'Trámite' ? '80px' : 'auto',
               position: 'relative',
             }}
-            className="table-header border-t border-r border-gray-200 whitespace-nowrap"
+            className="table-header relative border-t border-r border-gray-200 whitespace-nowrap"
           >
             {header}
           </th>

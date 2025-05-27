@@ -10,13 +10,15 @@ export default async function HomePage() {
 
   return (
     <main className="container mx-auto p-4">
-      <h1 className="font-display mb-8 text-3xl font-bold tracking-tight">
+      <h1 className="font-display mb-8 text-3xl font-bold tracking-tight text-white">
         Registro de Transacciones
       </h1>
-      <TransactionTable
-        initialData={initialData}
-        onUpdateRecordAction={updateRecords}
-      />
+      <div className="overflow-auto">
+        <TransactionTable
+          initialData={initialData}
+          onUpdateRecordAction={updateRecords}
+        />
+      </div>
     </main>
   );
 }
