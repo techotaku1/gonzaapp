@@ -50,6 +50,7 @@ export default function TransactionTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [currentDate, setCurrentDate] = useState(getCurrentDate());
   const [selectedPlates, setSelectedPlates] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -136,11 +137,17 @@ export default function TransactionTable({
   const handleSaveOperation = useCallback(
     async (records: TransactionRecord[]): Promise<SaveResult> => {
       try {
+        setIsSaving(true);
         const result = await onUpdateRecordAction(records);
+        if (result.success) {
+          setUnsavedChanges(false);
+        }
         return result;
       } catch (error) {
         console.error('Error saving changes:', error);
         return { success: false, error: 'Failed to save changes' };
+      } finally {
+        setIsSaving(false);
       }
     },
     [onUpdateRecordAction]
@@ -148,12 +155,13 @@ export default function TransactionTable({
 
   const handleSaveSuccess = useCallback(() => {
     setUnsavedChanges(false);
+    setIsSaving(false);
   }, []);
 
   const debouncedSave = useDebouncedSave(
-    handleSaveOperation, // Cambiar aquí para usar handleSaveOperation
+    handleSaveOperation,
     handleSaveSuccess,
-    3000
+    1000 // Reducido a 1 segundo
   );
 
   // Type-safe input change handler
@@ -317,23 +325,25 @@ export default function TransactionTable({
     [handleInputChange]
   );
 
-  // Group records by date with null safety
+  // Group records by date with null safety and maintain insertion order
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
 
-    [...data]
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-      .forEach((record) => {
-        // Ensure we have a valid date string
-        const dateKey: string =
-          record.fecha instanceof Date && !isNaN(record.fecha.getTime())
-            ? (record.fecha.toISOString().split('T')[0] ?? '')
-            : '';
-        const existingGroup = groups.get(dateKey) ?? [];
-        groups.set(dateKey, [...existingGroup, record]);
-      });
+    // No need to sort here, data is already in the correct order
+    data.forEach((record) => {
+      const dateKey: string =
+        record.fecha instanceof Date && !isNaN(record.fecha.getTime())
+          ? (record.fecha.toISOString().split('T')[0] ?? '')
+          : '';
+      const existingGroup = groups.get(dateKey) ?? [];
+      // Add new records to the beginning of the array
+      groups.set(dateKey, [record, ...existingGroup]);
+    });
 
-    return Array.from(groups.entries());
+    // Convert to array and sort dates in reverse chronological order
+    return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
+      dateB.localeCompare(dateA)
+    );
   }, [data]);
 
   // Memoize the current date group and related data
@@ -403,12 +413,16 @@ export default function TransactionTable({
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveChanges}
-              disabled={!unsavedChanges}
+              disabled={!unsavedChanges || isSaving}
               className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600 disabled:opacity-50"
             >
-              {unsavedChanges ? 'Guardando' : 'Guardado'}
+              {isSaving
+                ? 'Guardando...'
+                : unsavedChanges
+                  ? 'Guardar'
+                  : 'Guardado'}
             </button>
-            {unsavedChanges && (
+            {isSaving && (
               <div className="dot-spinner">
                 <div className="dot-spinner__dot" />
                 <div className="dot-spinner__dot" />
