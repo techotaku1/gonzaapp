@@ -51,6 +51,7 @@ export default function TransactionTable({
   const [currentDate, setCurrentDate] = useState(getCurrentDate());
   const [selectedPlates, setSelectedPlates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [zoom, setZoom] = useState(1);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -419,6 +420,14 @@ export default function TransactionTable({
     </div>
   );
 
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 0.1, 0.5)); // Zoom mínimo de 0.5
+  };
+
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 0.1, 1)); // Zoom máximo de 1
+  };
+
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
@@ -454,6 +463,25 @@ export default function TransactionTable({
               </div>
             )}
           </div>
+          <div className="ml-4 flex items-center gap-2">
+            <button
+              onClick={handleZoomOut}
+              className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
+              title="Reducir zoom"
+            >
+              -
+            </button>
+            <span className="text-sm text-gray-600">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={handleZoomIn}
+              className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
+              title="Aumentar zoom"
+            >
+              +
+            </button>
+          </div>
         </div>
         <time className="font-display text-2xl text-gray-600">
           {currentDate}
@@ -461,7 +489,15 @@ export default function TransactionTable({
       </div>
 
       <div className="overflow-x-auto shadow-md sm:rounded-lg">
-        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div
+          className="max-h-[calc(100vh-200px)] w-full"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'left top',
+            width: `${(1 / zoom) * 100}%`, // Ajusta el ancho para compensar el zoom
+            overflowX: 'auto',
+          }}
+        >
           <table className="w-full text-left text-sm text-gray-500">
             <HeaderTitles />
             <tbody>
