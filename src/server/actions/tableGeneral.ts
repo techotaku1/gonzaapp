@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';
@@ -122,6 +122,23 @@ export async function updateRecords(
       success: false,
       error:
         error instanceof Error ? error.message : 'Failed to update records',
+    };
+  }
+}
+
+export async function deleteRecords(
+  ids: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.delete(transactions).where(inArray(transactions.id, ids));
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting records:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to delete records',
     };
   }
 }

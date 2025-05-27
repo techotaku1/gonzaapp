@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
-import { createRecord } from '~/server/actions/tableGeneral';
+import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
 import '~/styles/spinner.css';
@@ -53,6 +53,8 @@ export default function TransactionTable({
   const [isSaving, setIsSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [showOriginalScrollbar, setShowOriginalScrollbar] = useState(true);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -433,6 +435,36 @@ export default function TransactionTable({
     setShowOriginalScrollbar(newZoom === 1);
   };
 
+  const handleDeleteModeToggle = () => {
+    setIsDeleteMode(!isDeleteMode);
+    setRowsToDelete(new Set());
+  };
+
+  const handleDeleteSelect = (id: string) => {
+    const newSelected = new Set(rowsToDelete);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setRowsToDelete(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (rowsToDelete.size === 0) return;
+
+    if (confirm(`¿Está seguro de eliminar ${rowsToDelete.size} registros?`)) {
+      const result = await deleteRecords(Array.from(rowsToDelete));
+      if (result.success) {
+        setData(data.filter((row) => !rowsToDelete.has(row.id)));
+        setRowsToDelete(new Set());
+        setIsDeleteMode(false);
+      } else {
+        alert('Error al eliminar registros');
+      }
+    }
+  };
+
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
@@ -443,6 +475,24 @@ export default function TransactionTable({
           >
             Agregar Registro
           </button>
+          <button
+            onClick={handleDeleteModeToggle}
+            className={`rounded px-4 py-2 text-white ${
+              isDeleteMode
+                ? 'bg-red-500 hover:bg-red-600'
+                : 'bg-gray-500 hover:bg-gray-600'
+            }`}
+          >
+            {isDeleteMode ? 'Cancelar' : 'Eliminar Registros'}
+          </button>
+          {isDeleteMode && rowsToDelete.size > 0 && (
+            <button
+              onClick={handleDeleteSelected}
+              className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+            >
+              Eliminar ({rowsToDelete.size})
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveChanges}
@@ -531,6 +581,16 @@ export default function TransactionTable({
                     key={row.id}
                     className="border-b bg-white hover:bg-gray-50"
                   >
+                    {isDeleteMode && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={rowsToDelete.has(row.id)}
+                          onChange={() => handleDeleteSelect(row.id)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       {renderInput(rowWithFormulas, 'fecha', 'date')}
                     </td>
