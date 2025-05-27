@@ -15,7 +15,7 @@ interface SaveResult {
   error?: string;
 }
 
-type InputValue = string | number | boolean | null;
+type InputValue = string | number | boolean | Date | null;
 type InputType = 'text' | 'number' | 'date' | 'checkbox';
 type HandleInputChange = (
   id: string,
@@ -262,9 +262,14 @@ export default function TransactionTable({
           return '';
         }
 
-        // Handle date values with time
-        if (type === 'date' && val instanceof Date) {
-          return val.toISOString().slice(0, 16);
+        if (field === 'fecha' && val instanceof Date) {
+          try {
+            const date = val;
+            return date.toISOString().slice(0, 16);
+          } catch (error) {
+            console.error('Error formatting date:', error);
+            return '';
+          }
         }
 
         // Format cilindraje with thousands separator
@@ -303,18 +308,18 @@ export default function TransactionTable({
           case 'tarifaServicio':
             return 'w-[80px]';
           case 'tipoVehiculo':
-            return 'w-[70px]'; // Ajustado para coincidir con el header
+            return 'w-[70px]';
           case 'boletasRegistradas':
-            return 'w-[120px]'; // Mismo ancho que el header
+            return 'w-[100px]';
           case 'placa':
-            return 'w-[70px] h-[1.5rem]'; // Altura fija para alinear
+            return 'w-[70px] h-[1.5rem]';
           case 'nombre':
           case 'observaciones':
-            return 'w-[100px]'; // Reducido de 120px
+            return 'w-[100px]';
           case 'tramite':
             return 'w-[70px]';
           case 'emitidoPor':
-            return 'w-[100px]';
+            return 'w-[70px]';
           case 'ciudad':
             return 'w-[70px]';
           case 'asesor':
@@ -353,7 +358,7 @@ export default function TransactionTable({
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-field w-[120px] overflow-hidden rounded border text-ellipsis"
+            className="table-select-field w-[105px] overflow-hidden rounded border text-ellipsis"
             title={value as string} // Agregar tooltip al select
           >
             <option value="">Seleccionar...</option>
@@ -363,6 +368,27 @@ export default function TransactionTable({
               </option>
             ))}
           </select>
+        );
+      }
+
+      // Modificar la sección del renderInput donde se maneja el campo fecha
+      if (field === 'fecha') {
+        return (
+          <div className="relative flex w-full items-center justify-center">
+            <input
+              type="datetime-local"
+              value={formatValue(value)}
+              onChange={(e) => {
+                try {
+                  const inputDate = new Date(e.target.value + ':00Z');
+                  handleInputChange(row.id, field, inputDate);
+                } catch (error) {
+                  console.error('Error converting date:', error);
+                }
+              }}
+              className="table-date-field flex w-[140px] cursor-pointer items-center justify-center rounded border px-0 py-0.5 text-center text-[10px]"
+            />
+          </div>
         );
       }
 
@@ -422,18 +448,28 @@ export default function TransactionTable({
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
 
-    // Process records in original order
     data.forEach((record) => {
-      const dateKey: string =
-        record.fecha instanceof Date && !isNaN(record.fecha.getTime())
-          ? (record.fecha.toISOString().split('T')[0] ?? '')
-          : '';
+      if (!(record.fecha instanceof Date) || isNaN(record.fecha.getTime())) {
+        return;
+      }
+
+      const date = new Date(record.fecha);
+      const dateKey = date.toISOString().split('T')[0] ?? '';
+      if (!dateKey) return; // Skip if dateKey is empty
+
       const existingGroup = groups.get(dateKey) ?? [];
-      // Add new records at the end to maintain oldest-to-newest order
       groups.set(dateKey, [...existingGroup, record]);
     });
 
-    // Sort dates in reverse chronological order (newest first)
+    // Ordenar registros dentro de cada grupo por hora
+    for (const [key, records] of groups.entries()) {
+      const sortedRecords = records.sort((a, b) => {
+        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+      });
+      groups.set(key, sortedRecords);
+    }
+
+    // Ordenar grupos por fecha
     return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
       dateB.localeCompare(dateA)
     );
