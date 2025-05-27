@@ -1,37 +1,81 @@
-import Link from 'next/link';
+import { revalidatePath } from 'next/cache';
+import { eq } from 'drizzle-orm';
 
-export default function HomePage() {
+import TransactionTable from '~/components/TransactionTable';
+import { db } from '~/server/db';
+import { transactions } from '~/server/db/schema';
+import { type TransactionRecord } from '~/types';
+
+async function updateRecordsAction(records: TransactionRecord[]) {
+  'use server';
+
+  for (const record of records) {
+    const updateData = {
+      id: record.id,
+      fecha: record.fecha.toISOString(),
+      tramite: record.tramite,
+      matricula: record.matricula,
+      pagado: record.pagado,
+      boleta: record.boleta,
+      boletasRegistradas: String(record.boletasRegistradas),
+      emitidoPor: record.emitidoPor,
+      placa: record.placa,
+      tipoDocumento: record.tipoDocumento,
+      numeroDocumento: record.numeroDocumento,
+      nombre: record.nombre,
+      cilindraje: record.cilindraje ? Number(record.cilindraje) : null,
+      tipoVehiculo: record.tipoVehiculo,
+      celular: record.celular,
+      ciudad: record.ciudad,
+      asesor: record.asesor,
+      novedad: record.novedad,
+      precioNeto: String(record.precioNeto),
+      comisionExtra: record.comisionExtra,
+      tarifaServicio: String(record.tarifaServicio),
+      impuesto4x1000: String(record.impuesto4x1000),
+      gananciaBruta: String(record.gananciaBruta),
+      rappi: record.rappi,
+      observaciones: record.observaciones,
+    };
+
+    await db
+      .update(transactions)
+      .set(updateData)
+      .where(eq(transactions.id, record.id));
+  }
+
+  revalidatePath('/');
+}
+
+export default async function HomePage() {
+  const data = await db
+    .select()
+    .from(transactions)
+    .orderBy(transactions.fecha);
+
+  const initialData: TransactionRecord[] = data.map((record) => ({
+    ...record,
+    fecha: new Date(record.fecha),
+    boletasRegistradas: Number(record.boletasRegistradas),
+    precioNeto: Number(record.precioNeto),
+    tarifaServicio: Number(record.tarifaServicio),
+    impuesto4x1000: Number(record.impuesto4x1000),
+    gananciaBruta: Number(record.gananciaBruta),
+    matricula: record.matricula ?? null,
+    cilindraje: record.cilindraje ?? null,
+    tipoVehiculo: record.tipoVehiculo ?? null,
+    celular: record.celular ?? null,
+    novedad: record.novedad ?? null,
+    observaciones: record.observaciones ?? null,
+  }));
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-          Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-        </h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/usage/first-steps"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">First Steps →</h3>
-            <div className="text-lg">
-              Just the basics - Everything you need to know to set up your
-              database and authentication.
-            </div>
-          </Link>
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 text-white hover:bg-white/20"
-            href="https://create.t3.gg/en/introduction"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">Documentation →</h3>
-            <div className="text-lg">
-              Learn more about Create T3 App, the libraries it uses, and how to
-              deploy it.
-            </div>
-          </Link>
-        </div>
-      </div>
+    <main className="container mx-auto p-4">
+      <h1 className="mb-8 text-3xl font-bold">Registro de Transacciones</h1>
+      <TransactionTable
+        initialData={initialData}
+        onUpdateRecordAction={updateRecordsAction}
+      />
     </main>
   );
 }
