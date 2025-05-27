@@ -264,12 +264,12 @@ export default function TransactionTable({
 
         // Handle date values with time
         if (type === 'date' && val instanceof Date) {
-          const date = new Date(val);
-          // Ajustar al horario de Bogotá
-          const colombiaDate = new Date(
-            date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-          );
-          return colombiaDate.toISOString().slice(0, 16);
+          return val.toISOString().slice(0, 16);
+        }
+
+        // Format cilindraje with thousands separator
+        if (field === 'cilindraje' && typeof val === 'number') {
+          return formatCurrency(val);
         }
 
         // Handle money fields
@@ -301,7 +301,7 @@ export default function TransactionTable({
             return 'w-[100px]'; // Aumentado el ancho para novedad
           case 'precioNeto':
           case 'tarifaServicio':
-            return 'w-[70px]';
+            return 'w-[80px]';
           case 'tipoVehiculo':
             return 'w-[70px]'; // Ajustado para coincidir con el header
           case 'boletasRegistradas':
@@ -321,7 +321,7 @@ export default function TransactionTable({
           case 'tipoDocumento':
             return 'w-[40px]';
           case 'fecha':
-            return 'w-[100px]';
+            return 'w-[60px]';
           case 'numeroDocumento':
           case 'celular':
             return 'w-[65px]';
@@ -345,7 +345,6 @@ export default function TransactionTable({
         'Mundial nave',
         'Mundial fel',
         'No Emitir',
-        'Certificado tradicion',
       ] as const;
 
       if (field === 'emitidoPor') {
@@ -369,18 +368,21 @@ export default function TransactionTable({
         <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
           <input
             type={
-              isMoneyField ? 'text' : type === 'date' ? 'datetime-local' : type
+              field === 'cilindraje'
+                ? 'text'
+                : isMoneyField
+                  ? 'text'
+                  : type === 'date'
+                    ? 'datetime-local'
+                    : type
             }
             value={formatValue(value)}
-            checked={type === 'checkbox' ? Boolean(value) : undefined}
-            title={
-              field === 'asesor' || field === 'nombre'
-                ? formatValue(value)
-                : undefined
-            }
             onChange={(e) => {
               let newValue: InputValue;
-              if (isMoneyField) {
+              if (field === 'cilindraje') {
+                // Remove non-numeric characters and parse
+                newValue = parseNumber(e.target.value);
+              } else if (isMoneyField) {
                 newValue = parseNumber(e.target.value);
               } else if (type === 'checkbox') {
                 newValue = e.target.checked;
@@ -395,6 +397,10 @@ export default function TransactionTable({
               type === 'checkbox'
                 ? 'h-3 w-3 rounded border-gray-300'
                 : `flex items-center justify-center rounded border px-0.5 py-0.5 text-center text-[10px] ${getWidth()} ${
+                    field === 'cilindraje'
+                      ? '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
+                      : ''
+                  } ${
                     field === 'placa'
                       ? 'table-text-field h-[1.5rem] leading-[1.5rem] uppercase'
                       : type === 'number' || isMoneyField
