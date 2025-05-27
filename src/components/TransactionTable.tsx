@@ -42,7 +42,7 @@ export default function TransactionTable({
 }: {
   initialData: TransactionRecord[];
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
-}) {
+}): React.JSX.Element {
   const [data, setData] = useState<TransactionRecord[]>(initialData);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
@@ -176,6 +176,37 @@ export default function TransactionTable({
     2000 // Aumentado a 2 segundos para dar más tiempo de agrupación
   );
 
+  // Move groupedByDate before it's used
+  const groupedByDate = useMemo(() => {
+    const groups = new Map<string, TransactionRecord[]>();
+
+    data.forEach((record) => {
+      if (!(record.fecha instanceof Date) || isNaN(record.fecha.getTime())) {
+        return;
+      }
+
+      const date = new Date(record.fecha);
+      const dateKey = date.toISOString().split('T')[0] ?? '';
+      if (!dateKey) return;
+
+      const existingGroup = groups.get(dateKey) ?? [];
+      groups.set(dateKey, [...existingGroup, record]);
+    });
+
+    // Ordenar registros dentro de cada grupo por hora
+    for (const [key, records] of groups.entries()) {
+      const sortedRecords = records.sort((a, b) => {
+        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+      });
+      groups.set(key, sortedRecords);
+    }
+
+    // Ordenar grupos por fecha
+    return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
+      dateB.localeCompare(dateA)
+    );
+  }, [data]);
+
   // Type-safe input change handler
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
@@ -183,11 +214,18 @@ export default function TransactionTable({
         const newData = prevData.map((row) => {
           if (row.id === id) {
             const updatedRow = { ...row };
+            let newDate: Date;
 
             switch (field) {
               case 'fecha':
-                updatedRow[field] =
-                  typeof value === 'string' ? new Date(value) : row.fecha;
+                if (value instanceof Date) {
+                  newDate = value;
+                } else {
+                  newDate = new Date(value as string);
+                }
+                if (!isNaN(newDate.getTime())) {
+                  updatedRow[field] = newDate;
+                }
                 break;
               case 'precioNeto':
               case 'tarifaServicio':
@@ -207,12 +245,29 @@ export default function TransactionTable({
           }
           return row;
         });
+
         setUnsavedChanges(true);
         void debouncedSave(newData);
         return newData;
       });
+
+      // Cuando se cambia la fecha, actualizar la página actual
+      if (field === 'fecha' && value) {
+        const dateStr = (
+          value instanceof Date ? value : new Date(value as string)
+        )
+          .toISOString()
+          .split('T')[0];
+        // Encontrar la página correspondiente a la nueva fecha
+        const pageIndex = groupedByDate.findIndex(
+          ([gDate]) => gDate === dateStr
+        );
+        if (pageIndex !== -1) {
+          setCurrentPage(pageIndex + 1);
+        }
+      }
     },
-    [debouncedSave]
+    [debouncedSave, groupedByDate]
   );
 
   const handleSaveChanges = async () => {
@@ -392,6 +447,24 @@ export default function TransactionTable({
         );
       }
 
+      const renderPlacaInput = () => (
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            value={formatValue(value)}
+            title={formatValue(value)}
+            onChange={(e) =>
+              handleInputChange(row.id, field, e.target.value.toUpperCase())
+            }
+            className="table-text-field h-[1.5rem] w-[70px] cursor-pointer overflow-hidden rounded border px-0.5 py-0.5 text-center text-xl font-bold text-ellipsis uppercase hover:overflow-visible hover:text-clip"
+          />
+        </div>
+      );
+
+      if (field === ('placa' as keyof TransactionRecord)) {
+        return renderPlacaInput();
+      }
+
       return (
         <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
           <input
@@ -443,37 +516,6 @@ export default function TransactionTable({
     },
     [handleInputChange]
   );
-
-  // Group records by date while maintaining insertion order
-  const groupedByDate = useMemo(() => {
-    const groups = new Map<string, TransactionRecord[]>();
-
-    data.forEach((record) => {
-      if (!(record.fecha instanceof Date) || isNaN(record.fecha.getTime())) {
-        return;
-      }
-
-      const date = new Date(record.fecha);
-      const dateKey = date.toISOString().split('T')[0] ?? '';
-      if (!dateKey) return; // Skip if dateKey is empty
-
-      const existingGroup = groups.get(dateKey) ?? [];
-      groups.set(dateKey, [...existingGroup, record]);
-    });
-
-    // Ordenar registros dentro de cada grupo por hora
-    for (const [key, records] of groups.entries()) {
-      const sortedRecords = records.sort((a, b) => {
-        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
-      });
-      groups.set(key, sortedRecords);
-    }
-
-    // Ordenar grupos por fecha
-    return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
-      dateB.localeCompare(dateA)
-    );
-  }, [data]);
 
   // Memoize the current date group and related data
   const { currentDateGroup, paginatedData, totalPages } = useMemo(() => {

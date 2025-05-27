@@ -26,7 +26,7 @@ export const tableHeaders = [
 
 export default function HeaderTitles() {
   return (
-    <thead className="bg-gray-50 text-[14px] text-black">
+    <thead className="bg-gray-50 text-[15px] text-black">
       <tr>
         {tableHeaders.map((header) => {
           const noBorderRight = [
