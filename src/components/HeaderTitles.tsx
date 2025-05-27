@@ -27,7 +27,7 @@ export const tableHeaders = [
 export default function HeaderTitles() {
   return (
     <thead className="bg-gray-50 text-[16px] text-black">
-      <tr className="border-collapse">
+      <tr>
         {tableHeaders.map((header) => (
           <th
             key={header}
@@ -36,7 +36,7 @@ export default function HeaderTitles() {
               minWidth: header === 'Trámite' ? '80px' : 'auto',
               position: 'relative',
             }}
-            className="table-header border-r border-gray-200 whitespace-nowrap"
+            className="table-header border-t border-r border-gray-200 whitespace-nowrap"
           >
             {header}
           </th>

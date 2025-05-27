@@ -354,7 +354,7 @@ export default function TransactionTable({
       const getWidth = () => {
         switch (field) {
           case 'impuesto4x1000':
-            return 'w-[60px]'; // Aumentado el ancho para 4x1000
+            return 'w-[70px]'; // Aumentado el ancho para 4x1000
           case 'gananciaBruta':
             return 'w-[90px]'; // Aumentado el ancho para ganancia bruta
           case 'novedad':
