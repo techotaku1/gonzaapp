@@ -32,7 +32,7 @@ export default function HeaderTitles() {
           <th
             key={header}
             scope="col"
-            className="table-header px-2 py-2 whitespace-nowrap"
+            className="table-header whitespace-nowrap"
           >
             {header}
           </th>

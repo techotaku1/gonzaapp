@@ -107,7 +107,7 @@
   }
 
   .table-cell {
-    @apply flex items-center justify-center border-r border-gray-200;
+    @apply flex items-center justify-center border-r border-gray-400;
     min-height: 1.5rem;
     padding: 0.15rem 0.5rem;
     display: table-cell;
@@ -116,7 +116,7 @@
   }
 
   .table-header {
-    @apply border-r border-gray-200 bg-gray-50;
+    @apply border-r border-gray-400 bg-gray-50;
     height: 2rem;
     line-height: 2rem;
     padding: 0.15rem 0.5rem;
@@ -153,7 +153,7 @@
   }
 
   .table-checkbox-cell {
-    @apply border-r border-gray-200 px-2;
+    @apply border-r border-gray-400 px-2;
     height: 1.5rem;
     line-height: 1.5rem;
     display: table-cell;
