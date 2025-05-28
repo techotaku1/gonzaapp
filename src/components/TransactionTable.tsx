@@ -576,17 +576,17 @@ export default function TransactionTable({
       <button
         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
         disabled={currentPage === 1}
-        className="rounded px-4 py-2 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
+        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
       >
         Anterior
       </button>
-      <span className="flex items-center px-4 text-sm text-white">
+      <span className="flex items-center px-4 text-sm text-black">
         Página {currentPage} de {totalPages}
       </span>
       <button
         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
         disabled={currentPage === totalPages}
-        className="rounded px-4 py-2 text-sm font-medium text-white hover:bg-white/10 disabled:opacity-50"
+        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
       >
         Siguiente
       </button>
@@ -712,7 +712,7 @@ export default function TransactionTable({
             >
               -
             </button>
-            <span className="text-sm text-white">
+            <span className="text-sm text-black">
               {Math.round(zoom * 100)}%
             </span>
             <button
@@ -724,7 +724,7 @@ export default function TransactionTable({
             </button>
           </div>
         </div>
-        <time className="font-display text-2xl text-white">{currentDate}</time>
+        <time className="font-display font-bold text-2xl text-black">{currentDate}</time>
       </div>
 
       {/* Modificar la sección de la tabla */}

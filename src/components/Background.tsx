@@ -5,7 +5,7 @@ export default function Background() {
     <div className="fixed inset-0 -z-10">
       <Image
         alt="Background Pattern"
-        src="/Sprinkle.svg"
+        src="/background.jpg"
         quality={100}
         fill
         priority

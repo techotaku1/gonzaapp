@@ -30,7 +30,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
-      <body className="min-h-screen bg-gradient-to-b from-[#0e2a47] to-[#00459e]">
+      <body>
         <Background />
         {children}
       </body>

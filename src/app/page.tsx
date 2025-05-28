@@ -12,7 +12,7 @@ export default async function HomePage() {
     <main className="container mx-auto h-screen p-4">
       {' '}
       {/* Reducido el padding */}
-      <h1 className="font-display mb-2 text-3xl font-bold tracking-tight text-white">
+      <h1 className="font-display mb-2 text-3xl font-bold tracking-tight text-black">
         Registro de Transacciones
       </h1>
       <TransactionTable
