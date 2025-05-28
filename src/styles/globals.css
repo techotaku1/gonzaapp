@@ -116,7 +116,7 @@
   }
 
   .table-header {
-    @apply border-r border-gray-400 bg-gray-50;
+    position: sticky;
     height: 2rem;
     line-height: 2rem;
     padding: 0.15rem 0.5rem;
@@ -125,10 +125,8 @@
     color: black;
     text-align: center;
     vertical-align: middle;
-    border-bottom: 2px solid #e5e7eb;
     box-sizing: border-box;
     min-width: min-content;
-    position: sticky;
     top: 0;
     z-index: 10;
     background-color: #f9fafb;
@@ -136,7 +134,7 @@
 
   /* Contenedor de tabla con scroll */
   .table-container {
-    @apply relative overflow-hidden rounded-lg bg-white shadow-md;
+    @apply relative overflow-hidden rounded-lg shadow-md;
     height: calc(92vh - 120px); /* Aumentado el espacio disponible */
   }
 
@@ -153,7 +151,7 @@
   }
 
   .table-checkbox-cell {
-    @apply border-r border-gray-400 px-2;
+    @apply border-r border-gray-400;
     height: 1.5rem;
     line-height: 1.5rem;
     display: table-cell;

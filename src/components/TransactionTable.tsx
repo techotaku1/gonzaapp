@@ -70,7 +70,7 @@ const emitidoPorOptions = [
   'No Emitir',
 ] as const;
 
-type EmitidoPorOption = typeof emitidoPorOptions[number];
+type EmitidoPorOption = (typeof emitidoPorOptions)[number];
 
 export default function TransactionTable({
   initialData,
@@ -818,7 +818,7 @@ export default function TransactionTable({
                             handleRowSelect(row.id, row.precioNeto)
                           }
                           disabled={row.pagado}
-                          className="h-4 w-4 rounded border-gray-300 disabled:opacity-50"
+                          className="h-4 w-4 rounded border-gray-400 disabled:opacity-50"
                         />
                       </div>
                     </td>
