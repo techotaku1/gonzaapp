@@ -2,13 +2,13 @@ export default function HeaderTitles() {
   const tableHeaders = [
     'Fecha',
     'Trámite',
-    'Seleccionar',
+    'Boleta',
     'Pagado',
     'Boletas Registradas',
     'Emitido Por',
     'Placa',
-    'Tipo Doc',
-    'Número Doc',
+    'Documento',
+    '#',
     'Nombre',
     'Cilindraje',
     'Tipo Vehículo',
@@ -26,7 +26,7 @@ export default function HeaderTitles() {
   ];
 
   return (
-    <thead>
+    <thead className="sticky-header">
       <tr className="bg-gray-50">
         {tableHeaders.map((header) => (
           <th

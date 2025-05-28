@@ -120,16 +120,18 @@
     height: 2rem;
     line-height: 2rem;
     padding: 0.15rem 0.5rem;
-    position: relative;
     font-family: var(--font-table-text);
     font-weight: 700;
     color: black;
     text-align: center;
     vertical-align: middle;
     border-bottom: 2px solid #e5e7eb;
-    display: table-cell;
     box-sizing: border-box;
     min-width: min-content;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f9fafb;
   }
 
   /* Contenedor de tabla con scroll */
@@ -139,13 +141,15 @@
   }
 
   .table-scroll-container {
-    @apply overflow-x-auto overflow-y-auto;
+    @apply overflow-x-auto;
     height: 100%;
+    position: relative;
   }
 
   .table-wrapper {
-    @apply relative w-full;
-    border-collapse: collapse;
+    @apply w-full;
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
   .table-checkbox-cell {
