@@ -120,7 +120,7 @@
     height: 2rem;
     line-height: 2rem;
     padding: 0.15rem 0.5rem;
-    position: static; /* Cambiado de relative a static */
+    position: relative;
     font-family: var(--font-table-text);
     font-weight: 700;
     color: black;
@@ -130,6 +130,22 @@
     display: table-cell;
     box-sizing: border-box;
     min-width: min-content;
+  }
+
+  /* Contenedor de tabla con scroll */
+  .table-container {
+    @apply relative overflow-hidden rounded-lg bg-white shadow-md;
+    height: calc(92vh - 120px); /* Aumentado el espacio disponible */
+  }
+
+  .table-scroll-container {
+    @apply overflow-x-auto overflow-y-auto;
+    height: 100%;
+  }
+
+  .table-wrapper {
+    @apply relative w-full;
+    border-collapse: collapse;
   }
 
   .table-checkbox-cell {
@@ -207,22 +223,43 @@
   .emitido-por-panel {
     @apply bg-blue-100 text-blue-800;
   }
-  .emitido-por-previ {
-    @apply bg-green-100 text-green-800;
+  .emitido-por-panel-juan {
+    @apply bg-sky-100 text-sky-800; /* Nuevo color para Panel Juan */
   }
-  .emitido-por-bolivar {
-    @apply bg-yellow-100 text-yellow-800;
+  .emitido-por-evelio {
+    @apply bg-emerald-100 text-emerald-800; /* Cambiado de amber a emerald para mejor distinción */
   }
-  .emitido-por-axa {
+  .emitido-por-previ-usuario {
     @apply bg-purple-100 text-purple-800;
   }
-  .emitido-por-mundial {
+  .emitido-por-previ-publica {
+    @apply bg-rose-100 text-rose-800;
+  }
+  .emitido-por-previ-sonia {
+    @apply bg-amber-100 text-amber-800;
+  }
+  .emitido-por-bolivar {
+    @apply bg-lime-100 text-lime-800;
+  }
+  .emitido-por-axa-sebas {
+    @apply bg-cyan-100 text-cyan-800;
+  }
+  .emitido-por-axa-yuli {
+    @apply bg-pink-100 text-pink-800;
+  }
+  .emitido-por-axa-gloria {
+    @apply bg-indigo-100 text-indigo-800;
+  }
+  .emitido-por-axa-maryuri {
     @apply bg-orange-100 text-orange-800;
+  }
+  .emitido-por-mundial-nave {
+    @apply bg-teal-100 text-teal-800;
+  }
+  .emitido-por-mundial-fel {
+    @apply bg-violet-100 text-violet-800;
   }
   .emitido-por-no-emitir {
     @apply bg-red-100 text-red-800;
-  }
-  .emitido-por-panel-evelio {
-    @apply bg-amber-100 text-amber-800;
   }
 }

@@ -1,42 +1,38 @@
-export const tableHeaders = [
-  'Fecha',
-  'Trámite',
-  'Boleta',
-  'Pagado',
-  'Boletas Registradas',
-  'Emitido Por',
-  'Placa',
-  'Documento',
-  '#',
-  'Nombre',
-  'Cilindraje',
-  'Tipo Vehículo',
-  'Celular',
-  'Ciudad',
-  'Asesor',
-  'Novedad',
-  'Precio Neto',
-  'Tarifa Servicio',
-  'Comisión Extra',
-  '4x1000',
-  'Ganancia Bruta',
-  'Rappi',
-  'Observaciones',
-] as const;
-
 export default function HeaderTitles() {
+  const tableHeaders = [
+    'Fecha',
+    'Trámite',
+    'Seleccionar',
+    'Pagado',
+    'Boletas Registradas',
+    'Emitido Por',
+    'Placa',
+    'Tipo Doc',
+    'Número Doc',
+    'Nombre',
+    'Cilindraje',
+    'Tipo Vehículo',
+    'Celular',
+    'Ciudad',
+    'Asesor',
+    'Novedad',
+    'Precio Neto',
+    'Tarifa Servicio',
+    'Com Extra',
+    '4x1000',
+    'Ganancia Bruta',
+    'Rappi',
+    'Observaciones',
+  ];
+
   return (
-    <thead className="bg-gray-50 text-[16px] text-black">
-      <tr>
+    <thead>
+      <tr className="bg-gray-50">
         {tableHeaders.map((header) => (
           <th
             key={header}
             scope="col"
-            style={{
-              minWidth: header === 'Trámite' ? '80px' : 'auto',
-              position: 'relative',
-            }}
-            className="table-header relative border-t border-r border-gray-200 whitespace-nowrap"
+            className="table-header px-2 py-2 whitespace-nowrap"
           >
             {header}
           </th>

@@ -409,12 +409,18 @@ export default function TransactionTable({
       ] as const;
 
       const getEmitidoPorClass = (value: string): string => {
+        if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
         if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
-        if (value.includes('Panel')) return 'emitido-por-panel';
-        if (value.includes('Previ')) return 'emitido-por-previ';
+        if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
+        if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
+        if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
         if (value.includes('Bolivar')) return 'emitido-por-bolivar';
-        if (value.includes('Axa')) return 'emitido-por-axa';
-        if (value.includes('Mundial')) return 'emitido-por-mundial';
+        if (value.includes('Axa Sebas')) return 'emitido-por-axa-sebas';
+        if (value.includes('Axa Yuli')) return 'emitido-por-axa-yuli';
+        if (value.includes('Axa gloria')) return 'emitido-por-axa-gloria';
+        if (value.includes('Axa Maryuri')) return 'emitido-por-axa-maryuri';
+        if (value.includes('Mundial nave')) return 'emitido-por-mundial-nave';
+        if (value.includes('Mundial fel')) return 'emitido-por-mundial-fel';
         if (value.includes('No Emitir')) return 'emitido-por-no-emitir';
         return '';
       };
@@ -722,9 +728,9 @@ export default function TransactionTable({
       </div>
 
       {/* Modificar la sección de la tabla */}
-      <div className="overflow-hidden rounded-lg bg-white shadow-md">
-        <div className="max-h-[calc(100vh-250px)] overflow-y-auto">
-          <table className="w-full table-auto border-separate border-spacing-0">
+      <div className="table-container">
+        <div className="table-scroll-container">
+          <table className="table-wrapper">
             <HeaderTitles />
             <tbody>
               {paginatedData.map((row, index) => {
