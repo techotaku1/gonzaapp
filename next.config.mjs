@@ -1,3 +1,5 @@
+import "./src/env.js";
+
 // @ts-check
 
 /**
