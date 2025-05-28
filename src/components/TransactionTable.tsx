@@ -36,6 +36,42 @@ function getCurrentDate(): string {
   return formatter.format(today).toUpperCase();
 }
 
+// Add this function at the component level, before the TransactionTable function
+const getEmitidoPorClass = (value: string): string => {
+  if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
+  if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
+  if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
+  if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
+  if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
+  if (value.includes('Bolivar')) return 'emitido-por-bolivar';
+  if (value.includes('Axa Sebas')) return 'emitido-por-axa-sebas';
+  if (value.includes('Axa Yuli')) return 'emitido-por-axa-yuli';
+  if (value.includes('Axa gloria')) return 'emitido-por-axa-gloria';
+  if (value.includes('Axa Maryuri')) return 'emitido-por-axa-maryuri';
+  if (value.includes('Mundial nave')) return 'emitido-por-mundial-nave';
+  if (value.includes('Mundial fel')) return 'emitido-por-mundial-fel';
+  if (value.includes('No Emitir')) return 'emitido-por-no-emitir';
+  return '';
+};
+
+const emitidoPorOptions = [
+  'Panel Juan',
+  'Panel Evelio',
+  'Previ usuario',
+  'Previ pública',
+  'Previ Sonia',
+  'Bolivar suj',
+  'Axa Sebas',
+  'Axa Yuli',
+  'Axa gloria',
+  'Axa Maryuri',
+  'Mundial nave',
+  'Mundial fel',
+  'No Emitir',
+] as const;
+
+type EmitidoPorOption = typeof emitidoPorOptions[number];
+
 export default function TransactionTable({
   initialData,
   onUpdateRecordAction,
@@ -392,39 +428,6 @@ export default function TransactionTable({
         }
       };
 
-      const emitidoPorOptions = [
-        'Panel Juan',
-        'Panel Evelio', // Añadida nueva opción
-        'Previ usuario',
-        'Previ pública',
-        'Previ Sonia',
-        'Bolivar suj',
-        'Axa Sebas',
-        'Axa Yuli',
-        'Axa gloria',
-        'Axa Maryuri',
-        'Mundial nave',
-        'Mundial fel',
-        'No Emitir',
-      ] as const;
-
-      const getEmitidoPorClass = (value: string): string => {
-        if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
-        if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
-        if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
-        if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
-        if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
-        if (value.includes('Bolivar')) return 'emitido-por-bolivar';
-        if (value.includes('Axa Sebas')) return 'emitido-por-axa-sebas';
-        if (value.includes('Axa Yuli')) return 'emitido-por-axa-yuli';
-        if (value.includes('Axa gloria')) return 'emitido-por-axa-gloria';
-        if (value.includes('Axa Maryuri')) return 'emitido-por-axa-maryuri';
-        if (value.includes('Mundial nave')) return 'emitido-por-mundial-nave';
-        if (value.includes('Mundial fel')) return 'emitido-por-mundial-fel';
-        if (value.includes('No Emitir')) return 'emitido-por-no-emitir';
-        return '';
-      };
-
       // En la sección donde se renderiza el select de emitidoPor:
       if (field === 'emitidoPor') {
         return (
@@ -435,7 +438,7 @@ export default function TransactionTable({
             title={value as string}
           >
             <option value="">Seleccionar...</option>
-            {emitidoPorOptions.map((option) => (
+            {emitidoPorOptions.map((option: EmitidoPorOption) => (
               <option
                 key={option}
                 value={option}
@@ -593,15 +596,19 @@ export default function TransactionTable({
     </div>
   );
 
-  const handleZoomOut = () => {
-    const newZoom = Math.max(zoom - 0.1, 0.5);
-    setZoom(newZoom);
-  };
+  const handleZoomOut = useCallback(() => {
+    setZoom((prev) => {
+      const newZoom = Math.max(prev - 0.1, 0.5);
+      return newZoom;
+    });
+  }, []);
 
-  const handleZoomIn = () => {
-    const newZoom = Math.min(zoom + 0.1, 1);
-    setZoom(newZoom);
-  };
+  const handleZoomIn = useCallback(() => {
+    setZoom((prev) => {
+      const newZoom = Math.min(prev + 0.1, 1);
+      return newZoom;
+    });
+  }, []);
 
   const handleDeleteModeToggle = () => {
     setIsDeleteMode(!isDeleteMode);
@@ -724,13 +731,35 @@ export default function TransactionTable({
             </button>
           </div>
         </div>
-        <time className="font-display font-bold text-2xl text-black">{currentDate}</time>
+        <time className="font-display text-2xl font-bold text-black">
+          {currentDate}
+        </time>
       </div>
 
       {/* Modificar la sección de la tabla */}
-      <div className="table-container">
-        <div className="table-scroll-container">
-          <table className="table-wrapper">
+      <div
+        className="table-container"
+        style={{
+          backgroundImage: 'url("/background-table.jpg")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          borderRadius: '8px',
+          padding: '1rem',
+        }}
+      >
+        <div
+          className="table-scroll-container"
+          style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'left top',
+            width: `${(1 / zoom) * 100}%`,
+            height: `${(1 / zoom) * 100}%`,
+            overflowX: zoom === 1 ? 'auto' : 'scroll',
+            overflowY: 'auto',
+          }}
+        >
+          <table className="w-full text-left text-sm text-gray-500">
             <HeaderTitles />
             <tbody>
               {paginatedData.map((row, index) => {
@@ -752,7 +781,9 @@ export default function TransactionTable({
                 return (
                   <tr
                     key={row.id}
-                    className="border-b bg-white hover:bg-gray-50"
+                    className={`border-b hover:bg-gray-50 ${
+                      row.pagado ? getEmitidoPorClass(row.emitidoPor) : ''
+                    }`}
                   >
                     {isDeleteMode && (
                       <td className="px-0.5 py-0.5 whitespace-nowrap">
@@ -936,9 +967,7 @@ export default function TransactionTable({
                         />
                       </div>
                     </td>
-                    <td
-                      className={`table-cell whitespace-nowrap ${index === 22 ? 'border-r-0' : ''}`}
-                    >
+                    <td className="table-cell whitespace-nowrap">
                       {renderInput(rowWithFormulas, 'observaciones')}
                     </td>
                   </tr>
