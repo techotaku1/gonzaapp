@@ -675,7 +675,7 @@ export default function TransactionTable({
             </span>
             <span className="absolute right-0 flex h-full w-10 transform items-center justify-center rounded-lg bg-green-500 transition-all duration-300 group-hover:w-full group-hover:translate-x-0">
               <svg
-                className="w-8 text-white active:scale-75"
+                className="w-8 text-white group-active:scale-[0.8]" // Cambiado de active:scale-[0.8] a group-active:scale-[0.8]
                 fill="none"
                 height="24"
                 stroke="currentColor"
@@ -829,13 +829,15 @@ export default function TransactionTable({
                     }`}
                   >
                     {isDeleteMode && (
-                      <td className="px-0.5 py-0.5 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={rowsToDelete.has(row.id)}
-                          onChange={() => handleDeleteSelect(row.id)}
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
+                      <td className="table-cell h-full border-r border-gray-400 px-0.5 py-0.5">
+                        <div className="flex h-full items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={rowsToDelete.has(row.id)}
+                            onChange={() => handleDeleteSelect(row.id)}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                        </div>
                       </td>
                     )}
                     <td

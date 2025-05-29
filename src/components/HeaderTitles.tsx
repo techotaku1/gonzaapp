@@ -37,7 +37,7 @@ export default function HeaderTitles({
             scope="col"
             className="table-header relative w-10 border-r border-b border-gray-400 bg-white text-center whitespace-nowrap"
           >
-            <div className="flex h-full items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center">
               <svg
                 className="h-4 w-4 text-gray-600"
                 fill="none"
