@@ -12,8 +12,15 @@ export default function ExportDateRangeModal({
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const startDate = new Date(formData.get('startDate') as string);
-    const endDate = new Date(formData.get('endDate') as string);
+
+    // Obtener las fechas del formulario y ajustarlas a Colombia
+    const startInput = formData.get('startDate') as string;
+    const endInput = formData.get('endDate') as string;
+
+    // Crear fechas en la zona horaria de Colombia
+    const startDate = new Date(`${startInput}T00:00:00`);
+    const endDate = new Date(`${endInput}T23:59:59`);
+
     onExport(startDate, endDate);
     setIsOpen(false);
   };

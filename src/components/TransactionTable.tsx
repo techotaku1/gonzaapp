@@ -669,15 +669,24 @@ export default function TransactionTable({
   const handleExport = useCallback(
     (startDate: Date, endDate: Date) => {
       try {
+        // Configurar las fechas para Colombia (UTC-5)
+        const colombiaTimeZone = 'America/Bogota';
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
 
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
+        // Filtrar los datos usando las fechas en la zona horaria de Colombia
         const filteredData = data.filter((record) => {
+          // Convertir la fecha del registro a fecha Colombia
           const recordDate = new Date(record.fecha);
-          return recordDate >= start && recordDate <= end;
+          const colombiaDate = new Date(
+            recordDate.toLocaleString('en-US', { timeZone: colombiaTimeZone })
+          );
+
+          // Usar las fechas en la zona horaria correcta
+          return colombiaDate >= start && colombiaDate <= end;
         });
 
         if (filteredData.length === 0) {
@@ -687,9 +696,13 @@ export default function TransactionTable({
           return;
         }
 
+        // Ordenar los datos por fecha
+        const sortedData = [...filteredData].sort(
+          (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+        );
+
         // Transformar los datos aplicando las fórmulas antes de exportar
-        const excelData = filteredData.map((record) => {
-          // Calcular las fórmulas para cada registro
+        const excelData = sortedData.map((record) => {
           const {
             precioNetoAjustado,
             tarifaServicioAjustada,
@@ -697,8 +710,18 @@ export default function TransactionTable({
             gananciaBruta,
           } = calculateFormulas(record);
 
+          // Formatear la fecha en la zona horaria de Colombia
+          const fecha = new Date(record.fecha);
+          const fechaColombia = new Date(
+            fecha.toLocaleString('en-US', { timeZone: colombiaTimeZone })
+          );
+
           return {
-            Fecha: new Date(record.fecha).toLocaleString('es-CO'),
+            Fecha: fechaColombia.toLocaleString('es-CO', {
+              dateStyle: 'short',
+              timeStyle: 'short',
+              timeZone: colombiaTimeZone,
+            }),
             Trámite: record.tramite,
             Pagado: record.pagado ? 'Sí' : 'No',
             'Boletas Registradas': record.boletasRegistradas,
@@ -713,14 +736,11 @@ export default function TransactionTable({
             Ciudad: record.ciudad,
             Asesor: record.asesor,
             Novedad: record.novedad,
-            'Precio Neto': precioNetoAjustado, // Usar valor ajustado
+            'Precio Neto': precioNetoAjustado,
             'Comisión Extra': record.comisionExtra ? 'Sí' : 'No',
-            'Tarifa Servicio': tarifaServicioAjustada, // Usar valor ajustado
-            '4x1000': impuesto4x1000, // Usar valor calculado
-            'Ganancia Bruta': gananciaBruta, // Usar valor calculado
-            'Comisión Rappi': record.rappi
-              ? `${record.precioNeto * 0.01}`
-              : '0',
+            'Tarifa Servicio': tarifaServicioAjustada,
+            '4x1000': impuesto4x1000,
+            'Ganancia Bruta': gananciaBruta,
             Rappi: record.rappi ? 'Sí' : 'No',
             Observaciones: record.observaciones,
           };
@@ -729,15 +749,15 @@ export default function TransactionTable({
         // Crear una nueva hoja de trabajo
         const ws = XLSX.utils.json_to_sheet(excelData);
 
-        // Ajustar el ancho de las columnas
+        // Ajustar el ancho de las columnas según los HeaderTitles
         const colWidths = [
           { wch: 20 }, // Fecha
-          { wch: 10 }, // Trámite
+          { wch: 15 }, // Trámite
           { wch: 8 }, // Pagado
-          { wch: 10 }, // Boletas Registradas
+          { wch: 15 }, // Boletas Registradas
           { wch: 15 }, // Emitido Por
           { wch: 10 }, // Placa
-          { wch: 8 }, // Tipo Documento
+          { wch: 12 }, // Tipo Documento
           { wch: 15 }, // Número Documento
           { wch: 30 }, // Nombre
           { wch: 10 }, // Cilindraje
@@ -745,14 +765,14 @@ export default function TransactionTable({
           { wch: 12 }, // Celular
           { wch: 15 }, // Ciudad
           { wch: 20 }, // Asesor
-          { wch: 30 }, // Novedad
+          { wch: 20 }, // Novedad
           { wch: 12 }, // Precio Neto
           { wch: 12 }, // Comisión Extra
           { wch: 12 }, // Tarifa Servicio
           { wch: 10 }, // 4x1000
           { wch: 12 }, // Ganancia Bruta
           { wch: 8 }, // Rappi
-          { wch: 50 }, // Observaciones
+          { wch: 40 }, // Observaciones
         ];
 
         ws['!cols'] = colWidths;
@@ -761,9 +781,24 @@ export default function TransactionTable({
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Registros');
 
-        // Generar el archivo Excel
-        const fileName = `registros_${start.toISOString().split('T')[0]}_${end.toISOString().split('T')[0]}.xlsx`;
+        // Generar el nombre del archivo con fechas en formato Colombia
+        const formatDateForFileName = (date: Date) => {
+          return date
+            .toLocaleDateString('es-CO', {
+              timeZone: colombiaTimeZone,
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            })
+            .replace(/\//g, '-');
+        };
+
+        const fileName = `registros_${formatDateForFileName(start)}_a_${formatDateForFileName(end)}.xlsx`;
         XLSX.writeFile(wb, fileName);
+
+        console.log(
+          `Exportados ${excelData.length} registros del ${formatDateForFileName(start)} al ${formatDateForFileName(end)}`
+        );
       } catch (error) {
         console.error('Error al exportar:', error);
         if (error instanceof Error) {
