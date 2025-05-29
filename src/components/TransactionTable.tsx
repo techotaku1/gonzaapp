@@ -687,31 +687,44 @@ export default function TransactionTable({
           return;
         }
 
-        // Transformar los datos al formato deseado para Excel
-        const excelData = filteredData.map((record) => ({
-          Fecha: new Date(record.fecha).toLocaleString('es-CO'),
-          Trámite: record.tramite,
-          Pagado: record.pagado ? 'Sí' : 'No',
-          'Boletas Registradas': record.boletasRegistradas,
-          'Emitido Por': record.emitidoPor,
-          Placa: record.placa,
-          'Tipo Documento': record.tipoDocumento,
-          'Número Documento': record.numeroDocumento,
-          Nombre: record.nombre,
-          Cilindraje: record.cilindraje,
-          'Tipo Vehículo': record.tipoVehiculo,
-          Celular: record.celular,
-          Ciudad: record.ciudad,
-          Asesor: record.asesor,
-          Novedad: record.novedad,
-          'Precio Neto': record.precioNeto,
-          'Comisión Extra': record.comisionExtra ? 'Sí' : 'No',
-          'Tarifa Servicio': record.tarifaServicio,
-          '4x1000': record.impuesto4x1000,
-          'Ganancia Bruta': record.gananciaBruta,
-          Rappi: record.rappi ? 'Sí' : 'No',
-          Observaciones: record.observaciones,
-        }));
+        // Transformar los datos aplicando las fórmulas antes de exportar
+        const excelData = filteredData.map((record) => {
+          // Calcular las fórmulas para cada registro
+          const {
+            precioNetoAjustado,
+            tarifaServicioAjustada,
+            impuesto4x1000,
+            gananciaBruta,
+          } = calculateFormulas(record);
+
+          return {
+            Fecha: new Date(record.fecha).toLocaleString('es-CO'),
+            Trámite: record.tramite,
+            Pagado: record.pagado ? 'Sí' : 'No',
+            'Boletas Registradas': record.boletasRegistradas,
+            'Emitido Por': record.emitidoPor,
+            Placa: record.placa.toUpperCase(),
+            'Tipo Documento': record.tipoDocumento,
+            'Número Documento': record.numeroDocumento,
+            Nombre: record.nombre,
+            Cilindraje: record.cilindraje,
+            'Tipo Vehículo': record.tipoVehiculo,
+            Celular: record.celular,
+            Ciudad: record.ciudad,
+            Asesor: record.asesor,
+            Novedad: record.novedad,
+            'Precio Neto': precioNetoAjustado, // Usar valor ajustado
+            'Comisión Extra': record.comisionExtra ? 'Sí' : 'No',
+            'Tarifa Servicio': tarifaServicioAjustada, // Usar valor ajustado
+            '4x1000': impuesto4x1000, // Usar valor calculado
+            'Ganancia Bruta': gananciaBruta, // Usar valor calculado
+            'Comisión Rappi': record.rappi
+              ? `${record.precioNeto * 0.01}`
+              : '0',
+            Rappi: record.rappi ? 'Sí' : 'No',
+            Observaciones: record.observaciones,
+          };
+        });
 
         // Crear una nueva hoja de trabajo
         const ws = XLSX.utils.json_to_sheet(excelData);
