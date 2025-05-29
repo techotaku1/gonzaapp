@@ -7,6 +7,8 @@ import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
 import '~/styles/spinner.css';
+import '~/styles/buttonLoader.css';
+import '~/styles/deleteButton.css';
 
 import HeaderTitles from './HeaderTitles';
 
@@ -40,6 +42,7 @@ function getCurrentDate(): string {
 const getEmitidoPorClass = (value: string): string => {
   if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
   if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
+  if (value.includes('Panel William')) return 'emitido-por-panel-william'; // Nueva condición
   if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
   if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
   if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
@@ -57,6 +60,7 @@ const getEmitidoPorClass = (value: string): string => {
 const emitidoPorOptions = [
   'Panel Juan',
   'Panel Evelio',
+  'Panel William', // Nueva opción añadida
   'Previ usuario',
   'Previ pública',
   'Previ Sonia',
@@ -664,28 +668,67 @@ export default function TransactionTable({
         <div className="flex items-center gap-4">
           <button
             onClick={addNewRow}
-            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500"
           >
-            Agregar Registro
+            <span className="ml-8 transform font-semibold text-white transition-all duration-300 group-hover:translate-x-20 group-hover:opacity-0">
+              Agregar
+            </span>
+            <span className="absolute right-0 flex h-full w-10 transform items-center justify-center rounded-lg bg-green-500 transition-all duration-300 group-hover:w-full group-hover:translate-x-0">
+              <svg
+                className="w-8 text-white active:scale-75"
+                fill="none"
+                height="24"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                width="24"
+              >
+                <line x1="12" x2="12" y1="5" y2="19" />
+                <line x1="5" x2="19" y1="12" y2="12" />
+              </svg>
+            </span>
           </button>
-          <button
-            onClick={handleDeleteModeToggle}
-            className={`rounded px-4 py-2 text-white ${
-              isDeleteMode
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-gray-500 hover:bg-gray-600'
-            }`}
-          >
-            {isDeleteMode ? 'Cancelar' : 'Eliminar Registros'}
-          </button>
-          {isDeleteMode && rowsToDelete.size > 0 && (
-            <button
-              onClick={handleDeleteSelected}
-              className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-            >
-              Eliminar ({rowsToDelete.size})
+
+          <div className="flex items-center gap-2">
+            <button onClick={handleDeleteModeToggle} className="delete-button">
+              <span className="text">
+                {isDeleteMode ? 'Cancelar' : 'Eliminar'}
+              </span>
+              <span className="icon">
+                {isDeleteMode ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M3 6v18h18v-18h-18zm5 14c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm4-18v2h-20v-2h5.711c.9 0 1.631-1.099 1.631-2h5.315c0 .901.73 2 1.631 2h5.712z" />
+                  </svg>
+                )}
+              </span>
             </button>
-          )}
+
+            {isDeleteMode && rowsToDelete.size > 0 && (
+              <button
+                onClick={handleDeleteSelected}
+                className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+              >
+                Eliminar ({rowsToDelete.size})
+              </button>
+            )}
+          </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={handleSaveChanges}
@@ -760,7 +803,7 @@ export default function TransactionTable({
           }}
         >
           <table className="w-full text-left text-sm text-gray-500">
-            <HeaderTitles />
+            <HeaderTitles isDeleteMode={isDeleteMode} />
             <tbody>
               {paginatedData.map((row, index) => {
                 const {
