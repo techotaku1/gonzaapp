@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
+import * as XLSX from 'xlsx';
+
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
@@ -10,6 +12,7 @@ import '~/styles/spinner.css';
 import '~/styles/buttonLoader.css';
 import '~/styles/deleteButton.css';
 
+import ExportDateRangeModal from './ExportDateRangeModal';
 import HeaderTitles from './HeaderTitles';
 
 interface SaveResult {
@@ -94,6 +97,7 @@ export default function TransactionTable({
   const [zoom, setZoom] = useState(1);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -662,6 +666,103 @@ export default function TransactionTable({
     [handleInputChange]
   );
 
+  const handleExport = useCallback(
+    (startDate: Date, endDate: Date) => {
+      try {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+
+        const filteredData = data.filter((record) => {
+          const recordDate = new Date(record.fecha);
+          return recordDate >= start && recordDate <= end;
+        });
+
+        if (filteredData.length === 0) {
+          alert(
+            'No hay datos para exportar en el rango de fechas seleccionado'
+          );
+          return;
+        }
+
+        // Transformar los datos al formato deseado para Excel
+        const excelData = filteredData.map((record) => ({
+          Fecha: new Date(record.fecha).toLocaleString('es-CO'),
+          Trámite: record.tramite,
+          Pagado: record.pagado ? 'Sí' : 'No',
+          'Boletas Registradas': record.boletasRegistradas,
+          'Emitido Por': record.emitidoPor,
+          Placa: record.placa,
+          'Tipo Documento': record.tipoDocumento,
+          'Número Documento': record.numeroDocumento,
+          Nombre: record.nombre,
+          Cilindraje: record.cilindraje,
+          'Tipo Vehículo': record.tipoVehiculo,
+          Celular: record.celular,
+          Ciudad: record.ciudad,
+          Asesor: record.asesor,
+          Novedad: record.novedad,
+          'Precio Neto': record.precioNeto,
+          'Comisión Extra': record.comisionExtra ? 'Sí' : 'No',
+          'Tarifa Servicio': record.tarifaServicio,
+          '4x1000': record.impuesto4x1000,
+          'Ganancia Bruta': record.gananciaBruta,
+          Rappi: record.rappi ? 'Sí' : 'No',
+          Observaciones: record.observaciones,
+        }));
+
+        // Crear una nueva hoja de trabajo
+        const ws = XLSX.utils.json_to_sheet(excelData);
+
+        // Ajustar el ancho de las columnas
+        const colWidths = [
+          { wch: 20 }, // Fecha
+          { wch: 10 }, // Trámite
+          { wch: 8 }, // Pagado
+          { wch: 10 }, // Boletas Registradas
+          { wch: 15 }, // Emitido Por
+          { wch: 10 }, // Placa
+          { wch: 8 }, // Tipo Documento
+          { wch: 15 }, // Número Documento
+          { wch: 30 }, // Nombre
+          { wch: 10 }, // Cilindraje
+          { wch: 15 }, // Tipo Vehículo
+          { wch: 12 }, // Celular
+          { wch: 15 }, // Ciudad
+          { wch: 20 }, // Asesor
+          { wch: 30 }, // Novedad
+          { wch: 12 }, // Precio Neto
+          { wch: 12 }, // Comisión Extra
+          { wch: 12 }, // Tarifa Servicio
+          { wch: 10 }, // 4x1000
+          { wch: 12 }, // Ganancia Bruta
+          { wch: 8 }, // Rappi
+          { wch: 50 }, // Observaciones
+        ];
+
+        ws['!cols'] = colWidths;
+
+        // Crear un nuevo libro de trabajo
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+
+        // Generar el archivo Excel
+        const fileName = `registros_${start.toISOString().split('T')[0]}_${end.toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+      } catch (error) {
+        console.error('Error al exportar:', error);
+        if (error instanceof Error) {
+          alert(`Error al exportar los datos: ${error.message}`);
+        } else {
+          alert('Error al exportar los datos');
+        }
+      }
+    },
+    [data]
+  );
+
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
@@ -753,31 +854,44 @@ export default function TransactionTable({
                 <div className="dot-spinner__dot" />
               </div>
             )}
-          </div>
-          <div className="ml-4 flex items-center gap-2">
             <button
-              onClick={handleZoomOut}
-              className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
-              title="Reducir zoom"
+              onClick={() => setIsExportModalOpen(true)}
+              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
             >
-              -
+              Exportar a Excel
             </button>
-            <span className="text-sm text-black">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={handleZoomIn}
-              className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
-              title="Aumentar zoom"
-            >
-              +
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleZoomOut}
+                className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
+                title="Reducir zoom"
+              >
+                -
+              </button>
+              <span className="text-sm text-black">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={handleZoomIn}
+                className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
+                title="Aumentar zoom"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
         <time className="font-display text-2xl font-bold text-black">
           {currentDate}
         </time>
       </div>
+
+      {/* Modal de exportación por rango de fechas */}
+      <ExportDateRangeModal
+        isOpen={isExportModalOpen}
+        setIsOpen={setIsExportModalOpen}
+        onExport={handleExport}
+      />
 
       {/* Modificar la sección de la tabla */}
       <div
