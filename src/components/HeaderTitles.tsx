@@ -35,7 +35,7 @@ export default function HeaderTitles({
         {isDeleteMode && (
           <th
             scope="col"
-            className="table-header relative w-10 border-r border-b border-gray-400 bg-white text-center whitespace-nowrap"
+            className="border-r border-b table-header relative w-10 bg-white text-center whitespace-nowrap"
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <svg
@@ -58,7 +58,7 @@ export default function HeaderTitles({
           <th
             key={header}
             scope="col"
-            className="table-header relative border-r border-b border-gray-400 bg-white whitespace-nowrap"
+            className="border-r border-b table-header relative bg-white whitespace-nowrap"
           >
             {header}
           </th>

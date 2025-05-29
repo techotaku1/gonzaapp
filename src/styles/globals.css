@@ -152,16 +152,17 @@
 
   .table-checkbox-cell {
     @apply border-r border-gray-400;
-    height: 1.5rem;
-    line-height: 1.5rem;
+    height: 100%;
     display: table-cell;
     vertical-align: middle;
+    position: relative;
   }
 
   .table-checkbox-wrapper {
     @apply flex items-center justify-center;
     height: 1.5rem;
     min-width: 2rem;
+    position: relative;
   }
 
   .font-lexend {
