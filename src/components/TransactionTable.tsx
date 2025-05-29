@@ -79,6 +79,13 @@ const emitidoPorOptions = [
 
 type EmitidoPorOption = (typeof emitidoPorOptions)[number];
 
+// Change these type definitions to be used
+const tramiteOptions = ['SOAT'] as const;
+type _TramiteOption = (typeof tramiteOptions)[number];
+
+const tipoDocumentoOptions = ['CC', 'NIT', 'TI'] as const;
+type _TipoDocumentoOption = (typeof tipoDocumentoOptions)[number];
+
 export default function TransactionTable({
   initialData,
   onUpdateRecordAction,
@@ -151,7 +158,7 @@ export default function TransactionTable({
     const newRowId = crypto.randomUUID(); // Generar ID aquí
     const newRow: Omit<TransactionRecord, 'id'> = {
       fecha: colombiaDate,
-      tramite: '',
+      tramite: 'SOAT', // Set default value
       pagado: false,
       boleta: false,
       boletasRegistradas: 0,
@@ -496,6 +503,42 @@ export default function TransactionTable({
 
       if (field === ('placa' as keyof TransactionRecord)) {
         return renderPlacaInput();
+      }
+
+      // Add this before the return statement:
+      if (field === 'tramite') {
+        return (
+          <select
+            value={value as string}
+            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
+            className="emitido-por-select w-[70px] rounded border border-gray-400"
+            title={value as string}
+          >
+            {tramiteOptions.map((option) => (
+              <option key={option} value={option} className="text-center">
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      }
+
+      if (field === 'tipoDocumento') {
+        return (
+          <select
+            value={value as string}
+            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
+            className="emitido-por-select w-[50px] rounded border border-gray-400"
+            title={value as string}
+          >
+            <option value="">-</option>
+            {tipoDocumentoOptions.map((option) => (
+              <option key={option} value={option} className="text-center">
+                {option}
+              </option>
+            ))}
+          </select>
+        );
       }
 
       return (

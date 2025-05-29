@@ -237,6 +237,35 @@
     padding-right: 1rem;
   }
 
+  /* Estilos compartidos para todos los selects de la tabla */
+  .emitido-por-select,
+  .tramite-select,
+  .documento-select {
+    @apply flex items-center justify-center;
+    font-family: var(--font-table-text);
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: 0.65rem;
+    line-height: 1;
+    height: 1.5rem;
+    padding: 0.15rem 0.5rem;
+    color: black;
+    margin: 0 auto;
+    text-align: center;
+    text-align-last: center;
+    -moz-text-align-last: center;
+    padding-left: 0;
+    padding-right: 0;
+    text-indent: 0;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    padding-right: 1rem;
+  }
+
   /* Colores para cada opción */
   .emitido-por-panel {
     @apply bg-blue-100 text-blue-800;
