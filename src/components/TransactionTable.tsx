@@ -8,6 +8,7 @@ import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
+import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 import '~/styles/spinner.css';
 import '~/styles/buttonLoader.css';
 import '~/styles/deleteButton.css';
@@ -85,6 +86,19 @@ type _TramiteOption = (typeof tramiteOptions)[number];
 
 const tipoDocumentoOptions = ['CC', 'NIT', 'TI'] as const;
 type _TipoDocumentoOption = (typeof tipoDocumentoOptions)[number];
+
+const novedadOptions = [
+  'Inicial',
+  'Error Pasajero',
+  'Renovacion',
+  'Indeterminado',
+  'Sin Novedad',
+  'Cambio de Categoria',
+] as const;
+
+// Actualizar la definición de tipoVehiculoOptions para usar los valores del sistema de precios
+const tipoVehiculoOptions = vehicleTypes;
+type _TipoVehiculoOption = (typeof tipoVehiculoOptions)[number];
 
 export default function TransactionTable({
   initialData,
@@ -264,33 +278,61 @@ export default function TransactionTable({
         const newData = prevData.map((row) => {
           if (row.id === id) {
             const updatedRow = { ...row };
-            let newDate: Date;
 
-            switch (field) {
-              case 'fecha':
-                if (value instanceof Date) {
-                  newDate = value;
-                } else {
-                  newDate = new Date(value as string);
-                }
-                if (!isNaN(newDate.getTime())) {
-                  updatedRow[field] = newDate;
-                }
-                break;
-              case 'precioNeto':
-              case 'tarifaServicio':
-              case 'impuesto4x1000':
-              case 'gananciaBruta':
-              case 'boletasRegistradas':
-              case 'cilindraje':
-                updatedRow[field] =
-                  typeof value === 'string'
-                    ? Number(value) || 0
-                    : (value as number);
-                break;
-              default:
-                updatedRow[field] = value as never;
+            try {
+              // Update the field value first
+              switch (field) {
+                case 'fecha':
+                  if (value instanceof Date) {
+                    updatedRow[field] = value;
+                  } else {
+                    const newDate = new Date(value as string);
+                    if (!isNaN(newDate.getTime())) {
+                      updatedRow[field] = newDate;
+                    }
+                  }
+                  break;
+                case 'precioNeto':
+                case 'tarifaServicio':
+                case 'impuesto4x1000':
+                case 'gananciaBruta':
+                case 'boletasRegistradas':
+                case 'cilindraje':
+                  updatedRow[field] =
+                    typeof value === 'string'
+                      ? Number(value) || 0
+                      : (value as number);
+                  break;
+                default:
+                  updatedRow[field] = value as never;
+              }
+            } catch (err) {
+              console.error('Error updating field:', err);
+              return row;
             }
+
+            // Auto-calculate SOAT price when vehicle type changes
+            if (field === 'tipoVehiculo' || field === 'cilindraje') {
+              const updatedRow = { ...row };
+              if (field === 'tipoVehiculo') {
+                updatedRow.tipoVehiculo = value as string;
+              } else if (field === 'cilindraje') {
+                updatedRow.cilindraje = value as number;
+              }
+
+              // Calculate SOAT price when both tipoVehiculo and cilindraje are available
+              if (updatedRow.tipoVehiculo) {
+                const soatPrice = calculateSoatPrice(
+                  updatedRow.tipoVehiculo,
+                  updatedRow.cilindraje
+                );
+                if (soatPrice > 0) {
+                  updatedRow.precioNeto = soatPrice;
+                }
+              }
+              return updatedRow;
+            }
+
             return updatedRow;
           }
           return row;
@@ -533,6 +575,43 @@ export default function TransactionTable({
           >
             <option value="">-</option>
             {tipoDocumentoOptions.map((option) => (
+              <option key={option} value={option} className="text-center">
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      }
+
+      // Inside renderInput function, add these conditions before the final return:
+      if (field === 'tipoVehiculo') {
+        return (
+          <select
+            value={(value as string) || ''}
+            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
+            className="emitido-por-select w-[150px] rounded border border-gray-400"
+            title={value as string}
+          >
+            <option value="">Seleccionar...</option>
+            {tipoVehiculoOptions.map((option: string) => (
+              <option key={option} value={option} className="text-center">
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      }
+
+      if (field === 'novedad') {
+        return (
+          <select
+            value={(value as string) || ''}
+            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
+            className="emitido-por-select w-[120px] rounded border border-gray-400"
+            title={value as string}
+          >
+            <option value="">Seleccionar...</option>
+            {novedadOptions.map((option) => (
               <option key={option} value={option} className="text-center">
                 {option}
               </option>
