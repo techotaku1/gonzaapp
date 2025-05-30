@@ -470,9 +470,9 @@ export default function TransactionTable({
           case 'ciudad':
             return 'w-[70px]';
           case 'asesor':
-            return 'w-[100px]'; // Reducido de 100px
+            return 'w-[100px]';
           case 'tipoDocumento':
-            return 'w-[40px]';
+            return 'w-[70px]';
           case 'fecha':
             return 'w-[60px]';
           case 'numeroDocumento':
@@ -491,7 +491,7 @@ export default function TransactionTable({
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className={`emitido-por-select w-[105px] overflow-hidden rounded border text-ellipsis ${getEmitidoPorClass(value as string)}`}
+            className={`table-select-base w-[105px] rounded border ${getEmitidoPorClass(value as string)}`}
             title={value as string}
           >
             <option value="">Seleccionar...</option>
@@ -547,16 +547,17 @@ export default function TransactionTable({
         return renderPlacaInput();
       }
 
-      // Add this before the return statement:
-      if (field === 'tramite') {
+      // Update all select elements to use the new base class
+      if (field === 'tipoDocumento') {
         return (
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="emitido-por-select w-[70px] rounded border border-gray-400"
+            className="table-select-base w-[70px] rounded border border-gray-400"
             title={value as string}
           >
-            {tramiteOptions.map((option) => (
+            <option value="">-</option>
+            {tipoDocumentoOptions.map((option) => (
               <option key={option} value={option} className="text-center">
                 {option}
               </option>
@@ -565,16 +566,16 @@ export default function TransactionTable({
         );
       }
 
-      if (field === 'tipoDocumento') {
+      // Add this before the return statement:
+      if (field === 'tramite') {
         return (
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="emitido-por-select w-[50px] rounded border border-gray-400"
+            className="table-select-base w-[70px] rounded border border-gray-400"
             title={value as string}
           >
-            <option value="">-</option>
-            {tipoDocumentoOptions.map((option) => (
+            {tramiteOptions.map((option) => (
               <option key={option} value={option} className="text-center">
                 {option}
               </option>
@@ -589,12 +590,17 @@ export default function TransactionTable({
           <select
             value={(value as string) || ''}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="emitido-por-select w-[150px] rounded border border-gray-400"
+            className="table-select-base w-[150px] rounded border border-gray-400"
             title={value as string}
           >
             <option value="">Seleccionar...</option>
             {tipoVehiculoOptions.map((option: string) => (
-              <option key={option} value={option} className="text-center">
+              <option
+                key={option}
+                value={option}
+                className="text-center"
+                title={option} // Añadir título también a las opciones
+              >
                 {option}
               </option>
             ))}
@@ -607,12 +613,17 @@ export default function TransactionTable({
           <select
             value={(value as string) || ''}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="emitido-por-select w-[120px] rounded border border-gray-400"
-            title={value as string}
+            className="table-select-base w-[120px] rounded border border-gray-400"
+            title={value as string} // El título mostrará el texto completo al hacer hover
           >
             <option value="">Seleccionar...</option>
             {novedadOptions.map((option) => (
-              <option key={option} value={option} className="text-center">
+              <option
+                key={option}
+                value={option}
+                className="text-center"
+                title={option} // Añadir título también a las opciones
+              >
                 {option}
               </option>
             ))}

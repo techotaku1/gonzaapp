@@ -210,8 +210,8 @@
     padding: 0;
   }
 
-  /* Estilos para el select de emitidoPor */
-  .emitido-por-select {
+  /* Estilo base para todos los selects de la tabla */
+  .table-select-base {
     @apply flex items-center justify-center;
     font-family: var(--font-table-text);
     font-optical-sizing: auto;
@@ -219,54 +219,58 @@
     font-size: 0.65rem;
     line-height: 1;
     height: 1.5rem;
-    padding: 0.15rem 0.5rem;
+    padding: 0.15rem 1.5rem 0.15rem 0.5rem;
     color: black;
     margin: 0 auto;
     text-align: center;
     text-align-last: center;
     -moz-text-align-last: center;
-    padding-left: 0;
-    padding-right: 0;
     text-indent: 0;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    padding-right: 1rem;
+    background-position: right 0.25rem center;
+    background-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Estilos compartidos para todos los selects de la tabla */
-  .emitido-por-select,
-  .tramite-select,
-  .documento-select {
-    @apply flex items-center justify-center;
-    font-family: var(--font-table-text);
-    font-optical-sizing: auto;
-    font-weight: 500;
-    font-size: 0.65rem;
-    line-height: 1;
-    height: 1.5rem;
-    padding: 0.15rem 0.5rem;
-    color: black;
-    margin: 0 auto;
-    text-align: center;
-    text-align-last: center;
-    -moz-text-align-last: center;
-    padding-left: 0;
-    padding-right: 0;
-    text-indent: 0;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    padding-right: 1rem;
+  /* Estilo para las opciones del select */
+  select.table-select-base option {
+    padding: 0.15rem 0.5rem !important;
+    text-align: left !important;
+    text-overflow: ellipsis;
+    overflow: hidden;
   }
 
-  /* Colores para cada opción */
+  /* Asegurarnos que las opciones estén centradas en Firefox */
+  @-moz-document url-prefix() {
+    select.table-select-base {
+      padding-right: 1.5rem;
+      background-position: right 0.25rem center;
+    }
+    select.table-select-base option {
+      text-align: left !important;
+    }
+  }
+
+  /* Asegurarnos que las opciones estén centradas en Chrome/Safari */
+  @media screen and (-webkit-min-device-pixel-ratio: 0) {
+    select.table-select-base {
+      padding-right: 1.5rem;
+      background-position: right 0.25rem center;
+    }
+    select.table-select-base option {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+      text-align: left !important;
+    }
+  }
+
+  /* Mantener solo los estilos de color para las opciones de emitidoPor */
   .emitido-por-panel {
     @apply bg-blue-100 text-blue-800;
   }
