@@ -1,95 +1,79 @@
-Motos
-Camperos y Camionetas 0 - 9 años
-Camperos y Camionetas 10 años o más
-Autos Familiares 0 - 9 años
-Autos Familiares 10 años o más
-Autos de Negocios y Taxis 0 - 9 años
-Autos de Negocios y Taxis 10 años o más
-Buses y Busetas
-Vehículos para 6 o más Pasajeros 0 - 9 años
-Vehículos para 6 o más Pasajeros 10 años o más
-Carga o Mixto
-Oficiales Especiales
-Tarifa Clase de Vehículo Prima Contribución 52% Tasa Runt Total a Pagar
-Ciclomotor
-Menos de 100 c.c.
-De 100 a 200 c.c.
-Más de 200 c.c.
-Motocarros,tricimoto,cuadriciclos
-Motocarro 5 pasajeros
-100
-110
-120
-130
-140
-150
-$76.200 $39.600 $2.100 $117.900
-$158.800 $82.500 $2.100 $243.400
-$213.300 $110.900 $2.100 $326.300
-$497.500 $258.700 $2.100 $758.300
-$240.600 $125.100 $2.100 $367.800
-$240.600 $125.100 $2.100 $367.800
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-211
-221
-231
-$518.100 $269.400 $2.100 $789.600
-$618.900 $321.800 $2.100 $942.800
-$726.200 $377.600 $2.100 $1.105.900
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-212
-222
-232
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-$623.100 $324.000 $2.100 $949.200
-$733.400 $381.300 $2.100 $1.116.800
-$833.500 $433.400 $2.100 $1.269.000
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-511
-521
-531
-$291.600 $151.600 $2.100 $445.300
-$355.500 $184.800 $2.100 $542.400
-$415.400 $216.000 $2.100 $633.500
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-512
-522
-532
-$387.100 $201.200 $2.100 $590.400
-$442.500 $230.100 $2.100 $674.700
-$492.900 $256.300 $2.100 $751.300
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-711
-721
-731
-$174.900 $90.900 $2.100 $267.900
-$217.500 $113.100 $2.100 $332.700
-$280.900 $146.300 $2.100 $429.000
-Menos de 1.500 c.c.
-De 1.500 a 2.500 c.c.
-Más de 2.500 c.c.
-712
-722
-732
-$218.700 $113.700 $2.100 $334.500
-$269.000 $139.800 $2.100 $410.900
-$329.700 $171.400 $2.100 $503.200
-Intermunicipal Menor a 10 pasajeros
-Intermunicipal 10 o más pasajeros
-910
-920
-$414.900 $215.700 $2.100 $632.700
-810 Servicio Público Urbano $419.700 $218.200 $2.100 $640.000
-$602.400 $313.200 $2.100 $917.700
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+100	Ciclomotores	$117.900	 +$6.300
+110	Menos 100 C.C.	$243.400	 +$13.200
+120	De 100 C.C. a 200 C,.C.	$326.300	 +$17.800
+130	Más de 200 C.C.	$758.300	 -$71.800
+140	Motocarro, Tricimoto, Cuadriciclos
+$367.800	 +$20.100
+
+10 años o más
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+212	Menos de 1.500 C.C.	$949.200	-$90.100
+222	De 1.500 C.C. a 2.500 C.C.	$1.116.800	-$105.900
+232	Más de 2.500 C.C.	$1.269.000	-$120.500
+
+Menos de 10 años
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+211	Menos de 1.500 C.C	$789.600	-$74.900
+221	 De 1.500 C.C. a 2.500 C.C.	$942.800	-$89.500
+231	Más de 2.500 C.C.	$1.105.900	-$105.000
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+310	Menos de 5 toneladas	$884.700	-$83.900 
+320	De 5 a 15 toneladas	$1.277.600	 -$121.100
+330	Más de 15 toneladas	$1.615.500	 -$153.300
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+410	Menos de 1.500 C.C	 $995.500	-$94.400
+420	De 1.500 a 2.500 C.C	$1.255.100	-$119.000
+430	Más de 2.500 C.C 	$1.504.700	-$142.700
+
+10 o más años
+
+Tarifa	Cilindraje	Total	Diferencia vs 2024
+512	Menos de 1.500 C.C	$590.400	-$55.900
+522	De 1.500 a 2.500 C.C 	$674.700	-$63.900
+532	Más de 2.500 C.C	$751.300	-$71.200
+ 
+
+Menos de 10 años
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+511	Menos de 1.500 C.C	$445.300	-$42.200
+521	De 1.500 a 2.500 C.C	$542.400	-$51.200 
+531	Más de 2.500 C.C	$633.500	 -$60.000
+
+10 años o más
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+612	Menos de 2.500 C.C	$1.013.600	-$96.000
+622	2.500 C.C o más	$1.276.400	-$121.100
+ 
+
+Menos de 10 años
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+611	Menos de 2.500 C.C	$794.100	 -$75.200
+621	2.500 C.C o más	$1.063.000	 -$100.700
+
+10 años o más
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+712	Menos de 1.500 C.C	$334.500	+$18.300
+722	De 1.500 a 2.500 C.C	$410.900	+$22.300
+732	Más de 2.500 C.C	$503.200	+$27.500
+Menos de 10 años
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+711	Menos de 1.500 C.C	$267.900	+$14.600
+721	De 1.500 a 2.500 C.C	$332.700	+$18.100
+731	Más de 2.500 C.C	$429.000	+$23.400
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+810	Bus buseta urbano	$640.000	+$35.000
+
+Tarifa	Cilindraje	Valor 2025	Diferencia vs 2024
+910	Menos de 10 pasajeros	$632.700	+$34.500
+920	10 o más pasajeros	$917.700	+$50.200

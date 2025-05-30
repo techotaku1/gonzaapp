@@ -6,163 +6,209 @@ export interface SoatPrice {
 }
 
 export const vehicleTypes = [
-  'Ciclomotor',
-  'Menos de 100 c.c.',
-  'De 100 a 200 c.c.',
-  'Más de 200 c.c.',
-  'Motocarros, tricimoto, cuadriciclos',
-  'Motocarro 5 pasajeros',
-  'Camperos y Camionetas 0 - 9 años',
-  'Camperos y Camionetas 10 años o más',
-  'Autos Familiares 0 - 9 años',
-  'Autos Familiares 10 años o más',
-  'Autos de Negocios y Taxis 0 - 9 años',
-  'Autos de Negocios y Taxis 10 años o más',
-  'Buses y Busetas',
-  'Vehículos para 6 o más Pasajeros 0 - 9 años',
-  'Vehículos para 6 o más Pasajeros 10 años o más',
-  'Carga o Mixto',
-  'Oficiales Especiales',
+  '100 - Ciclomotores',
+  '110 - Menos de 100 c.c.',
+  '120 - De 100 a 200 c.c.',
+  '130 - Más de 200 c.c.',
+  '140 - Motocarros, tricimoto, cuadriciclos',
+  '211 - Camperos y Camionetas (0-9 años) menos 1.500 c.c.',
+  '221 - Camperos y Camionetas (0-9 años) 1.500-2.500 c.c.',
+  '231 - Camperos y Camionetas (0-9 años) más 2.500 c.c.',
+  '212 - Camperos y Camionetas (10+ años) menos 1.500 c.c.',
+  '222 - Camperos y Camionetas (10+ años) 1.500-2.500 c.c.',
+  '232 - Camperos y Camionetas (10+ años) más 2.500 c.c.',
+  '310 - Carga menos de 5 ton',
+  '320 - Carga 5 a 15 ton',
+  '330 - Carga más de 15 ton',
+  '410 - Oficiales Especiales menos 1.500 c.c.',
+  '420 - Oficiales Especiales 1.500-2.500 c.c.',
+  '430 - Oficiales Especiales más 2.500 c.c.',
+  '511 - Autos Familiares (0-9 años) menos 1.500 c.c.',
+  '521 - Autos Familiares (0-9 años) 1.500-2.500 c.c.',
+  '531 - Autos Familiares (0-9 años) más 2.500 c.c.',
+  '512 - Autos Familiares (10+ años) menos 1.500 c.c.',
+  '522 - Autos Familiares (10+ años) 1.500-2.500 c.c.',
+  '532 - Autos Familiares (10+ años) más 2.500 c.c.',
+  '611 - 6+ Pasajeros (0-9 años) menos 2.500 c.c.',
+  '621 - 6+ Pasajeros (0-9 años) 2.500 c.c. o más',
+  '612 - 6+ Pasajeros (10+ años) menos 2.500 c.c.',
+  '622 - 6+ Pasajeros (10+ años) 2.500 c.c. o más',
+  '711 - Autos Negocios (0-9 años) menos 1.500 c.c.',
+  '721 - Autos Negocios (0-9 años) 1.500-2.500 c.c.',
+  '731 - Autos Negocios (0-9 años) más 2.500 c.c.',
+  '712 - Autos Negocios (10+ años) menos 1.500 c.c.',
+  '722 - Autos Negocios (10+ años) 1.500-2.500 c.c.',
+  '732 - Autos Negocios (10+ años) más 2.500 c.c.',
+  '810 - Bus buseta urbano',
+  '910 - Buses menos de 10 pasajeros',
+  '920 - Buses 10 o más pasajeros',
 ] as const;
 
 export type VehicleType = (typeof vehicleTypes)[number];
 
 export const soatPrices2025: SoatPrice[] = [
-  { vehicleType: 'Ciclomotor', code: '100', basePrice: 117900 },
-  { vehicleType: 'Menos de 100 c.c.', code: '110', basePrice: 243400 },
-  { vehicleType: 'De 100 a 200 c.c.', code: '120', basePrice: 326300 },
-  { vehicleType: 'Más de 200 c.c.', code: '130', basePrice: 758300 },
+  { vehicleType: '100 - Ciclomotores', code: '100', basePrice: 117900 },
+  { vehicleType: '110 - Menos de 100 c.c.', code: '110', basePrice: 243400 },
+  { vehicleType: '120 - De 100 a 200 c.c.', code: '120', basePrice: 326300 },
+  { vehicleType: '130 - Más de 200 c.c.', code: '130', basePrice: 758300 },
   {
-    vehicleType: 'Motocarros, tricimoto, cuadriciclos',
+    vehicleType: '140 - Motocarros, tricimoto, cuadriciclos',
     code: '140',
     basePrice: 367800,
   },
-  { vehicleType: 'Motocarro 5 pasajeros', code: '150', basePrice: 367800 },
 
-  // Camperos y Camionetas 0-9 años
+  // Camperos y Camionetas
   {
-    vehicleType: 'Camperos y Camionetas 0 - 9 años',
+    vehicleType: '211 - Camperos y Camionetas (0-9 años) menos 1.500 c.c.',
     code: '211',
-    cylinderRange: 'Menos de 1.500 c.c.',
     basePrice: 789600,
   },
   {
-    vehicleType: 'Camperos y Camionetas 0 - 9 años',
+    vehicleType: '221 - Camperos y Camionetas (0-9 años) 1.500-2.500 c.c.',
     code: '221',
-    cylinderRange: 'De 1.500 a 2.500 c.c.',
     basePrice: 942800,
   },
   {
-    vehicleType: 'Camperos y Camionetas 0 - 9 años',
+    vehicleType: '231 - Camperos y Camionetas (0-9 años) más 2.500 c.c.',
     code: '231',
-    cylinderRange: 'Más de 2.500 c.c.',
     basePrice: 1105900,
   },
-
-  // Camperos y Camionetas 10 años o más
   {
-    vehicleType: 'Camperos y Camionetas 10 años o más',
+    vehicleType: '212 - Camperos y Camionetas (10+ años) menos 1.500 c.c.',
     code: '212',
-    cylinderRange: 'Menos de 1.500 c.c.',
     basePrice: 949200,
   },
   {
-    vehicleType: 'Camperos y Camionetas 10 años o más',
+    vehicleType: '222 - Camperos y Camionetas (10+ años) 1.500-2.500 c.c.',
     code: '222',
-    cylinderRange: 'De 1.500 a 2.500 c.c.',
     basePrice: 1116800,
   },
   {
-    vehicleType: 'Camperos y Camionetas 10 años o más',
+    vehicleType: '232 - Camperos y Camionetas (10+ años) más 2.500 c.c.',
     code: '232',
-    cylinderRange: 'Más de 2.500 c.c.',
     basePrice: 1269000,
   },
 
-  // Autos Familiares 0-9 años
+  // Carga
+  { vehicleType: '310 - Carga menos de 5 ton', code: '310', basePrice: 884700 },
+  { vehicleType: '320 - Carga 5 a 15 ton', code: '320', basePrice: 1277600 },
+  { vehicleType: '330 - Carga más de 15 ton', code: '330', basePrice: 1615500 },
+
+  // Oficiales Especiales
   {
-    vehicleType: 'Autos Familiares 0 - 9 años',
+    vehicleType: '410 - Oficiales Especiales menos 1.500 c.c.',
+    code: '410',
+    basePrice: 995500,
+  },
+  {
+    vehicleType: '420 - Oficiales Especiales 1.500-2.500 c.c.',
+    code: '420',
+    basePrice: 1255100,
+  },
+  {
+    vehicleType: '430 - Oficiales Especiales más 2.500 c.c.',
+    code: '430',
+    basePrice: 1504700,
+  },
+
+  // Autos Familiares
+  {
+    vehicleType: '511 - Autos Familiares (0-9 años) menos 1.500 c.c.',
     code: '511',
-    cylinderRange: 'Menos de 1.500 c.c.',
     basePrice: 445300,
   },
   {
-    vehicleType: 'Autos Familiares 0 - 9 años',
+    vehicleType: '521 - Autos Familiares (0-9 años) 1.500-2.500 c.c.',
     code: '521',
-    cylinderRange: 'De 1.500 a 2.500 c.c.',
     basePrice: 542400,
   },
   {
-    vehicleType: 'Autos Familiares 0 - 9 años',
+    vehicleType: '531 - Autos Familiares (0-9 años) más 2.500 c.c.',
     code: '531',
-    cylinderRange: 'Más de 2.500 c.c.',
     basePrice: 633500,
   },
-
-  // Autos Familiares 10 años o más
   {
-    vehicleType: 'Autos Familiares 10 años o más',
+    vehicleType: '512 - Autos Familiares (10+ años) menos 1.500 c.c.',
     code: '512',
-    cylinderRange: 'Menos de 1.500 c.c.',
     basePrice: 590400,
   },
   {
-    vehicleType: 'Autos Familiares 10 años o más',
+    vehicleType: '522 - Autos Familiares (10+ años) 1.500-2.500 c.c.',
     code: '522',
-    cylinderRange: 'De 1.500 a 2.500 c.c.',
     basePrice: 674700,
   },
   {
-    vehicleType: 'Autos Familiares 10 años o más',
+    vehicleType: '532 - Autos Familiares (10+ años) más 2.500 c.c.',
     code: '532',
-    cylinderRange: 'Más de 2.500 c.c.',
-    basePrice: 674700,
+    basePrice: 751300,
   },
 
-  // Autos de Negocios y Taxis 0-9 años
+  // 6+ Pasajeros
   {
-    vehicleType: 'Autos de Negocios y Taxis 0 - 9 años',
+    vehicleType: '611 - 6+ Pasajeros (0-9 años) menos 2.500 c.c.',
+    code: '611',
+    basePrice: 794100,
+  },
+  {
+    vehicleType: '621 - 6+ Pasajeros (0-9 años) 2.500 c.c. o más',
+    code: '621',
+    basePrice: 1063000,
+  },
+  {
+    vehicleType: '612 - 6+ Pasajeros (10+ años) menos 2.500 c.c.',
+    code: '612',
+    basePrice: 1013600,
+  },
+  {
+    vehicleType: '622 - 6+ Pasajeros (10+ años) 2.500 c.c. o más',
+    code: '622',
+    basePrice: 1276400,
+  },
+
+  // Autos Negocios
+  {
+    vehicleType: '711 - Autos Negocios (0-9 años) menos 1.500 c.c.',
     code: '711',
-    cylinderRange: 'Menos de 1.500 c.c.',
     basePrice: 267900,
   },
   {
-    vehicleType: 'Autos de Negocios y Taxis 0 - 9 años',
+    vehicleType: '721 - Autos Negocios (0-9 años) 1.500-2.500 c.c.',
     code: '721',
-    cylinderRange: 'De 1.500 a 2.500 c.c.',
     basePrice: 332700,
   },
   {
-    vehicleType: 'Autos de Negocios y Taxis 0 - 9 años',
+    vehicleType: '731 - Autos Negocios (0-9 años) más 2.500 c.c.',
     code: '731',
-    cylinderRange: 'Más de 2.500 c.c.',
     basePrice: 429000,
   },
-
-  // Autos de Negocios y Taxis 10 años o más
   {
-    vehicleType: 'Autos de Negocios y Taxis 10 años o más',
+    vehicleType: '712 - Autos Negocios (10+ años) menos 1.500 c.c.',
     code: '712',
-    cylinderRange: 'Menos de 1.500 c.c.',
     basePrice: 334500,
   },
   {
-    vehicleType: 'Autos de Negocios y Taxis 10 años o más',
+    vehicleType: '722 - Autos Negocios (10+ años) 1.500-2.500 c.c.',
     code: '722',
-    cylinderRange: 'De 1.500 a 2.500 c.c.',
     basePrice: 410900,
   },
   {
-    vehicleType: 'Autos de Negocios y Taxis 10 años o más',
+    vehicleType: '732 - Autos Negocios (10+ años) más 2.500 c.c.',
     code: '732',
-    cylinderRange: 'Más de 2.500 c.c.',
     basePrice: 503200,
   },
 
-  // Buses y Busetas
-  { vehicleType: 'Buses y Busetas', code: '810', basePrice: 640000 },
-  { vehicleType: 'Buses y Busetas', code: '910', basePrice: 632700 },
-  { vehicleType: 'Buses y Busetas', code: '920', basePrice: 917700 },
+  // Buses
+  { vehicleType: '810 - Bus buseta urbano', code: '810', basePrice: 640000 },
+  {
+    vehicleType: '910 - Buses menos de 10 pasajeros',
+    code: '910',
+    basePrice: 632700,
+  },
+  {
+    vehicleType: '920 - Buses 10 o más pasajeros',
+    code: '920',
+    basePrice: 917700,
+  },
 ];
 
 export function calculateSoatPrice(
