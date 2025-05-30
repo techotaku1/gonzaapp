@@ -238,7 +238,7 @@ export default function TransactionTable({
   const debouncedSave = useDebouncedSave(
     handleSaveOperation,
     handleSaveSuccess,
-    2000 // Aumentado a 2 segundos para dar más tiempo de agrupación
+    1000 // Reducido a 1 segundo
   );
 
   // Move groupedByDate before it's used
@@ -554,7 +554,7 @@ export default function TransactionTable({
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-base w-[70px] rounded border border-gray-400"
+            className="table-select-base w-[70px] rounded border border-gray-600"
             title={value as string}
           >
             <option value="">-</option>
@@ -573,7 +573,7 @@ export default function TransactionTable({
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-base w-[70px] rounded border border-gray-400"
+            className="table-select-base w-[70px] rounded border border-gray-600"
             title={value as string}
           >
             {tramiteOptions.map((option) => (
@@ -591,7 +591,7 @@ export default function TransactionTable({
           <select
             value={(value as string) || ''}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-base w-[150px] rounded border border-gray-400"
+            className="table-select-base w-[150px] rounded border border-gray-600"
             title={value as string}
           >
             <option value="">Seleccionar...</option>
@@ -614,7 +614,7 @@ export default function TransactionTable({
           <select
             value={(value as string) || ''}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-base w-[120px] rounded border border-gray-400"
+            className="table-select-base w-[120px] rounded border border-gray-600"
             title={value as string} // El título mostrará el texto completo al hacer hover
           >
             <option value="">Seleccionar...</option>
@@ -1134,7 +1134,7 @@ export default function TransactionTable({
                     }`}
                   >
                     {isDeleteMode && (
-                      <td className="table-cell h-full border-r border-gray-400 px-0.5 py-0.5">
+                      <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
                         <div className="flex h-full items-center justify-center">
                           <input
                             type="checkbox"
@@ -1168,7 +1168,7 @@ export default function TransactionTable({
                             handleRowSelect(row.id, row.precioNeto)
                           }
                           disabled={row.pagado}
-                          className="h-4 w-4 rounded border-gray-400 disabled:opacity-50"
+                          className="h-4 w-4 rounded border-gray-600 disabled:opacity-50"
                         />
                       </div>
                     </td>
