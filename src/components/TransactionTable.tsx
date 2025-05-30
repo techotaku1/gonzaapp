@@ -238,7 +238,7 @@ export default function TransactionTable({
   const debouncedSave = useDebouncedSave(
     handleSaveOperation,
     handleSaveSuccess,
-    4000 // Reducido a 1 segundo
+    1000 // Reducido a 1 segundo
   );
 
   // Move groupedByDate before it's used
@@ -789,13 +789,16 @@ export default function TransactionTable({
       value: boolean,
       disabled?: boolean
     ) => (
-      <input
-        type="checkbox"
-        checked={value}
-        disabled={disabled}
-        onChange={(e) => handleInputChange(id, field, e.target.checked)}
-        className="h-4 w-4 rounded border-gray-300 disabled:opacity-50"
-      />
+      <label className="check-label">
+        <input
+          type="checkbox"
+          checked={value}
+          disabled={disabled}
+          onChange={(e) => handleInputChange(id, field, e.target.checked)}
+          className="sr-only"
+        />
+        <div className="checkmark" />
+      </label>
     ),
     [handleInputChange]
   );
@@ -1161,15 +1164,18 @@ export default function TransactionTable({
                     </td>
                     <td className="table-checkbox-cell whitespace-nowrap">
                       <div className="table-checkbox-wrapper">
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.has(row.id)}
-                          onChange={() =>
-                            handleRowSelect(row.id, row.precioNeto)
-                          }
-                          disabled={row.pagado}
-                          className="h-4 w-4 rounded border-gray-600 disabled:opacity-50"
-                        />
+                        <label className="check-label">
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.has(row.id)}
+                            onChange={() =>
+                              handleRowSelect(row.id, row.precioNeto)
+                            }
+                            disabled={row.pagado}
+                            className="sr-only"
+                          />
+                          <div className="checkmark" />
+                        </label>
                       </div>
                     </td>
                     <td className="table-checkbox-cell whitespace-nowrap">
@@ -1277,18 +1283,11 @@ export default function TransactionTable({
                     </td>
                     <td className="table-checkbox-cell whitespace-nowrap">
                       <div className="table-checkbox-wrapper">
-                        <input
-                          type="checkbox"
-                          checked={row.comisionExtra}
-                          onChange={(e) =>
-                            handleInputChange(
-                              row.id,
-                              'comisionExtra',
-                              e.target.checked
-                            )
-                          }
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
+                        {renderCheckbox(
+                          row.id,
+                          'comisionExtra',
+                          row.comisionExtra
+                        )}
                       </div>
                     </td>
                     <td
@@ -1307,14 +1306,7 @@ export default function TransactionTable({
                     </td>
                     <td className="table-checkbox-cell whitespace-nowrap">
                       <div className="table-checkbox-wrapper">
-                        <input
-                          type="checkbox"
-                          checked={row.rappi}
-                          onChange={(e) =>
-                            handleInputChange(row.id, 'rappi', e.target.checked)
-                          }
-                          className="h-4 w-4 rounded border-gray-300"
-                        />
+                        {renderCheckbox(row.id, 'rappi', row.rappi)}
                       </div>
                     </td>
                     <td className="table-cell whitespace-nowrap">

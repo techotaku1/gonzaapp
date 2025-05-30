@@ -10,7 +10,7 @@ interface SaveResult {
 export function useDebouncedSave(
   onSave: (records: TransactionRecord[]) => Promise<SaveResult>,
   onSuccess: () => void,
-  delay = 4000
+  delay = 1000
 ) {
   // Use refs to avoid dependency issues
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);

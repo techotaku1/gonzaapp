@@ -156,12 +156,14 @@
     display: table-cell;
     vertical-align: middle;
     position: relative;
+    padding: 0;
+    width: 2.5rem;
   }
 
   .table-checkbox-wrapper {
     @apply flex items-center justify-center;
-    height: 1.5rem;
-    min-width: 2rem;
+    height: 100%;
+    width: 100%;
     position: relative;
   }
 
@@ -315,5 +317,72 @@
   }
   .emitido-por-no-emitir {
     @apply bg-red-300 text-red-800;
+  }
+
+  /* Custom checkbox styles */
+  .check-label {
+    display: block;
+    position: relative;
+    cursor: pointer;
+    font-size: 16px;
+    user-select: none;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .check-label input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+  }
+
+  .checkmark {
+    position: relative;
+    height: 1em;
+    width: 1em;
+    background-color: #ccc;
+    border-radius: 0.2pc;
+    box-shadow: 2px 2px grey;
+  }
+
+  .check-label input:checked ~ .checkmark {
+    background-color: #5ee429;
+  }
+
+  .check-label input:disabled ~ .checkmark {
+    background-color: #5ee429;
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .check-label input:disabled ~ .checkmark:after {
+    display: block;
+    opacity: 0.7;
+    border-color: white;
+  }
+
+  .checkmark:after {
+    content: '';
+    position: absolute;
+    display: none;
+  }
+
+  .check-label input:checked ~ .checkmark:after {
+    display: block;
+  }
+
+  .check-label .checkmark:after {
+    left: 0.35em;
+    top: 0.2em;
+    width: 0.2em;
+    height: 0.4em;
+    border: solid white;
+    border-width: 0 0.12em 0.12em 0;
+    transform: rotate(45deg);
   }
 }
