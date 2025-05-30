@@ -10,52 +10,42 @@ interface SaveResult {
 export function useDebouncedSave(
   onSave: (records: TransactionRecord[]) => Promise<SaveResult>,
   onSuccess: () => void,
-  delay = 1000 // Reducido a 1 segundo
+  delay = 4000
 ) {
+  // Use refs to avoid dependency issues
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordsRef = useRef<TransactionRecord[]>([]);
-  const pendingChangesRef = useRef<boolean>(false);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
-        // Guardar cambios pendientes al desmontar
-        if (pendingChangesRef.current) {
-          void onSave(recordsRef.current);
-        }
       }
     };
-  }, [onSave]);
+  }, []);
 
   const save = useCallback(
     (records: TransactionRecord[]) => {
-      recordsRef.current = records;
-      pendingChangesRef.current = true;
-
-      // Si ya hay un timeout pendiente, no crear uno nuevo
+      // Cancel any pending save
       if (timeoutRef.current) {
-        return;
+        clearTimeout(timeoutRef.current);
       }
 
+      // Store latest records
+      recordsRef.current = records;
+
+      // Create new timeout
       timeoutRef.current = setTimeout(async () => {
-        if (pendingChangesRef.current) {
-          try {
-            const result = await onSave(recordsRef.current);
-            if (result.success) {
-              pendingChangesRef.current = false;
-              onSuccess();
-            }
-          } catch (error) {
-            console.error('Error al guardar:', error);
-          } finally {
-            timeoutRef.current = null;
-            // Verificar si hay cambios nuevos después de guardar
-            if (pendingChangesRef.current) {
-              save(recordsRef.current);
-            }
+        try {
+          const result = await onSave(recordsRef.current);
+          if (result.success) {
+            onSuccess();
           }
+        } catch (error) {
+          console.error('Error al guardar:', error);
+        } finally {
+          timeoutRef.current = null;
         }
       }, delay);
     },
