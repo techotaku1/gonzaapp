@@ -238,7 +238,7 @@ export default function TransactionTable({
   const debouncedSave = useDebouncedSave(
     handleSaveOperation,
     handleSaveSuccess,
-    1000 // Reducido a 1 segundo
+    4000 // Reducido a 1 segundo
   );
 
   // Move groupedByDate before it's used
