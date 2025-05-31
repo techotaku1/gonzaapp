@@ -9,10 +9,10 @@ import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
-import '~/styles/spinner.css';
 import '~/styles/buttonLoader.css';
 import '~/styles/deleteButton.css';
 import '~/styles/exportButton.css';
+import '~/styles/buttonSpinner.css';
 
 import ExportDateRangeModal from './ExportDateRangeModal';
 import HeaderTitles from './HeaderTitles';
@@ -120,6 +120,7 @@ export default function TransactionTable({
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isAddingRow, setIsAddingRow] = useState(false);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -163,55 +164,59 @@ export default function TransactionTable({
   };
 
   const addNewRow = async () => {
-    const now = new Date();
-    const colombiaDate = new Date(
-      now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-    );
-    const offset = colombiaDate.getTimezoneOffset();
-    colombiaDate.setMinutes(colombiaDate.getMinutes() - offset);
+    setIsAddingRow(true);
+    try {
+      const now = new Date();
+      const colombiaDate = new Date(
+        now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      );
+      const offset = colombiaDate.getTimezoneOffset();
+      colombiaDate.setMinutes(colombiaDate.getMinutes() - offset);
 
-    const newRowId = crypto.randomUUID(); // Generar ID aquí
-    const newRow: Omit<TransactionRecord, 'id'> = {
-      fecha: colombiaDate,
-      tramite: 'SOAT', // Set default value
-      pagado: false,
-      boleta: false,
-      boletasRegistradas: 0,
-      emitidoPor: '',
-      placa: '',
-      tipoDocumento: '',
-      numeroDocumento: '',
-      nombre: '',
-      cilindraje: null,
-      tipoVehiculo: null,
-      celular: null,
-      ciudad: '',
-      asesor: '',
-      novedad: null,
-      precioNeto: 0,
-      comisionExtra: false,
-      tarifaServicio: 0,
-      impuesto4x1000: 0,
-      gananciaBruta: 0,
-      rappi: false,
-      observaciones: null,
-    };
+      const newRowId = crypto.randomUUID(); // Generar ID aquí
+      const newRow: Omit<TransactionRecord, 'id'> = {
+        fecha: colombiaDate,
+        tramite: 'SOAT', // Set default value
+        pagado: false,
+        boleta: false,
+        boletasRegistradas: 0,
+        emitidoPor: '',
+        placa: '',
+        tipoDocumento: '',
+        numeroDocumento: '',
+        nombre: '',
+        cilindraje: null,
+        tipoVehiculo: null,
+        celular: null,
+        ciudad: '',
+        asesor: '',
+        novedad: null,
+        precioNeto: 0,
+        comisionExtra: false,
+        tarifaServicio: 0,
+        impuesto4x1000: 0,
+        gananciaBruta: 0,
+        rappi: false,
+        observaciones: null,
+      };
 
-    const result = await createRecord({ ...newRow, id: newRowId }); // Pasar el ID al crear
-    if (result.success) {
-      const newRowWithId = { ...newRow, id: newRowId };
-      setData((prevData) => [newRowWithId, ...prevData]);
-      // Forzar un guardado inmediato del nuevo registro
-      await handleSaveOperation([newRowWithId, ...data]);
-    } else {
-      console.error('Error creating new record:', result.error);
+      const result = await createRecord({ ...newRow, id: newRowId });
+      if (result.success) {
+        const newRowWithId = { ...newRow, id: newRowId };
+        setData((prevData) => [newRowWithId, ...prevData]);
+        // Forzar un guardado inmediato del nuevo registro
+        await handleSaveOperation([newRowWithId, ...data]);
+      } else {
+        console.error('Error creating new record:', result.error);
+      }
+    } finally {
+      setIsAddingRow(false);
     }
   };
 
   const handleSaveOperation = useCallback(
     async (records: TransactionRecord[]): Promise<SaveResult> => {
       try {
-        setIsSaving(true);
         // Solo guardar el registro que ha cambiado
         const result = await onUpdateRecordAction(records);
         if (result.success) {
@@ -223,8 +228,6 @@ export default function TransactionTable({
       } catch (error) {
         console.error('Error saving changes:', error);
         return { success: false, error: 'Failed to save changes' };
-      } finally {
-        setIsSaving(false);
       }
     },
     [onUpdateRecordAction]
@@ -952,28 +955,42 @@ export default function TransactionTable({
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
+          {/* Modifica el botón de agregar: */}
           <button
             onClick={addNewRow}
-            className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500"
+            disabled={isAddingRow}
+            className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500 disabled:opacity-50"
           >
-            <span className="ml-8 transform font-semibold text-white transition-all duration-300 group-hover:translate-x-20 group-hover:opacity-0">
+            <span
+              className={`ml-8 transform font-semibold text-white transition-all duration-300 ${isAddingRow ? 'translate-x-20 opacity-0' : ''}`}
+            >
               Agregar
             </span>
-            <span className="absolute right-0 flex h-full w-10 transform items-center justify-center rounded-lg bg-green-500 transition-all duration-300 group-hover:w-full group-hover:translate-x-0">
-              <svg
-                className="w-8 text-white group-active:scale-[0.8]" // Cambiado de active:scale-[0.8] a group-active:scale-[0.8]
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                width="24"
-              >
-                <line x1="12" x2="12" y1="5" y2="19" />
-                <line x1="5" x2="19" y1="12" y2="12" />
-              </svg>
+            <span
+              className={`absolute right-0 flex h-full transform items-center justify-center rounded-lg bg-green-500 transition-all duration-300 ${isAddingRow ? 'w-full translate-x-0' : 'w-10'}`}
+            >
+              {isAddingRow ? (
+                <div className="button-spinner">
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="spinner-blade" />
+                  ))}
+                </div>
+              ) : (
+                <svg
+                  className="w-8 text-white group-active:scale-[0.8]"
+                  fill="none"
+                  height="24"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  width="24"
+                >
+                  <line x1="12" x2="12" y1="5" y2="19" />
+                  <line x1="5" x2="19" y1="12" y2="12" />
+                </svg>
+              )}
             </span>
           </button>
 
@@ -1027,18 +1044,6 @@ export default function TransactionTable({
                   ? 'Guardar'
                   : 'Guardado'}
             </button>
-            {isSaving && (
-              <div className="dot-spinner">
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-                <div className="dot-spinner__dot" />
-              </div>
-            )}
             <button
               onClick={() => setIsExportModalOpen(true)}
               className="export-excel-button"
