@@ -1,4 +1,5 @@
 .export-excel-button {
+  font-weight: 700;
   display: flex;
   position: relative;
   justify-content: center;

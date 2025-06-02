@@ -1,14 +1,8 @@
 @import 'tailwindcss';
 
-@theme {
-  /* Font definitions */
-  --font-display: var(--font-delius), cursive;
-  --font-table-text: var(--font-lexend), sans-serif;
-}
-
-/* Font feature settings */
-@theme {
-  --font-table-text--font-feature-settings: 'kern' 1, 'tnum' 1;
+@theme inline {
+  --font-display: var(--font-delius);
+  --font-table-text: var(--font-lexend);
 }
 
 /* Base styles */
