@@ -10,13 +10,12 @@ interface SaveResult {
 export function useDebouncedSave(
   onSave: (records: TransactionRecord[]) => Promise<SaveResult>,
   onSuccess: () => void,
-  delay = 4000
+  delay = 1000
 ) {
-  // Use refs to avoid dependency issues
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordsRef = useRef<TransactionRecord[]>([]);
+  const pendingChangesRef = useRef(false);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -27,25 +26,26 @@ export function useDebouncedSave(
 
   const save = useCallback(
     (records: TransactionRecord[]) => {
-      // Cancel any pending save
+      recordsRef.current = records;
+      pendingChangesRef.current = true;
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
 
-      // Store latest records
-      recordsRef.current = records;
-
-      // Create new timeout
       timeoutRef.current = setTimeout(async () => {
-        try {
-          const result = await onSave(recordsRef.current);
-          if (result.success) {
-            onSuccess();
+        if (pendingChangesRef.current) {
+          try {
+            const result = await onSave(recordsRef.current);
+            if (result.success) {
+              pendingChangesRef.current = false;
+              onSuccess();
+            }
+          } catch (error) {
+            console.error('Error saving:', error);
+          } finally {
+            timeoutRef.current = null;
           }
-        } catch (error) {
-          console.error('Error al guardar:', error);
-        } finally {
-          timeoutRef.current = null;
         }
       }, delay);
     },

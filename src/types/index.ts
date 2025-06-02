@@ -23,4 +23,6 @@ export interface TransactionRecord {
   gananciaBruta: number;
   rappi: boolean;
   observaciones: string | null;
+  banco: string | null;
+  referencia: string | null;
 }

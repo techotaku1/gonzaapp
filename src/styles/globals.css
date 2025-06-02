@@ -20,6 +20,7 @@
     cursor: pointer;
   }
 
+  span,
   h1,
   h2,
   h3,
@@ -236,8 +237,8 @@
 
   /* Estilo para las opciones del select */
   select.table-select-base option {
-    padding: 0.15rem 0.5rem !important;
-    text-align: left !important;
+    padding: 0.15rem 0.5rem;
+    text-align: left;
     text-overflow: ellipsis;
     overflow: hidden;
   }
@@ -249,7 +250,7 @@
       background-position: right 0.25rem center;
     }
     select.table-select-base option {
-      text-align: left !important;
+      text-align: left;
     }
   }
 
@@ -380,5 +381,91 @@
     border: solid white;
     border-width: 0 0.15em 0.15em 0;
     transform: rotate(45deg);
+  }
+
+  /* Estilos específicos para la tabla de cuadre */
+  .cuadre-table {
+    @apply w-full table-fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .cuadre-header {
+    position: sticky;
+    height: 3.5rem;
+    line-height: 1.2;
+    padding: 0.5rem 1rem;
+    font-family: var(--font-table-text);
+    font-weight: 500;
+    font-size: 1.125rem;
+    color: black;
+    text-align: center;
+    vertical-align: middle;
+    background: linear-gradient(to bottom, #f3f4f6 0%, #e5e7eb 100%);
+    border-bottom: 2px solid #4a5565;
+    z-index: 10;
+    transition: background-color 0.2s;
+  }
+
+  .cuadre-header:hover {
+    background: linear-gradient(to bottom, #e5e7eb 0%, #d1d5db 100%);
+  }
+
+  .cuadre-cell {
+    @apply flex items-center justify-center border-r border-gray-300;
+    min-height: 3rem;
+    padding: 0.5rem 1rem;
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+    font-size: 1rem;
+    line-height: 1.5;
+    transition: background-color 0.2s;
+  }
+
+  .cuadre-cell:hover {
+    background-color: rgba(243, 244, 246, 0.5);
+  }
+
+  .cuadre-select {
+    @apply w-full rounded border border-gray-300;
+    height: 2.5rem;
+    font-size: 1rem;
+    background-color: white;
+    transition: all 0.2s;
+    line-height: 1;
+    padding: 0.15rem 1.5rem 0.15rem 0.5rem;
+    color: black;
+    margin: 0 auto;
+    text-align: center;
+    text-align-last: center;
+    -moz-text-align-last: center;
+    text-indent: 0;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+    /* Estilo para las opciones del select */
+  select.cuadre-select option {
+    padding: 0.15rem 0.5rem;
+    text-align: left;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+
+  .cuadre-input {
+    @apply w-full rounded border border-gray-300;
+    height: 2.5rem;
+    font-size: 1rem;
+    padding: 0.5rem;
+    background-color: white;
+    transition: all 0.2s;
   }
 }

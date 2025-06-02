@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import * as XLSX from 'xlsx';
 
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
+import { bancoOptions } from '~/utils/constants';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 import '~/styles/buttonLoader.css';
@@ -16,6 +19,7 @@ import '~/styles/buttonSpinner.css';
 
 import ExportDateRangeModal from './ExportDateRangeModal';
 import HeaderTitles from './HeaderTitles';
+import SearchBox from './SearchBox';
 import TransactionTotals from './TransactionTotals';
 
 interface SaveResult {
@@ -108,8 +112,10 @@ export default function TransactionTable({
 }: {
   initialData: TransactionRecord[];
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
-}): React.JSX.Element {
+}) {
+  const router = useRouter();
   const [data, setData] = useState<TransactionRecord[]>(initialData);
+  const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
@@ -178,7 +184,7 @@ export default function TransactionTable({
       const newRowId = crypto.randomUUID(); // Generar ID aquí
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: colombiaDate,
-        tramite: 'SOAT', // Set default value
+        tramite: 'SOAT',
         pagado: false,
         boleta: false,
         boletasRegistradas: 0,
@@ -200,6 +206,8 @@ export default function TransactionTable({
         gananciaBruta: 0,
         rappi: false,
         observaciones: null,
+        banco: null,
+        referencia: null,
       };
 
       const result = await createRecord({ ...newRow, id: newRowId });
@@ -637,6 +645,25 @@ export default function TransactionTable({
         );
       }
 
+      // Dentro de la función renderInput, añade este caso antes del return final:
+      if (field === 'banco') {
+        return (
+          <select
+            value={(value as string) || ''}
+            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
+            className="table-select-base w-[120px] rounded border border-gray-600"
+            title={value as string}
+          >
+            <option value="">Seleccionar...</option>
+            {bancoOptions.map((option) => (
+              <option key={option} value={option} className="text-center">
+                {option}
+              </option>
+            ))}
+          </select>
+        );
+      }
+
       return (
         <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
           <input
@@ -953,6 +980,19 @@ export default function TransactionTable({
     [data]
   );
 
+  const handleSearchAction = useCallback((results: TransactionRecord[]) => {
+    setFilteredData(results);
+    setCurrentPage(1);
+  }, []);
+
+  const handleGenerateCuadreAction = useCallback(
+    (records: TransactionRecord[]) => {
+      localStorage.setItem('cuadreRecords', JSON.stringify(records));
+      router.push('/cuadre');
+    },
+    [router]
+  );
+
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
@@ -1113,8 +1153,14 @@ export default function TransactionTable({
         onExport={handleExport}
       />
 
+      <SearchBox
+        data={data}
+        onSearchAction={handleSearchAction}
+        onGenerateCuadreAction={handleGenerateCuadreAction}
+      />
+
       {showTotals ? (
-        <TransactionTotals transactions={data} />
+        <TransactionTotals transactions={filteredData} />
       ) : (
         <div
           className="table-container"

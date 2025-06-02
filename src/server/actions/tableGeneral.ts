@@ -62,6 +62,7 @@ export async function createRecord(
       gananciaBruta: record.gananciaBruta.toString(),
       rappi: record.rappi,
       observaciones: record.observaciones ?? null,
+      banco: record.banco ?? null,
     };
 
     await db.insert(transactions).values(newRecord);
@@ -106,6 +107,7 @@ export async function updateRecords(
           gananciaBruta: record.gananciaBruta.toString(),
           rappi: record.rappi,
           observaciones: record.observaciones ?? null,
+          banco: record.banco ?? null,
         };
 
         await db

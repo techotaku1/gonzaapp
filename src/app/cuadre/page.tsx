@@ -1,0 +1,213 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+
+import { useRouter } from 'next/navigation';
+
+import { useDebouncedSave } from '~/hooks/useDebouncedSave';
+import { updateRecords } from '~/server/actions/tableGeneral';
+import { bancoOptions } from '~/utils/constants';
+
+import type { TransactionRecord } from '~/types';
+
+interface SummaryRecord extends TransactionRecord {
+  totalCombinado: number;
+}
+
+export default function CuadrePage() {
+  const router = useRouter();
+  const [summaryData, setSummaryData] = useState<SummaryRecord[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    // Load records from localStorage
+    const savedRecords = localStorage.getItem('cuadreRecords');
+    if (savedRecords) {
+      try {
+        const records = JSON.parse(savedRecords) as TransactionRecord[];
+        // Transform records to include totalCombinado
+        const summaryRecords = records.map((record) => ({
+          ...record,
+          totalCombinado: record.precioNeto + record.tarifaServicio,
+          fecha: new Date(record.fecha), // Convert date string back to Date object
+        }));
+        setSummaryData(summaryRecords);
+      } catch (error) {
+        console.error('Error loading cuadre records:', error);
+      }
+    }
+  }, []);
+
+  const handleSaveOperation = useCallback(
+    async (records: TransactionRecord[]) => {
+      try {
+        setIsSaving(true);
+        const result = await updateRecords(records);
+        if (result.success) {
+          // Actualizar localStorage con los datos más recientes
+          localStorage.setItem('cuadreRecords', JSON.stringify(records));
+        }
+        return result;
+      } catch (error) {
+        console.error('Error saving changes:', error);
+        return { success: false, error: 'Failed to save changes' };
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    []
+  );
+
+  const handleSaveSuccess = useCallback(() => {
+    setIsSaving(false);
+  }, []);
+
+  const debouncedSave = useDebouncedSave(
+    handleSaveOperation,
+    handleSaveSuccess,
+    2000
+  );
+
+  const handleUpdateBancoReferencia = (
+    id: string,
+    field: 'banco' | 'referencia',
+    value: string
+  ) => {
+    setSummaryData((prev) => {
+      const newData = prev.map((record) =>
+        record.id === id ? { ...record, [field]: value } : record
+      );
+      // Trigger auto-save
+      void debouncedSave(newData);
+      return newData;
+    });
+  };
+
+  return (
+    <div className="p-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Cuadre de Registros</h1>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push('/')}
+            className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-white hover:bg-gray-600"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Volver al Inicio
+          </button>
+          {isSaving ? (
+            <span className="font-bold flex items-center gap-2 rounded-md bg-blue-300 px-3 py-2.5 text-sm text-blue-800">
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Guardando cambios...
+            </span>
+          ) : (
+            <span className="font-bold rounded-md bg-green-300 px-3 py-2.5 text-sm text-green-800">
+              ✓ Todos los cambios guardados
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+        <table className="cuadre-table">
+          <thead>
+            <tr>
+              {[
+                'Fecha',
+                'Placa',
+                'Emitido Por',
+                'Asesor',
+                'Total (Precio + Tarifa)',
+                'Banco',
+                'Referencia',
+              ].map((header) => (
+                <th
+                  key={header}
+                  className="cuadre-header font-lexend relative border-r bg-white"
+                >
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {summaryData.map((record) => (
+              <tr key={record.id} className="border-b hover:bg-gray-50">
+                <td className="cuadre-cell font-lexend">
+                  {record.fecha.toLocaleDateString()}
+                </td>
+                <td className="cuadre-cell font-lexend uppercase">
+                  {record.placa}
+                </td>
+                <td className="cuadre-cell font-lexend">{record.emitidoPor}</td>
+                <td className="cuadre-cell font-lexend">{record.asesor}</td>
+                <td className="cuadre-cell font-lexend">
+                  ${record.totalCombinado.toLocaleString()}
+                </td>
+                <td className="cuadre-cell">
+                  <select
+                    value={record.banco ?? ''}
+                    onChange={(e) =>
+                      handleUpdateBancoReferencia(
+                        record.id,
+                        'banco',
+                        e.target.value
+                      )
+                    }
+                    className="cuadre-select font-lexend"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {bancoOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="cuadre-cell border-r-0">
+                  <input
+                    type="text"
+                    value={record.referencia ?? ''}
+                    onChange={(e) =>
+                      handleUpdateBancoReferencia(
+                        record.id,
+                        'referencia',
+                        e.target.value
+                      )
+                    }
+                    className="cuadre-input font-lexend"
+                    placeholder="Referencia..."
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
