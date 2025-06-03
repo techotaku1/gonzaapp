@@ -9,6 +9,7 @@ import type { TransactionRecord } from '~/types';
 interface TotalsByDate {
   date: string;
   precioNetoTotal: number;
+  tarifaServicioTotal: number;
   impuesto4x1000Total: number;
   gananciaBrutaTotal: number;
   transactionCount: number;
@@ -29,9 +30,10 @@ export default function TransactionTotals({
     transactions.forEach((transaction) => {
       if (!(transaction.fecha instanceof Date)) return;
 
-      // Convert to Colombia timezone
       const dateInColombia = new Date(
-        transaction.fecha.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+        transaction.fecha.toLocaleString('en-US', {
+          timeZone: 'America/Bogota',
+        })
       );
       const dateStr = dateInColombia.toISOString().split('T')[0];
       if (!dateStr) return;
@@ -39,13 +41,15 @@ export default function TransactionTotals({
       const current = totalsByDate.get(dateStr) ?? {
         date: dateStr,
         precioNetoTotal: 0,
+        tarifaServicioTotal: 0,
         impuesto4x1000Total: 0,
         gananciaBrutaTotal: 0,
         transactionCount: 0,
       };
 
-      // Calcular las fórmulas para cada transacción
-      const { impuesto4x1000, gananciaBruta } = calculateFormulas(transaction);
+      // Calcular las fórmulas para cada transacción y usar tarifaServicioAjustada
+      const { tarifaServicioAjustada, impuesto4x1000, gananciaBruta } =
+        calculateFormulas(transaction);
 
       // Añadir comisión extra si está marcada
       const precioNetoConComision = transaction.comisionExtra
@@ -55,6 +59,8 @@ export default function TransactionTotals({
       const updatedTotal = {
         ...current,
         precioNetoTotal: current.precioNetoTotal + precioNetoConComision,
+        tarifaServicioTotal:
+          current.tarifaServicioTotal + (tarifaServicioAjustada ?? 0),
         impuesto4x1000Total:
           current.impuesto4x1000Total + (impuesto4x1000 ?? 0),
         gananciaBrutaTotal: current.gananciaBrutaTotal + (gananciaBruta ?? 0),
@@ -93,7 +99,9 @@ export default function TransactionTotals({
       const colombiaDate = new Date(
         date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
       );
-      colombiaDate.setMinutes(colombiaDate.getMinutes() + colombiaDate.getTimezoneOffset());
+      colombiaDate.setMinutes(
+        colombiaDate.getMinutes() + colombiaDate.getTimezoneOffset()
+      );
 
       const formatted = new Intl.DateTimeFormat('es-CO', {
         weekday: 'long',
@@ -115,12 +123,14 @@ export default function TransactionTotals({
     return totals.reduce(
       (acc, curr) => ({
         precioNetoTotal: acc.precioNetoTotal + curr.precioNetoTotal,
+        tarifaServicioTotal: acc.tarifaServicioTotal + curr.tarifaServicioTotal,
         impuesto4x1000Total: acc.impuesto4x1000Total + curr.impuesto4x1000Total,
         gananciaBrutaTotal: acc.gananciaBrutaTotal + curr.gananciaBrutaTotal,
         transactionCount: acc.transactionCount + curr.transactionCount,
       }),
       {
         precioNetoTotal: 0,
+        tarifaServicioTotal: 0,
         impuesto4x1000Total: 0,
         gananciaBrutaTotal: 0,
         transactionCount: 0,
@@ -135,7 +145,7 @@ export default function TransactionTotals({
       {/* Totales generales con colores e iconos */}
       <div className="mb-8 rounded-lg bg-gray-100 p-6">
         <h3 className="mb-4 text-xl font-semibold">Totales Generales</h3>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
             <div className="text-sm text-gray-600">Total Transacciones</div>
             <div className="text-xl font-bold text-blue-600">
@@ -146,6 +156,12 @@ export default function TransactionTotals({
             <div className="text-sm text-gray-600">Precio Neto Total</div>
             <div className="text-xl font-bold text-green-600">
               {formatCurrency(grandTotals.precioNetoTotal)}
+            </div>
+          </div>
+          <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
+            <div className="text-sm text-gray-600">Tarifa Servicio Total</div>
+            <div className="text-xl font-bold text-orange-600">
+              {formatCurrency(grandTotals.tarifaServicioTotal)}
             </div>
           </div>
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
@@ -178,6 +194,9 @@ export default function TransactionTotals({
                 Precio Neto
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+                Tarifa Servicio
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
                 4x1000
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
@@ -199,6 +218,9 @@ export default function TransactionTotals({
                 </td>
                 <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-green-600">
                   {formatCurrency(total.precioNetoTotal)}
+                </td>
+                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-orange-600">
+                  {formatCurrency(total.tarifaServicioTotal)}
                 </td>
                 <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-red-600">
                   {formatCurrency(total.impuesto4x1000Total)}
