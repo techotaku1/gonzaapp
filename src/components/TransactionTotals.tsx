@@ -24,11 +24,16 @@ export default function TransactionTotals({
 
   const totals = useMemo(() => {
     const totalsByDate = new Map<string, TotalsByDate>();
+    const COMISION_EXTRA = 30000;
 
     transactions.forEach((transaction) => {
       if (!(transaction.fecha instanceof Date)) return;
 
-      const dateStr = transaction.fecha.toISOString().split('T')[0];
+      // Convert to Colombia timezone
+      const dateInColombia = new Date(
+        transaction.fecha.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      );
+      const dateStr = dateInColombia.toISOString().split('T')[0];
       if (!dateStr) return;
 
       const current = totalsByDate.get(dateStr) ?? {
@@ -42,10 +47,14 @@ export default function TransactionTotals({
       // Calcular las fórmulas para cada transacción
       const { impuesto4x1000, gananciaBruta } = calculateFormulas(transaction);
 
+      // Añadir comisión extra si está marcada
+      const precioNetoConComision = transaction.comisionExtra
+        ? (transaction.precioNeto ?? 0) + COMISION_EXTRA
+        : (transaction.precioNeto ?? 0);
+
       const updatedTotal = {
         ...current,
-        precioNetoTotal:
-          current.precioNetoTotal + (transaction.precioNeto ?? 0),
+        precioNetoTotal: current.precioNetoTotal + precioNetoConComision,
         impuesto4x1000Total:
           current.impuesto4x1000Total + (impuesto4x1000 ?? 0),
         gananciaBrutaTotal: current.gananciaBrutaTotal + (gananciaBruta ?? 0),
@@ -78,12 +87,27 @@ export default function TransactionTotals({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    try {
+      const date = new Date(dateString);
+      // Create date in Colombia timezone maintaining the day
+      const colombiaDate = new Date(
+        date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      );
+      colombiaDate.setMinutes(colombiaDate.getMinutes() + colombiaDate.getTimezoneOffset());
+
+      const formatted = new Intl.DateTimeFormat('es-CO', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Bogota',
+      }).format(colombiaDate);
+
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString;
+    }
   };
 
   // Calcular totales generales
