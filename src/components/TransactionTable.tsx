@@ -106,6 +106,11 @@ const novedadOptions = [
 const tipoVehiculoOptions = vehicleTypes;
 type _TipoVehiculoOption = (typeof tipoVehiculoOptions)[number];
 
+// Add this type for error handling
+interface CustomError {
+  message: string;
+}
+
 export default function TransactionTable({
   initialData,
   onUpdateRecordAction,
@@ -118,7 +123,6 @@ export default function TransactionTable({
   const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentDate, setCurrentDate] = useState(getCurrentDate());
   const [_selectedPlates, setSelectedPlates] = useState<string[]>([]);
@@ -226,32 +230,32 @@ export default function TransactionTable({
 
   const handleSaveOperation = useCallback(
     async (records: TransactionRecord[]): Promise<SaveResult> => {
+      setIsSaving(true);
       try {
-        // Solo guardar el registro que ha cambiado
         const result = await onUpdateRecordAction(records);
         if (result.success) {
-          // Actualizar el estado local después de guardar exitosamente
           setData(records);
-          setUnsavedChanges(false);
         }
         return result;
       } catch (error) {
-        console.error('Error saving changes:', error);
+        const customError = error as CustomError;
+        console.error('Error saving changes:', customError.message);
         return { success: false, error: 'Failed to save changes' };
+      } finally {
+        setIsSaving(false);
       }
     },
     [onUpdateRecordAction]
   );
 
   const handleSaveSuccess = useCallback(() => {
-    setUnsavedChanges(false);
     setIsSaving(false);
   }, []);
 
   const debouncedSave = useDebouncedSave(
     handleSaveOperation,
     handleSaveSuccess,
-    4000 // Reducido a 1 segundo
+    4000
   );
 
   // Move groupedByDate before it's used
@@ -292,7 +296,6 @@ export default function TransactionTable({
         const newData = prevData.map((row) => {
           if (row.id === id) {
             const updatedRow = { ...row };
-
             try {
               // Update the field value first
               switch (field) {
@@ -321,7 +324,8 @@ export default function TransactionTable({
                   updatedRow[field] = value as never;
               }
             } catch (err) {
-              console.error('Error updating field:', err);
+              const customError = err as CustomError;
+              console.error('Error updating field:', customError.message);
               return row;
             }
 
@@ -352,7 +356,7 @@ export default function TransactionTable({
           return row;
         });
 
-        setUnsavedChanges(true);
+        setIsSaving(true);
         void debouncedSave(newData);
         return newData;
       });
@@ -375,20 +379,6 @@ export default function TransactionTable({
     },
     [debouncedSave, groupedByDate]
   );
-
-  const handleSaveChanges = async () => {
-    try {
-      setIsSaving(true);
-      const result = await onUpdateRecordAction(data);
-      if (result.success) {
-        setUnsavedChanges(false);
-      }
-    } catch (error) {
-      console.error('Error saving changes:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('es-CO', {
@@ -996,8 +986,8 @@ export default function TransactionTable({
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          {/* Botón Agregar con nuevo efecto */}
+        <div className="flex w-full items-center gap-4">
+          {/* Botón Agregar */}
           <button
             onClick={addNewRow}
             disabled={isAddingRow}
@@ -1083,7 +1073,7 @@ export default function TransactionTable({
           {/* Botón Ver Totales */}
           <button
             onClick={() => setShowTotals(!showTotals)}
-            className="rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+            className="h-10 rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
           >
             {showTotals ? 'Ver Registros' : 'Ver Totales'}
           </button>
@@ -1091,7 +1081,7 @@ export default function TransactionTable({
           {/* Botón Exportar a Excel */}
           <button
             onClick={() => setIsExportModalOpen(true)}
-            className="export-excel-button"
+            className="export-excel-button h-10"
           >
             <svg
               fill="#fff"
@@ -1105,43 +1095,58 @@ export default function TransactionTable({
             Exportar a Excel
           </button>
 
-          {/* Controles de Guardado y Zoom movidos al final */}
-          <div className="ml-auto flex items-center gap-4">
-            <button
-              onClick={handleSaveChanges}
-              disabled={!unsavedChanges || isSaving}
-              className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600 disabled:opacity-50"
-            >
-              {isSaving
-                ? 'Guardando...'
-                : unsavedChanges
-                  ? 'Guardar'
-                  : 'Guardado'}
-            </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleZoomOut}
-                className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
-                title="Reducir zoom"
-              >
-                -
-              </button>
-              <span className="text-sm text-black">
-                {Math.round(zoom * 100)}%
+          {/* Auto-save indicator and date */}
+          <div className="flex h-10 items-center gap-4">
+            {isSaving ? (
+              <span className="flex h-10 items-center gap-2 rounded-md bg-blue-300 px-4 py-2 text-sm font-bold text-blue-800">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Guardando cambios...
               </span>
-              <button
-                onClick={handleZoomIn}
-                className="rounded bg-gray-500 px-3 py-1 text-white hover:bg-gray-600"
-                title="Aumentar zoom"
-              >
-                +
-              </button>
-            </div>
+            ) : (
+              <span className="flex h-10 items-center rounded-md bg-green-300 px-4 py-2 text-sm font-bold text-green-800">
+                ✓ Todos los cambios guardados
+              </span>
+            )}
+          </div>
+
+          {/* Zoom controls */}
+          <div className="flex h-10 items-center gap-1">
+            <button
+              onClick={handleZoomOut}
+              className="flex h-8 w-8 items-center justify-center rounded bg-gray-500 text-white hover:bg-gray-600"
+              title="Reducir zoom"
+            >
+              -
+            </button>
+            <span className="w-16 text-center text-sm font-medium text-black">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={handleZoomIn}
+              className="flex h-8 w-8 items-center justify-center rounded bg-gray-500 text-white hover:bg-gray-600"
+              title="Aumentar zoom"
+            >
+              +
+            </button>
           </div>
         </div>
 
-        <time className="font-display text-2xl font-bold text-black">
+        {/* Date display */}
+        <time className="font-display ml-4 text-2xl font-bold whitespace-nowrap text-black">
           {currentDate}
         </time>
       </div>
