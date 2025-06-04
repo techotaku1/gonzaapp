@@ -542,7 +542,7 @@ export default function TransactionTable({
             onChange={(e) =>
               handleInputChange(row.id, field, e.target.value.toUpperCase())
             }
-            className="placa-field w-[80px] cursor-pointer overflow-hidden rounded border hover:overflow-visible hover:text-clip"
+            className="placa-field w-[80px] bg-yellow-500 cursor-pointer overflow-hidden rounded border hover:overflow-visible hover:text-clip"
           />
         </div>
       );
