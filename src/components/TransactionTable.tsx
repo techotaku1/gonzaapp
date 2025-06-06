@@ -90,7 +90,7 @@ type EmitidoPorOption = (typeof emitidoPorOptions)[number];
 const tramiteOptions = ['SOAT'] as const;
 type _TramiteOption = (typeof tramiteOptions)[number];
 
-const tipoDocumentoOptions = ['CC', 'NIT', 'TI'] as const;
+const tipoDocumentoOptions = ['CC', 'NIT', 'TI', 'CE', 'PAS'] as const;
 type _TipoDocumentoOption = (typeof tipoDocumentoOptions)[number];
 
 const novedadOptions = [
