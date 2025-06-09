@@ -20,6 +20,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/localizations": "^3.16.4",
+    "@clerk/nextjs": "^6.21.0",
     "@neondatabase/serverless": "^1.0.0",
     "@t3-oss/env-nextjs": "^0.13.4",
     "@types/lodash": "^4.17.17",
