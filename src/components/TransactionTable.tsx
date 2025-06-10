@@ -10,7 +10,7 @@ import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { bancoOptions } from '~/utils/constants';
-import { getColombiaDate } from '~/utils/dateUtils';
+import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 import '~/styles/buttonLoader.css';
@@ -296,49 +296,66 @@ export default function TransactionTable({
     }
   }, [data, dateFilter]);
 
-  // Update groupedByDate logic with Colombia timezone
+  // Update DateGroup interface to be a proper tuple type
+  interface DateGroup extends Array<string | TransactionRecord[]> {
+    0: string;
+    1: TransactionRecord[];
+    date: string;
+    records: TransactionRecord[];
+    length: 2;
+  }
+
+  // Memoize createDateGroup function
+  const createDateGroup = useCallback(
+    (date: string, records: TransactionRecord[]): DateGroup => {
+      const group = [date, records] as const;
+      return Object.assign(group, {
+        date,
+        records,
+        [Symbol.iterator]: Array.prototype[Symbol.iterator],
+      }) as DateGroup;
+    },
+    []
+  );
+
+  // Update groupedByDate useMemo to include createDateGroup in dependencies
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
     const dataToGroup = [...filteredData];
 
     dataToGroup.forEach((record) => {
       if (!(record.fecha instanceof Date)) return;
+      const dateKey = getDateKey(record.fecha);
+      if (!dateKey) return;
 
-      // Usar fecha Colombia para agrupar y asegurar que dateKey sea string
-      const colombiaDate = getColombiaDate(new Date(record.fecha));
-      const dateKey = colombiaDate.toISOString().split('T')[0]!; // Add non-null assertion
-
-      // Asegurar que el grupo existe antes de operar con él
       const existingGroup = groups.get(dateKey) ?? [];
       groups.set(dateKey, [...existingGroup, record]);
     });
 
-    // Ordenar registros dentro de cada grupo por hora (más reciente primero)
+    // Sort records within each group
     groups.forEach((records, key) => {
       const sortedRecords = records.sort((a, b) => {
-        const dateA = getColombiaDate(new Date(b.fecha));
-        const dateB = getColombiaDate(new Date(a.fecha));
+        const dateA = toColombiaDate(new Date(b.fecha));
+        const dateB = toColombiaDate(new Date(a.fecha));
         return dateA.getTime() - dateB.getTime();
       });
       groups.set(key, sortedRecords);
     });
 
-    // Ordenar grupos por fecha (más reciente primero)
-    return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
-      dateB.localeCompare(dateA)
-    );
-  }, [filteredData]);
+    // Create final array of DateGroups
+    return Array.from(groups.entries())
+      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+      .map(([date, records]) => createDateGroup(date, records));
+  }, [filteredData, createDateGroup]);
 
   // Update paginatedData to handle dates correctly
   const paginatedData = useMemo(() => {
     if (dateFilter.startDate && dateFilter.endDate) {
-      // Si hay filtro de fechas, mostrar todos los registros filtrados sin paginación
       return filteredData;
     }
 
-    // Si no hay filtro, mostrar los registros del día seleccionado
     const currentGroup = groupedByDate[currentPage - 1];
-    return currentGroup ? currentGroup[1] : [];
+    return currentGroup ? currentGroup.records : [];
   }, [groupedByDate, currentPage, dateFilter, filteredData]);
 
   // Update current date display when page changes
@@ -785,14 +802,14 @@ export default function TransactionTable({
 
   // Memoize the current date group and related data
   const { currentDateGroup, totalPages } = useMemo(() => {
-    const defaultDate = new Date().toISOString().split('T')[0];
-    const group = groupedByDate[currentPage - 1] ?? [defaultDate, []];
+    const defaultDate = new Date().toISOString().split('T')[0]!;
+    const defaultGroup = createDateGroup(defaultDate, []);
 
     return {
-      currentDateGroup: group,
+      currentDateGroup: groupedByDate[currentPage - 1] ?? defaultGroup,
       totalPages: groupedByDate.length,
     };
-  }, [groupedByDate, currentPage]);
+  }, [groupedByDate, currentPage, createDateGroup]);
 
   // Update current date when page changes with safe date handling
   useEffect(() => {
