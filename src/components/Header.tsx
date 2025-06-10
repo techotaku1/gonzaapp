@@ -2,7 +2,11 @@
 
 import Image from 'next/image';
 
-import { UserButton, useUser, SignedIn } from '@clerk/nextjs';
+import {
+  UserButton,
+  useUser,
+  SignedIn
+} from '@clerk/nextjs';
 
 export default function Header() {
   const { user } = useUser();
@@ -14,7 +18,6 @@ export default function Header() {
           src="/banner.jpg"
           alt="Banner"
           fill
-          priority
           sizes="100vw"
           className="object-cover object-top"
           quality={100}
@@ -26,11 +29,9 @@ export default function Header() {
           <SignedIn>
             <UserButton />
           </SignedIn>
-          <SignedIn>
-            <h1 className="font-display text-xl font-bold tracking-tight text-white">
-              ¡Bienvenido, {user?.firstName ?? 'Usuario'}!
-            </h1>
-          </SignedIn>
+          <h1 className="font-display text-xl font-bold tracking-tight text-white">
+            ¡Bienvenido, {user?.firstName ?? 'Usuario'}!
+          </h1>
           <Image
             src="/logo2.png"
             alt="Logo"
@@ -41,7 +42,6 @@ export default function Header() {
               height: '90px',
             }}
             className="object-contain"
-            priority
           />
         </div>
 

@@ -33,7 +33,7 @@ export default function AuthLayout({
             objectFit: 'cover',
           }}
         />
-        <div className="absolute inset-0 bg-black/30" />
+        <div className="absolute inset-0" />
       </div>
       <div className="relative flex w-full items-center justify-center p-0 lg:w-1/2">
         <Image
@@ -48,7 +48,7 @@ export default function AuthLayout({
             zIndex: -1,
           }}
         />
-        <div className="absolute inset-0 bg-white/80" style={{ zIndex: -1 }} />
+        <div className="absolute inset-0 bg-white/50" style={{ zIndex: -1 }} />
         <div className="scale-90 transform">{children}</div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { bancoOptions } from '~/utils/constants';
+import { getColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 import '~/styles/buttonLoader.css';
@@ -111,6 +112,19 @@ interface CustomError {
   message: string;
 }
 
+const formatColombiaDate = (date: Date): string => {
+  const colombiaDate = getColombiaDate(date);
+  return new Intl.DateTimeFormat('es-CO', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'America/Bogota',
+  })
+    .format(colombiaDate)
+    .toUpperCase();
+};
+
 export default function TransactionTable({
   initialData,
   onUpdateRecordAction,
@@ -133,6 +147,10 @@ export default function TransactionTable({
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [showTotals, setShowTotals] = useState(false);
+  const [dateFilter, setDateFilter] = useState<{
+    startDate: Date | null;
+    endDate: Date | null;
+  }>({ startDate: null, endDate: null });
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -258,37 +276,96 @@ export default function TransactionTable({
     4000
   );
 
-  // Move groupedByDate before it's used
+  // Update filtered data when date filter changes
+  useEffect(() => {
+    if (dateFilter.startDate && dateFilter.endDate) {
+      const filtered = data.filter((record) => {
+        const recordDate = getColombiaDate(new Date(record.fecha));
+        if (dateFilter.startDate && dateFilter.endDate) {
+          const startDate = getColombiaDate(dateFilter.startDate);
+          const endDate = getColombiaDate(dateFilter.endDate);
+          startDate.setHours(0, 0, 0, 0);
+          endDate.setHours(23, 59, 59, 999);
+          return recordDate >= startDate && recordDate <= endDate;
+        }
+        return true;
+      });
+      setFilteredData(filtered);
+    } else {
+      setFilteredData(data);
+    }
+  }, [data, dateFilter]);
+
+  // Update groupedByDate logic with Colombia timezone
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
+    const dataToGroup = [...filteredData];
 
-    data.forEach((record) => {
-      if (!(record.fecha instanceof Date) || isNaN(record.fecha.getTime())) {
-        return;
-      }
+    dataToGroup.forEach((record) => {
+      if (!(record.fecha instanceof Date)) return;
 
-      const date = new Date(record.fecha);
-      const dateKey = date.toISOString().split('T')[0] ?? '';
-      if (!dateKey) return;
+      // Usar fecha Colombia para agrupar y asegurar que dateKey sea string
+      const colombiaDate = getColombiaDate(new Date(record.fecha));
+      const dateKey = colombiaDate.toISOString().split('T')[0]!; // Add non-null assertion
 
+      // Asegurar que el grupo existe antes de operar con él
       const existingGroup = groups.get(dateKey) ?? [];
       groups.set(dateKey, [...existingGroup, record]);
     });
 
-    // Ordenar registros dentro de cada grupo por hora
-    for (const [key, records] of groups.entries()) {
+    // Ordenar registros dentro de cada grupo por hora (más reciente primero)
+    groups.forEach((records, key) => {
       const sortedRecords = records.sort((a, b) => {
-        return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+        const dateA = getColombiaDate(new Date(b.fecha));
+        const dateB = getColombiaDate(new Date(a.fecha));
+        return dateA.getTime() - dateB.getTime();
       });
       groups.set(key, sortedRecords);
-    }
+    });
 
-    // Ordenar grupos por fecha
+    // Ordenar grupos por fecha (más reciente primero)
     return Array.from(groups.entries()).sort(([dateA], [dateB]) =>
       dateB.localeCompare(dateA)
     );
-  }, [data]);
+  }, [filteredData]);
 
+  // Update paginatedData to handle dates correctly
+  const paginatedData = useMemo(() => {
+    if (dateFilter.startDate && dateFilter.endDate) {
+      // Si hay filtro de fechas, mostrar todos los registros filtrados sin paginación
+      return filteredData;
+    }
+
+    // Si no hay filtro, mostrar los registros del día seleccionado
+    const currentGroup = groupedByDate[currentPage - 1];
+    return currentGroup ? currentGroup[1] : [];
+  }, [groupedByDate, currentPage, dateFilter, filteredData]);
+
+  // Update current date display when page changes
+  useEffect(() => {
+    if (dateFilter.startDate && dateFilter.endDate) {
+      // Si hay filtro, mostrar rango de fechas
+      const start = formatColombiaDate(dateFilter.startDate);
+      const end = formatColombiaDate(dateFilter.endDate);
+      setCurrentDate(`${start} - ${end}`);
+    } else {
+      // Si no hay filtro, mostrar la fecha del grupo actual
+      const currentGroup = groupedByDate[currentPage - 1];
+      if (currentGroup) {
+        const [dateStr] = currentGroup;
+        if (dateStr) {
+          const date = new Date(`${dateStr}T12:00:00-05:00`);
+          if (!isNaN(date.getTime())) {
+            const formatted = formatColombiaDate(date);
+            setCurrentDate(formatted);
+          }
+        }
+      }
+    }
+  }, [currentPage, groupedByDate, dateFilter]);
+
+  // Remove unused paginatedDataAll
+  // ...rest of the component code...
   // Type-safe input change handler
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
@@ -707,13 +784,12 @@ export default function TransactionTable({
   );
 
   // Memoize the current date group and related data
-  const { currentDateGroup, paginatedData, totalPages } = useMemo(() => {
+  const { currentDateGroup, totalPages } = useMemo(() => {
     const defaultDate = new Date().toISOString().split('T')[0];
     const group = groupedByDate[currentPage - 1] ?? [defaultDate, []];
 
     return {
       currentDateGroup: group,
-      paginatedData: group[1],
       totalPages: groupedByDate.length,
     };
   }, [groupedByDate, currentPage]);
@@ -956,7 +1032,9 @@ export default function TransactionTable({
         XLSX.writeFile(wb, fileName);
 
         console.log(
-          `Exportados ${excelData.length} registros del ${formatDateForFileName(start)} al ${formatDateForFileName(end)}`
+          `Exportados ${excelData.length} registros del ${formatDateForFileName(
+            start
+          )} al ${formatDateForFileName(end)}`
         );
       } catch (error) {
         console.error('Error al exportar:', error);
@@ -968,6 +1046,19 @@ export default function TransactionTable({
       }
     },
     [data]
+  );
+
+  // Memoize the filter callback
+  const handleFilterData = useCallback((results: TransactionRecord[]) => {
+    setFilteredData(results);
+  }, []);
+
+  // Memoize the date filter callback
+  const handleDateFilterChange = useCallback(
+    (startDate: Date | null, endDate: Date | null) => {
+      setDateFilter({ startDate, endDate });
+    },
+    []
   );
 
   return (
@@ -1147,7 +1238,8 @@ export default function TransactionTable({
 
       <SearchControls
         data={data}
-        onFilterAction={setFilteredData}
+        onFilterAction={handleFilterData}
+        onDateFilterChangeAction={handleDateFilterChange}
         onGenerateCuadreAction={(records: TransactionRecord[]) => {
           localStorage.setItem('cuadreRecords', JSON.stringify(records));
           router.push('/cuadre');
@@ -1155,7 +1247,7 @@ export default function TransactionTable({
       />
 
       {showTotals ? (
-        <TransactionTotals transactions={filteredData} />
+        <TransactionTotals transactions={data} />
       ) : (
         <div
           className="table-container"
@@ -1402,7 +1494,9 @@ export default function TransactionTable({
         </div>
       )}
 
-      {!showTotals && <Pagination />}
+      {!showTotals && !dateFilter.startDate && !dateFilter.endDate && (
+        <Pagination />
+      )}
 
       {/* Add the payment UI */}
       {selectedRows.size > 0 && (
