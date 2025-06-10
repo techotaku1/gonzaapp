@@ -58,7 +58,7 @@ export default function HeaderTitles({
           <th
             key={header}
             scope="col"
-            className="table-header relative border-r border-b bg-white whitespace-nowrap"
+            className="table-header relative border-r border-b border-gray-600 bg-white whitespace-nowrap"
           >
             {header}
           </th>

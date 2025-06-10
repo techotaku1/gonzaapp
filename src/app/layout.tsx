@@ -2,11 +2,10 @@ import '~/styles/globals.css';
 import { Delius, Lexend } from 'next/font/google';
 
 import { esMX } from '@clerk/localizations';
-import { ClerkProvider, SignedIn } from '@clerk/nextjs';
+import { ClerkProvider } from '@clerk/nextjs';
 import { type Metadata } from 'next';
 
-import Background from '~/components/Background';
-import Header from '~/components/Header';
+import ClientLayout from '~/components/ClientLayout';
 
 export const metadata: Metadata = {
   title: 'GonzaApp',
@@ -35,11 +34,7 @@ export default function RootLayout({
     <ClerkProvider localization={esMX}>
       <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
         <body>
-          <Background />
-          <SignedIn>
-            <Header />
-          </SignedIn>
-          {children}
+          <ClientLayout>{children}</ClientLayout>
         </body>
       </html>
     </ClerkProvider>

@@ -19,7 +19,7 @@ import '~/styles/buttonSpinner.css';
 
 import ExportDateRangeModal from './ExportDateRangeModal';
 import HeaderTitles from './HeaderTitles';
-import SearchBox from './SearchBox';
+import SearchControls from './SearchControls';
 import TransactionTotals from './TransactionTotals';
 
 interface SaveResult {
@@ -542,7 +542,7 @@ export default function TransactionTable({
             onChange={(e) =>
               handleInputChange(row.id, field, e.target.value.toUpperCase())
             }
-            className="placa-field w-[80px] bg-yellow-500 cursor-pointer overflow-hidden rounded border hover:overflow-visible hover:text-clip"
+            className="placa-field w-[80px] cursor-pointer overflow-hidden rounded border bg-yellow-500 hover:overflow-visible hover:text-clip"
           />
         </div>
       );
@@ -686,7 +686,7 @@ export default function TransactionTable({
             }}
             className={`${
               type === 'checkbox'
-                ? 'h-3 w-3 rounded border-gray-300'
+                ? 'h-3 w-3 rounded border-gray-600'
                 : `flex items-center justify-center overflow-hidden rounded border px-0.5 py-0.5 text-center text-[10px] text-ellipsis ${getWidth()} ${
                     field === 'cilindraje'
                       ? '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
@@ -970,19 +970,6 @@ export default function TransactionTable({
     [data]
   );
 
-  const handleSearchAction = useCallback((results: TransactionRecord[]) => {
-    setFilteredData(results);
-    setCurrentPage(1);
-  }, []);
-
-  const handleGenerateCuadreAction = useCallback(
-    (records: TransactionRecord[]) => {
-      localStorage.setItem('cuadreRecords', JSON.stringify(records));
-      router.push('/cuadre');
-    },
-    [router]
-  );
-
   return (
     <div className="relative">
       <div className="mb-4 flex items-center justify-between">
@@ -1127,7 +1114,7 @@ export default function TransactionTable({
           <div className="flex h-10 items-center gap-1">
             <button
               onClick={handleZoomOut}
-              className="flex h-8 w-8 items-center justify-center rounded bg-gray-500 text-white hover:bg-gray-600"
+              className="flex h-8 w-8 items-center justify-center rounded bg-gray-600 text-white hover:bg-gray-600"
               title="Reducir zoom"
             >
               -
@@ -1158,10 +1145,13 @@ export default function TransactionTable({
         onExport={handleExport}
       />
 
-      <SearchBox
+      <SearchControls
         data={data}
-        onSearchAction={handleSearchAction}
-        onGenerateCuadreAction={handleGenerateCuadreAction}
+        onFilterAction={setFilteredData}
+        onGenerateCuadreAction={(records: TransactionRecord[]) => {
+          localStorage.setItem('cuadreRecords', JSON.stringify(records));
+          router.push('/cuadre');
+        }}
       />
 
       {showTotals ? (
@@ -1189,7 +1179,7 @@ export default function TransactionTable({
               overflowY: 'auto',
             }}
           >
-            <table className="w-full text-left text-sm text-gray-500">
+            <table className="w-full text-left text-sm text-gray-600">
               <HeaderTitles isDeleteMode={isDeleteMode} />
               <tbody>
                 {paginatedData.map((row, index) => {
@@ -1222,7 +1212,7 @@ export default function TransactionTable({
                               type="checkbox"
                               checked={rowsToDelete.has(row.id)}
                               onChange={() => handleDeleteSelect(row.id)}
-                              className="h-4 w-4 rounded border-gray-300"
+                              className="h-4 w-4 rounded border-gray-600"
                             />
                           </div>
                         </td>

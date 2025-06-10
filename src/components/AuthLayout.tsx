@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+import Image from 'next/image';
+
 export default function AuthLayout({
   children,
 }: {
@@ -19,19 +21,34 @@ export default function AuthLayout({
 
   return (
     <div className="flex h-screen w-full">
-      <div
-        className="relative hidden w-1/2 lg:block"
-        style={{
-          backgroundImage: 'url(/fondo.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="flex h-full items-center justify-center">
-          <div className="absolute inset-0 bg-black/30" />
-        </div>
+      <div className="relative hidden w-1/2 lg:block">
+        <Image
+          src="/fondo.jpg"
+          alt="Login Background Left"
+          fill
+          priority
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          quality={100}
+          style={{
+            objectFit: 'cover',
+          }}
+        />
+        <div className="absolute inset-0 bg-black/30" />
       </div>
-      <div className="flex w-full items-center justify-center p-0 lg:w-1/2">
+      <div className="relative flex w-full items-center justify-center p-0 lg:w-1/2">
+        <Image
+          src="/fondoright.png"
+          alt="Login Background Right"
+          fill
+          priority
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          quality={100}
+          style={{
+            objectFit: 'cover',
+            zIndex: -1,
+          }}
+        />
+        <div className="absolute inset-0 bg-white/80" style={{ zIndex: -1 }} />
         <div className="scale-90 transform">{children}</div>
       </div>
     </div>

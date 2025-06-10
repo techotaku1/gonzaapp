@@ -102,7 +102,7 @@
   }
 
   .table-cell {
-    @apply flex items-center justify-center border-r border-gray-700;
+    @apply flex items-center justify-center border-r border-gray-600;
     min-height: 1.5rem;
     padding: 0.15rem 0.5rem;
     display: table-cell;
@@ -412,7 +412,7 @@
   }
 
   .cuadre-cell {
-    @apply flex items-center justify-center border-r border-gray-300;
+    @apply flex items-center justify-center border-r border-gray-600;
     min-height: 3rem;
     padding: 0.5rem 1rem;
     display: table-cell;
@@ -428,7 +428,7 @@
   }
 
   .cuadre-select {
-    @apply w-full rounded border border-gray-300;
+    @apply w-full rounded border border-gray-600;
     height: 2.5rem;
     font-size: 1rem;
     background-color: white;
@@ -461,7 +461,7 @@
   }
 
   .cuadre-input {
-    @apply w-full rounded border border-gray-300;
+    @apply w-full rounded border border-gray-600;
     height: 2.5rem;
     font-size: 1rem;
     padding: 0.5rem;

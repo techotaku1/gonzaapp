@@ -10,7 +10,9 @@ export default function Background() {
         fill
         priority
         sizes="100vw"
-        className="object-cover"
+        style={{
+          objectFit: 'cover',
+        }}
       />
     </div>
   );

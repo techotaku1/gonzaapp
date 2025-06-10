@@ -47,167 +47,167 @@ export const vehicleTypes = [
 export type VehicleType = (typeof vehicleTypes)[number];
 
 export const soatPrices2025: SoatPrice[] = [
-  { vehicleType: '100 - Ciclomotores', code: '100', basePrice: 117900 },
-  { vehicleType: '110 - Menos de 100 c.c.', code: '110', basePrice: 243400 },
-  { vehicleType: '120 - De 100 a 200 c.c.', code: '120', basePrice: 326300 },
-  { vehicleType: '130 - Más de 200 c.c.', code: '130', basePrice: 758300 },
+  { vehicleType: '100 - Ciclomotores', code: '100', basePrice: 118200 },
+  { vehicleType: '110 - Menos de 100 c.c.', code: '110', basePrice: 243700 },
+  { vehicleType: '120 - De 100 a 200 c.c.', code: '120', basePrice: 326600 },
+  { vehicleType: '130 - Más de 200 c.c.', code: '130', basePrice: 758600 },
   {
     vehicleType: '140 - Motocarros, tricimoto, cuadriciclos',
     code: '140',
-    basePrice: 367800,
+    basePrice: 368100,
   },
 
   // Camperos y Camionetas
   {
     vehicleType: '211 - Camperos y Camionetas (0-9 años) menos 1.500 c.c.',
     code: '211',
-    basePrice: 789600,
+    basePrice: 789900,
   },
   {
     vehicleType: '221 - Camperos y Camionetas (0-9 años) 1.500-2.500 c.c.',
     code: '221',
-    basePrice: 942800,
+    basePrice: 943100,
   },
   {
     vehicleType: '231 - Camperos y Camionetas (0-9 años) más 2.500 c.c.',
     code: '231',
-    basePrice: 1105900,
+    basePrice: 1106200,
   },
   {
     vehicleType: '212 - Camperos y Camionetas (10+ años) menos 1.500 c.c.',
     code: '212',
-    basePrice: 949200,
+    basePrice: 949500,
   },
   {
     vehicleType: '222 - Camperos y Camionetas (10+ años) 1.500-2.500 c.c.',
     code: '222',
-    basePrice: 1116800,
+    basePrice: 1117100,
   },
   {
     vehicleType: '232 - Camperos y Camionetas (10+ años) más 2.500 c.c.',
     code: '232',
-    basePrice: 1269000,
+    basePrice: 1269300,
   },
 
   // Carga
-  { vehicleType: '310 - Carga menos de 5 ton', code: '310', basePrice: 884700 },
-  { vehicleType: '320 - Carga 5 a 15 ton', code: '320', basePrice: 1277600 },
-  { vehicleType: '330 - Carga más de 15 ton', code: '330', basePrice: 1615500 },
+  { vehicleType: '310 - Carga menos de 5 ton', code: '310', basePrice: 885000 },
+  { vehicleType: '320 - Carga 5 a 15 ton', code: '320', basePrice: 1277900 },
+  { vehicleType: '330 - Carga más de 15 ton', code: '330', basePrice: 1615800 },
 
   // Oficiales Especiales
   {
     vehicleType: '410 - Oficiales Especiales menos 1.500 c.c.',
     code: '410',
-    basePrice: 995500,
+    basePrice: 995800,
   },
   {
     vehicleType: '420 - Oficiales Especiales 1.500-2.500 c.c.',
     code: '420',
-    basePrice: 1255100,
+    basePrice: 1255400,
   },
   {
     vehicleType: '430 - Oficiales Especiales más 2.500 c.c.',
     code: '430',
-    basePrice: 1504700,
+    basePrice: 1505000,
   },
 
   // Autos Familiares
   {
     vehicleType: '511 - Autos Familiares (0-9 años) menos 1.500 c.c.',
     code: '511',
-    basePrice: 445300,
+    basePrice: 445600,
   },
   {
     vehicleType: '521 - Autos Familiares (0-9 años) 1.500-2.500 c.c.',
     code: '521',
-    basePrice: 542400,
+    basePrice: 542700,
   },
   {
     vehicleType: '531 - Autos Familiares (0-9 años) más 2.500 c.c.',
     code: '531',
-    basePrice: 633500,
+    basePrice: 633800,
   },
   {
     vehicleType: '512 - Autos Familiares (10+ años) menos 1.500 c.c.',
     code: '512',
-    basePrice: 590400,
+    basePrice: 590700,
   },
   {
     vehicleType: '522 - Autos Familiares (10+ años) 1.500-2.500 c.c.',
     code: '522',
-    basePrice: 674700,
+    basePrice: 675000,
   },
   {
     vehicleType: '532 - Autos Familiares (10+ años) más 2.500 c.c.',
     code: '532',
-    basePrice: 751300,
+    basePrice: 751600,
   },
 
   // 6+ Pasajeros
   {
     vehicleType: '611 - 6+ Pasajeros (0-9 años) menos 2.500 c.c.',
     code: '611',
-    basePrice: 794100,
+    basePrice: 794400,
   },
   {
     vehicleType: '621 - 6+ Pasajeros (0-9 años) 2.500 c.c. o más',
     code: '621',
-    basePrice: 1063000,
+    basePrice: 1063300,
   },
   {
     vehicleType: '612 - 6+ Pasajeros (10+ años) menos 2.500 c.c.',
     code: '612',
-    basePrice: 1013600,
+    basePrice: 1013900,
   },
   {
     vehicleType: '622 - 6+ Pasajeros (10+ años) 2.500 c.c. o más',
     code: '622',
-    basePrice: 1276400,
+    basePrice: 1276700,
   },
 
   // Autos Negocios
   {
     vehicleType: '711 - Autos Negocios (0-9 años) menos 1.500 c.c.',
     code: '711',
-    basePrice: 267900,
+    basePrice: 268200,
   },
   {
     vehicleType: '721 - Autos Negocios (0-9 años) 1.500-2.500 c.c.',
     code: '721',
-    basePrice: 332700,
+    basePrice: 333000,
   },
   {
     vehicleType: '731 - Autos Negocios (0-9 años) más 2.500 c.c.',
     code: '731',
-    basePrice: 429000,
+    basePrice: 429300,
   },
   {
     vehicleType: '712 - Autos Negocios (10+ años) menos 1.500 c.c.',
     code: '712',
-    basePrice: 334500,
+    basePrice: 334800,
   },
   {
     vehicleType: '722 - Autos Negocios (10+ años) 1.500-2.500 c.c.',
     code: '722',
-    basePrice: 410900,
+    basePrice: 411200,
   },
   {
     vehicleType: '732 - Autos Negocios (10+ años) más 2.500 c.c.',
     code: '732',
-    basePrice: 503200,
+    basePrice: 503500,
   },
 
   // Buses
-  { vehicleType: '810 - Bus buseta urbano', code: '810', basePrice: 640000 },
+  { vehicleType: '810 - Bus buseta urbano', code: '810', basePrice: 640300 },
   {
     vehicleType: '910 - Buses menos de 10 pasajeros',
     code: '910',
-    basePrice: 632700,
+    basePrice: 633000,
   },
   {
     vehicleType: '920 - Buses 10 o más pasajeros',
     code: '920',
-    basePrice: 917700,
+    basePrice: 918000,
   },
 ];
 
