@@ -1,18 +1,31 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import Image from 'next/image';
 
-import {
-  UserButton,
-  useUser,
-  SignedIn
-} from '@clerk/nextjs';
+import { UserButton, useUser, SignedIn } from '@clerk/nextjs';
 
 export default function Header() {
   const { user } = useUser();
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollPos = window.scrollY;
+      setVisible(currentScrollPos === 0);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
-    <header className="fixed top-0 left-0 z-[100] flex h-26 w-full items-center justify-between overflow-hidden">
+    <header
+      className={`fixed top-0 left-0 z-[100] flex h-26 w-full items-center justify-between overflow-hidden shadow-lg shadow-black/20 transition-transform duration-300 ${
+        visible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
       <div className="absolute inset-0 -mt-60">
         <Image
           src="/banner.jpg"
