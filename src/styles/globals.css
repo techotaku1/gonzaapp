@@ -568,4 +568,27 @@
     font-size: 0.75rem;
     line-height: 1rem;
   }
+
+  /* Agregar estilos para el loading state */
+  .loading-overlay {
+    @apply absolute inset-0 flex items-center justify-center bg-black/20;
+    z-index: 1000;
+  }
+
+  .loading-spinner {
+    @apply h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent;
+  }
+
+  /* Estilos para el filtro de fechas */
+  .date-filter-container {
+    @apply relative flex items-center gap-2;
+  }
+
+  .date-filter-container input[type='date'] {
+    @apply cursor-pointer rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none;
+  }
+
+  .date-filter-container input[type='date']:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
 }
