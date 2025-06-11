@@ -1070,17 +1070,55 @@ export default function TransactionTable({
     setFilteredData(results);
   }, []);
 
-  // Memoize the date filter callback
+  // Actualizar la función que maneja las fechas
+  const updateDateDisplay = useCallback((startDate: Date | null, endDate: Date | null) => {
+    const dateElement = document.getElementById('current-date-display');
+    if (!dateElement) return;
+
+    if (startDate && endDate) {
+      const formatDate = (date: Date) => {
+        return new Intl.DateTimeFormat('es-CO', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: 'America/Bogota',
+        }).format(date).toUpperCase();
+      };
+
+      dateElement.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    } else {
+      const currentGroup = groupedByDate[currentPage - 1];
+      if (currentGroup) {
+        const [dateStr] = currentGroup;
+        if (dateStr) {
+          const date = new Date(`${dateStr}T12:00:00-05:00`);
+          if (!isNaN(date.getTime())) {
+            dateElement.textContent = formatColombiaDate(date);
+          }
+        }
+      }
+    }
+  }, [currentPage, groupedByDate]);
+
+  // Actualizar useEffect para el manejo de fechas
+  useEffect(() => {
+    updateDateDisplay(dateFilter.startDate, dateFilter.endDate);
+  }, [dateFilter, currentPage, updateDateDisplay]);
+
+  // Modificar handleDateFilterChange para actualizar la visualización
   const handleDateFilterChange = useCallback(
     (startDate: Date | null, endDate: Date | null) => {
       setDateFilter({ startDate, endDate });
+      updateDateDisplay(startDate, endDate);
     },
-    []
+    [updateDateDisplay]
   );
 
   return (
     <div className="relative">
-      <div className="mb-4 flex items-center justify-between">
+      {/* Remover el elemento time de aquí ya que ahora está en el layout principal */}
+      <div className="mb-4">
         <div className="flex w-full items-center gap-4">
           {/* Botón Agregar */}
           <button
@@ -1239,11 +1277,6 @@ export default function TransactionTable({
             </button>
           </div>
         </div>
-
-        {/* Date display */}
-        <time className="font-display ml-4 text-2xl font-bold whitespace-nowrap text-black">
-          {currentDate}
-        </time>
       </div>
 
       {/* Modal de exportación por rango de fechas */}

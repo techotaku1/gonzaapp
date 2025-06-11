@@ -15,9 +15,12 @@ export default async function HomePage() {
         <Header />
       </div>
       <main className="container mx-auto min-h-screen p-4 pt-32">
-        <h1 className="font-display mb-2 text-3xl font-bold tracking-tight text-black">
-          Registro de Transacciones
-        </h1>
+        <div className="flex items-center justify-between">
+          <time
+            id="current-date-display"
+            className="mb-4 font-display text-3xl font-bold tracking-tight text-black"
+          />
+        </div>
         <TransactionTable
           initialData={initialData}
           onUpdateRecordAction={updateRecords}
