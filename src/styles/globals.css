@@ -452,7 +452,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-    /* Estilo para las opciones del select */
+  /* Estilo para las opciones del select */
   select.cuadre-select option {
     padding: 0.15rem 0.5rem;
     text-align: left;
@@ -467,5 +467,105 @@
     padding: 0.5rem;
     background-color: white;
     transition: all 0.2s;
+  }
+
+  /* Ocultar elementos específicos de Clerk */
+  .cl-footerAction,
+  .cl-footerActionLink,
+  .cl-footerText {
+    display: none !important;
+  }
+
+  /* Si necesitas ser más específico */
+  .cl-card .cl-footer .cl-footerAction {
+    display: none !important;
+  }
+
+  /* Estilo para inputs autocompletados */
+  input:-webkit-autofill,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    @apply bg-transparent;
+    -webkit-box-shadow: 0 0 0px 1000px transparent inset;
+    -webkit-text-fill-color: white !important; /* 👈 fuerza el color blanco */
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Traducciones de mensajes de error de Clerk - Actualizado */
+  [data-error-code] {
+    @apply mt-1 text-xs font-medium text-red-500;
+  }
+
+  /* Ocultar mensajes originales en inglés */
+  [data-error-code='form_identifier_not_found'],
+  [data-error-code='form_password_incorrect'],
+  [data-error-code='form_identifier_exists'],
+  [data-error-code='form_param_format_invalid'],
+  [data-error-code='form_password_pwned'],
+  [data-error-code='form_param_missing'],
+  [data-error-code='form_code_incorrect'] {
+    font-size: 0;
+    line-height: 0;
+    visibility: hidden;
+    position: relative;
+    height: 16px; /* Mantener espacio para el mensaje traducido */
+    display: block;
+  }
+
+  /* Traducciones */
+  [data-error-code='form_identifier_not_found']::before {
+    content: 'No se encontró una cuenta con este correo electrónico';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-error-code='form_password_incorrect']::before {
+    content: 'La contraseña es incorrecta';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-error-code='form_identifier_exists']::before {
+    content: 'Ya existe una cuenta con este correo electrónico';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-error-code='form_param_format_invalid']::before {
+    content: 'El formato del correo electrónico no es válido';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-error-code='form_password_pwned']::before {
+    content: 'Esta contraseña ha sido comprometida, por favor use otra';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-error-code='form_param_missing']::before {
+    content: 'Este campo es obligatorio';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+
+  [data-error-code='form_code_incorrect']::before {
+    content: 'El código ingresado es incorrecto';
+    visibility: visible;
+    position: absolute;
+    font-size: 0.75rem;
+    line-height: 1rem;
   }
 }
