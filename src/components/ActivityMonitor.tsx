@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import { useAuth } from '@clerk/nextjs';
 
-const INACTIVE_TIMEOUT = 10 * 60 * 1000; // 10 minutos
+const INACTIVE_TIMEOUT = 30 * 60 * 1000; // 30 minutos
 
 export default function ActivityMonitor() {
   const { signOut } = useAuth();
