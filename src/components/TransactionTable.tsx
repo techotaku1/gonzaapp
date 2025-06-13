@@ -137,12 +137,14 @@ export default function TransactionTable({
     startDate: Date | null;
     endDate: Date | null;
   }>({ startDate: null, endDate: null });
-  const [hasSearchResults, _setHasSearchResults] = useState(false);
+  const [hasSearchResults, setHasSearchResults] = useState(false);
   const [isAsesorSelectionMode, setIsAsesorSelectionMode] = useState(false);
   const [selectedAsesores, setSelectedAsesores] = useState<Set<string>>(
     new Set()
   );
   const [_currentDateDisplay, setCurrentDateDisplay] = useState('');
+
+  const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -283,8 +285,10 @@ export default function TransactionTable({
         return true;
       });
       setFilteredData(filtered);
+      setHasSearchResults(filtered.length > 0);
     } else {
       setFilteredData(data);
+      setHasSearchResults(data.length > 0);
     }
   }, [data, dateFilter]);
 
@@ -1059,6 +1063,7 @@ export default function TransactionTable({
   // Memoize the filter callback
   const handleFilterData = useCallback((results: TransactionRecord[]) => {
     setFilteredData(results);
+    setHasSearchResults(results.length > 0);
   }, []);
 
   // Actualizar la función que maneja las fechas
@@ -1124,23 +1129,33 @@ export default function TransactionTable({
     });
   }, []);
 
-  // Update renderAsesorSelect to use handleAsesorSelection
   const renderAsesorSelect = useCallback(
     (row: TransactionRecord) => {
       if (!isAsesorSelectionMode) return null;
 
       return (
-        <td className="table-checkbox-cell">
-          <input
-            type="checkbox"
-            checked={selectedAsesores.has(row.id)}
-            onChange={() => handleAsesorSelection(row.id, row.asesor)}
-            className="h-4 w-4 rounded border-gray-300"
-          />
-        </td>
+        <div className="flex items-center gap-2">
+          <div className="table-checkbox-wrapper">
+            <label className="check-label">
+              <input
+                type="checkbox"
+                checked={selectedAsesores.has(row.id)}
+                onChange={() => handleAsesorSelection(row.id, row.asesor)}
+                className="sr-only"
+              />
+              <div className="checkmark" />
+            </label>
+          </div>
+          {renderInput(row, 'asesor')}
+        </div>
       );
     },
-    [isAsesorSelectionMode, selectedAsesores, handleAsesorSelection]
+    [
+      isAsesorSelectionMode,
+      selectedAsesores,
+      handleAsesorSelection,
+      renderInput,
+    ]
   );
 
   // Rename TableHeader to _TableHeader since it's unused
@@ -1178,9 +1193,10 @@ export default function TransactionTable({
     );
   }, [isDeleteMode, isAsesorSelectionMode]);
 
-  // Replace handleToggleAsesorSelection with handleToggleAsesorMode
+  // Replace handleToggleAsesorSelection with this optimized version
   const handleToggleAsesorMode = useCallback(async () => {
     try {
+      setIsLoadingAsesorMode(true);
       const result = await toggleAsesorSelectionAction();
       if (result.success) {
         setIsAsesorSelectionMode((prev) => !prev);
@@ -1188,6 +1204,8 @@ export default function TransactionTable({
       }
     } catch (error) {
       console.error('Error toggling asesor selection:', error);
+    } finally {
+      setIsLoadingAsesorMode(false);
     }
   }, []);
 
@@ -1382,6 +1400,7 @@ export default function TransactionTable({
         hasSearchResults={hasSearchResults}
         isAsesorSelectionMode={isAsesorSelectionMode}
         hasSelectedAsesores={selectedAsesores.size > 0}
+        isLoadingAsesorMode={isLoadingAsesorMode}
       />
 
       {showTotals ? (
@@ -1557,7 +1576,9 @@ export default function TransactionTable({
                           index === 14 ? 'border-r-0' : ''
                         }`}
                       >
-                        {renderInput(rowWithFormulas, 'asesor')}
+                        {isAsesorSelectionMode
+                          ? renderAsesorSelect(row)
+                          : renderInput(rowWithFormulas, 'asesor')}
                       </td>
                       <td
                         className={`table-cell whitespace-nowrap ${
@@ -1623,7 +1644,6 @@ export default function TransactionTable({
                       <td className="table-cell whitespace-nowrap">
                         {renderInput(rowWithFormulas, 'observaciones')}
                       </td>
-                      {isAsesorSelectionMode && renderAsesorSelect(row)}
                     </tr>
                   );
                 })}

@@ -6,6 +6,8 @@ import DatePicker from 'react-datepicker';
 
 import 'react-datepicker/dist/react-datepicker.css';
 
+import { Icons } from './icons';
+
 import type { TransactionRecord } from '~/types';
 
 interface SearchControlsProps {
@@ -20,6 +22,7 @@ interface SearchControlsProps {
   hasSearchResults: boolean;
   isAsesorSelectionMode: boolean;
   hasSelectedAsesores: boolean;
+  isLoadingAsesorMode: boolean;
 }
 
 export default function SearchControls({
@@ -31,11 +34,13 @@ export default function SearchControls({
   hasSearchResults,
   isAsesorSelectionMode,
   hasSelectedAsesores,
+  isLoadingAsesorMode,
 }: SearchControlsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingCuadre, setIsGeneratingCuadre] = useState(false);
 
   // Memoize the filtering logic to prevent infinite loops
   const filteredData = useMemo(() => {
@@ -79,6 +84,11 @@ export default function SearchControls({
       setIsLoading(false);
     }
   }, [startDate, endDate, onDateFilterChangeAction]);
+
+  const handleGenerateCuadre = useCallback(() => {
+    setIsGeneratingCuadre(true);
+    onGenerateCuadreAction(data);
+  }, [data, onGenerateCuadreAction]);
 
   // Add minDate handling
   const minDateValue = startDate ?? undefined;
@@ -162,20 +172,40 @@ export default function SearchControls({
       <div className="ml-auto flex items-center gap-2">
         <button
           onClick={onToggleAsesorSelectionAction}
-          disabled={!hasSearchResults}
-          className="rounded-md bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600 disabled:opacity-50"
+          disabled={!hasSearchResults || isLoadingAsesorMode}
+          className={`flex items-center gap-2 rounded-md px-4 py-2 text-white transition-all ${
+            hasSearchResults
+              ? 'bg-yellow-500 hover:bg-yellow-600'
+              : 'cursor-not-allowed bg-gray-400'
+          }`}
         >
-          {isAsesorSelectionMode
-            ? 'Cancelar Selección'
-            : 'Seleccionar por Asesor'}
+          {isLoadingAsesorMode ? (
+            <>
+              <Icons.spinner className="h-4 w-4 animate-spin" />
+              <span>Cargando...</span>
+            </>
+          ) : (
+            <span>
+              {isAsesorSelectionMode
+                ? 'Cancelar Selección'
+                : 'Seleccionar por Asesor'}
+            </span>
+          )}
         </button>
 
         <button
-          onClick={() => onGenerateCuadreAction(data)}
-          disabled={!hasSelectedAsesores}
-          className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+          onClick={handleGenerateCuadre}
+          disabled={!hasSelectedAsesores || isGeneratingCuadre}
+          className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
         >
-          Generar Cuadre
+          {isGeneratingCuadre ? (
+            <>
+              <Icons.spinner className="h-4 w-4 animate-spin" />
+              <span>Generando...</span>
+            </>
+          ) : (
+            <span>Generar Cuadre</span>
+          )}
         </button>
       </div>
     </div>

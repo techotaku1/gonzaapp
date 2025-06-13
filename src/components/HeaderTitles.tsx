@@ -1,9 +1,9 @@
 export default function HeaderTitles({
   isDeleteMode = false,
-  isAsesorSelectionMode,
+  _isAsesorSelectionMode = false,
 }: {
   isDeleteMode?: boolean;
-  isAsesorSelectionMode?: boolean;
+  _isAsesorSelectionMode?: boolean;
 }) {
   const tableHeaders = [
     'Fecha',
@@ -65,9 +65,6 @@ export default function HeaderTitles({
             {header}
           </th>
         ))}
-        {isAsesorSelectionMode && (
-          <th className="table-header">Seleccionar Asesor</th>
-        )}
       </tr>
     </thead>
   );
