@@ -20,18 +20,32 @@ export default function CuadrePage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Load records from localStorage
+    // Load records from localStorage and merge with existing ones
     const savedRecords = localStorage.getItem('cuadreRecords');
     if (savedRecords) {
       try {
-        const records = JSON.parse(savedRecords) as TransactionRecord[];
-        // Transform records to include totalCombinado
-        const summaryRecords = records.map((record) => ({
-          ...record,
-          totalCombinado: record.precioNeto + record.tarifaServicio,
-          fecha: new Date(record.fecha), // Convert date string back to Date object
-        }));
-        setSummaryData(summaryRecords);
+        const newRecords = JSON.parse(savedRecords) as TransactionRecord[];
+        setSummaryData((prevData) => {
+          // Create a map of existing records by ID
+          const existingRecordsMap = new Map(
+            prevData.map((record) => [record.id, record])
+          );
+
+          // Merge new records with existing ones
+          newRecords.forEach((record) => {
+            existingRecordsMap.set(record.id, {
+              ...existingRecordsMap.get(record.id), // Preserve existing data
+              ...record, // Override with new data
+              fecha: new Date(record.fecha),
+              totalCombinado: record.precioNeto + record.tarifaServicio,
+            });
+          });
+
+          return Array.from(existingRecordsMap.values());
+        });
+
+        // Clear the localStorage after merging
+        localStorage.removeItem('cuadreRecords');
       } catch (error) {
         console.error('Error loading cuadre records:', error);
       }
@@ -70,8 +84,8 @@ export default function CuadrePage() {
 
   const handleUpdateBancoReferencia = (
     id: string,
-    field: 'banco' | 'referencia',
-    value: string
+    field: 'banco' | 'referencia' | 'banco2' | 'fechaCliente',
+    value: string | Date | null
   ) => {
     setSummaryData((prev) => {
       const newData = prev.map((record) =>
@@ -107,7 +121,7 @@ export default function CuadrePage() {
             Volver al Inicio
           </button>
           {isSaving ? (
-            <span className="font-bold flex items-center gap-2 rounded-md bg-blue-300 px-3 py-2.5 text-sm text-blue-800">
+            <span className="flex items-center gap-2 rounded-md bg-blue-300 px-3 py-2.5 text-sm font-bold text-blue-800">
               <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
@@ -126,7 +140,7 @@ export default function CuadrePage() {
               Guardando cambios...
             </span>
           ) : (
-            <span className="font-bold rounded-md bg-green-300 px-3 py-2.5 text-sm text-green-800">
+            <span className="rounded-md bg-green-300 px-3 py-2.5 text-sm font-bold text-green-800">
               ✓ Todos los cambios guardados
             </span>
           )}
@@ -143,6 +157,8 @@ export default function CuadrePage() {
                 'Asesor',
                 'Total (Precio + Tarifa)',
                 'Banco',
+                'Banco 2',
+                'Fecha Cliente',
                 'Referencia',
               ].map((header) => (
                 <th
@@ -187,6 +203,49 @@ export default function CuadrePage() {
                       </option>
                     ))}
                   </select>
+                </td>
+                <td className="cuadre-cell">
+                  <select
+                    value={record.banco2 ?? ''}
+                    onChange={(e) =>
+                      handleUpdateBancoReferencia(
+                        record.id,
+                        'banco2',
+                        e.target.value
+                      )
+                    }
+                    className="cuadre-select font-lexend"
+                  >
+                    <option value="">Seleccionar...</option>
+                    {bancoOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className="cuadre-cell date-column font-lexend">
+                  <input
+                    type="datetime-local"
+                    value={
+                      record.fechaCliente
+                        ? new Date(record.fechaCliente)
+                            .toISOString()
+                            .slice(0, 16)
+                        : ''
+                    }
+                    onChange={(e) => {
+                      const date = e.target.value
+                        ? new Date(e.target.value)
+                        : null;
+                      handleUpdateBancoReferencia(
+                        record.id,
+                        'fechaCliente',
+                        date
+                      );
+                    }}
+                    className="cuadre-input" // Added text-xs class
+                  />
                 </td>
                 <td className="cuadre-cell border-r-0">
                   <input

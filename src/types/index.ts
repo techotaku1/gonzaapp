@@ -24,5 +24,7 @@ export interface TransactionRecord {
   rappi: boolean;
   observaciones: string | null;
   banco: string | null;
+  banco2: string | null; // Nuevo campo
+  fechaCliente: Date | null; // Nuevo campo
   referencia: string | null;
 }

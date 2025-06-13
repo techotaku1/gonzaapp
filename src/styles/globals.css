@@ -394,10 +394,10 @@
     position: sticky;
     height: 3.5rem;
     line-height: 1.2;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem; /* Reduced padding */
     font-family: var(--font-table-text);
     font-weight: 500;
-    font-size: 1.125rem;
+    font-size: 0.9rem; /* Reduced font size */
     color: black;
     text-align: center;
     vertical-align: middle;
@@ -405,20 +405,18 @@
     border-bottom: 2px solid #4a5565;
     z-index: 10;
     transition: background-color 0.2s;
-  }
-
-  .cuadre-header:hover {
-    background: linear-gradient(to bottom, #e5e7eb 0%, #d1d5db 100%);
+    min-width: 80px; /* Added minimum width */
+    max-width: 120px; /* Added maximum width */
   }
 
   .cuadre-cell {
     @apply flex items-center justify-center border-r border-gray-600;
     min-height: 3rem;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem; /* Reduced padding */
     display: table-cell;
     vertical-align: middle;
     text-align: center;
-    font-size: 1rem;
+    font-size: 0.875rem; /* Reduced font size */
     line-height: 1.5;
     transition: background-color 0.2s;
   }
@@ -463,10 +461,18 @@
   .cuadre-input {
     @apply w-full rounded border border-gray-600;
     height: 2.5rem;
-    font-size: 1rem;
+    font-size: 0.875rem;
     padding: 0.5rem;
     background-color: white;
     transition: all 0.2s;
+    min-width: 0; /* Allow input to shrink */
+  }
+
+  /* Specific style for datetime inputs */
+  input[type='datetime-local'].cuadre-input {
+    min-width: 130px; /* Ensure datetime is visible */
+    font-size: 0.7rem; /* Smaller font for datetime */
+    padding: 0.25rem; /* Reduced padding */
   }
 
   /* Ocultar elementos específicos de Clerk */
@@ -588,6 +594,19 @@
     @apply cursor-pointer rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none;
   }
 
+  .date-filter-container input[type='date']:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
+  /* Ocultar visualmente el icono sin eliminar funcionalidad */
+  input[type='datetime-local']::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    position: absolute;
+    left: 0;
+  }
+  
   .date-filter-container input[type='date']:disabled {
     @apply cursor-not-allowed opacity-50;
   }

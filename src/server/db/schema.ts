@@ -45,5 +45,7 @@ export const transactions = pgTable('transactions', {
   rappi: boolean('rappi').notNull().default(false),
   observaciones: varchar('observaciones'),
   banco: varchar('banco'),
+  banco2: varchar('banco2'), // Nuevo campo para segundo banco
+  fechaCliente: timestamp('fecha_cliente'), // Nueva fecha para el cliente
   referencia: varchar('referencia'),
 });

@@ -223,6 +223,8 @@ export default function TransactionTable({
         rappi: false,
         observaciones: null,
         banco: null,
+        banco2: null, // Added missing field
+        fechaCliente: null, // Added missing field
         referencia: null,
       };
 
