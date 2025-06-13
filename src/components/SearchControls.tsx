@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import DatePicker from 'react-datepicker';
 
 import 'react-datepicker/dist/react-datepicker.css';
+
 import type { TransactionRecord } from '~/types';
 
 interface SearchControlsProps {
@@ -14,14 +15,22 @@ interface SearchControlsProps {
     startDate: Date | null,
     endDate: Date | null
   ) => void;
+  onToggleAsesorSelectionAction: () => Promise<void>;
   onGenerateCuadreAction: (records: TransactionRecord[]) => void;
+  hasSearchResults: boolean;
+  isAsesorSelectionMode: boolean;
+  hasSelectedAsesores: boolean;
 }
 
 export default function SearchControls({
   data,
   onFilterAction,
   onDateFilterChangeAction,
+  onToggleAsesorSelectionAction,
   onGenerateCuadreAction,
+  hasSearchResults,
+  isAsesorSelectionMode,
+  hasSelectedAsesores,
 }: SearchControlsProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -150,12 +159,25 @@ export default function SearchControls({
         )}
       </div>
 
-      <button
-        onClick={() => onGenerateCuadreAction(data)}
-        className="ml-auto rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-      >
-        Generar Cuadre
-      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          onClick={onToggleAsesorSelectionAction}
+          disabled={!hasSearchResults}
+          className="rounded-md bg-yellow-500 px-4 py-2 text-white hover:bg-yellow-600 disabled:opacity-50"
+        >
+          {isAsesorSelectionMode
+            ? 'Cancelar Selección'
+            : 'Seleccionar por Asesor'}
+        </button>
+
+        <button
+          onClick={() => onGenerateCuadreAction(data)}
+          disabled={!hasSelectedAsesores}
+          className="rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+        >
+          Generar Cuadre
+        </button>
+      </div>
     </div>
   );
 }

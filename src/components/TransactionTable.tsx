@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
+import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { bancoOptions } from '~/utils/constants';
@@ -36,20 +37,6 @@ type HandleInputChange = (
   value: InputValue
 ) => void;
 
-function getCurrentDate(): string {
-  // Use a fixed date string format to avoid hydration mismatch
-  const today = new Date();
-  const formatter = new Intl.DateTimeFormat('es-CO', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'America/Bogota',
-  });
-  return formatter.format(today).toUpperCase();
-}
-
-// Add this function at the component level, before the TransactionTable function
 const getEmitidoPorClass = (value: string): string => {
   if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
   if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
@@ -138,7 +125,6 @@ export default function TransactionTable({
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [currentDate, setCurrentDate] = useState(getCurrentDate());
   const [_selectedPlates, setSelectedPlates] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -151,6 +137,12 @@ export default function TransactionTable({
     startDate: Date | null;
     endDate: Date | null;
   }>({ startDate: null, endDate: null });
+  const [hasSearchResults, _setHasSearchResults] = useState(false);
+  const [isAsesorSelectionMode, setIsAsesorSelectionMode] = useState(false);
+  const [selectedAsesores, setSelectedAsesores] = useState<Set<string>>(
+    new Set()
+  );
+  const [_currentDateDisplay, setCurrentDateDisplay] = useState('');
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -364,7 +356,7 @@ export default function TransactionTable({
       // Si hay filtro, mostrar rango de fechas
       const start = formatColombiaDate(dateFilter.startDate);
       const end = formatColombiaDate(dateFilter.endDate);
-      setCurrentDate(`${start} - ${end}`);
+      setCurrentDateDisplay(`${start} - ${end}`);
     } else {
       // Si no hay filtro, mostrar la fecha del grupo actual
       const currentGroup = groupedByDate[currentPage - 1];
@@ -374,16 +366,15 @@ export default function TransactionTable({
           const date = new Date(`${dateStr}T12:00:00-05:00`);
           if (!isNaN(date.getTime())) {
             const formatted = formatColombiaDate(date);
-            setCurrentDate(formatted);
+            setCurrentDateDisplay(formatted);
           }
         }
       }
     }
-  }, [currentPage, groupedByDate, dateFilter]);
+  }, [currentPage, groupedByDate, dateFilter, setCurrentDateDisplay]);
 
   // Remove unused paginatedDataAll
-  // ...rest of the component code...
-  // Type-safe input change handler
+  // ...Type-safe input change handler
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       setData((prevData) => {
@@ -827,7 +818,7 @@ export default function TransactionTable({
       timeZone: 'America/Bogota',
     });
 
-    setCurrentDate(formatter.format(date).toUpperCase());
+    setCurrentDateDisplay(formatter.format(date).toUpperCase());
   }, [currentDateGroup]);
 
   // Add pagination controls component
@@ -1071,35 +1062,40 @@ export default function TransactionTable({
   }, []);
 
   // Actualizar la función que maneja las fechas
-  const updateDateDisplay = useCallback((startDate: Date | null, endDate: Date | null) => {
-    const dateElement = document.getElementById('current-date-display');
-    if (!dateElement) return;
+  const updateDateDisplay = useCallback(
+    (startDate: Date | null, endDate: Date | null) => {
+      const dateElement = document.getElementById('current-date-display');
+      if (!dateElement) return;
 
-    if (startDate && endDate) {
-      const formatDate = (date: Date) => {
-        return new Intl.DateTimeFormat('es-CO', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: 'America/Bogota',
-        }).format(date).toUpperCase();
-      };
+      if (startDate && endDate) {
+        const formatDate = (date: Date) => {
+          return new Intl.DateTimeFormat('es-CO', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            timeZone: 'America/Bogota',
+          })
+            .format(date)
+            .toUpperCase();
+        };
 
-      dateElement.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
-    } else {
-      const currentGroup = groupedByDate[currentPage - 1];
-      if (currentGroup) {
-        const [dateStr] = currentGroup;
-        if (dateStr) {
-          const date = new Date(`${dateStr}T12:00:00-05:00`);
-          if (!isNaN(date.getTime())) {
-            dateElement.textContent = formatColombiaDate(date);
+        dateElement.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+      } else {
+        const currentGroup = groupedByDate[currentPage - 1];
+        if (currentGroup) {
+          const [dateStr] = currentGroup;
+          if (dateStr) {
+            const date = new Date(`${dateStr}T12:00:00-05:00`);
+            if (!isNaN(date.getTime())) {
+              dateElement.textContent = formatColombiaDate(date);
+            }
           }
         }
       }
-    }
-  }, [currentPage, groupedByDate]);
+    },
+    [currentPage, groupedByDate]
+  );
 
   // Actualizar useEffect para el manejo de fechas
   useEffect(() => {
@@ -1114,6 +1110,86 @@ export default function TransactionTable({
     },
     [updateDateDisplay]
   );
+
+  // Add proper handler for asesor selection
+  const handleAsesorSelection = useCallback((id: string, _asesor: string) => {
+    setSelectedAsesores((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // Update renderAsesorSelect to use handleAsesorSelection
+  const renderAsesorSelect = useCallback(
+    (row: TransactionRecord) => {
+      if (!isAsesorSelectionMode) return null;
+
+      return (
+        <td className="table-checkbox-cell">
+          <input
+            type="checkbox"
+            checked={selectedAsesores.has(row.id)}
+            onChange={() => handleAsesorSelection(row.id, row.asesor)}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+        </td>
+      );
+    },
+    [isAsesorSelectionMode, selectedAsesores, handleAsesorSelection]
+  );
+
+  // Rename TableHeader to _TableHeader since it's unused
+  const _TableHeader = useCallback(() => {
+    return (
+      <tr>
+        {isDeleteMode && <th className="table-header">Eliminar</th>}
+        <th className="table-header">Fecha</th>
+        <th className="table-header">Trámite</th>
+        <th className="table-header">Seleccionar</th>
+        <th className="table-header">Pagado</th>
+        <th className="table-header">Boletas Registradas</th>
+        <th className="table-header">Emitido Por</th>
+        <th className="table-header">Placa</th>
+        <th className="table-header">Tipo Documento</th>
+        <th className="table-header">Número Documento</th>
+        <th className="table-header">Nombre</th>
+        <th className="table-header">Cilindraje</th>
+        <th className="table-header">Tipo Vehículo</th>
+        <th className="table-header">Celular</th>
+        <th className="table-header">Ciudad</th>
+        <th className="table-header">Asesor</th>
+        <th className="table-header">Novedad</th>
+        <th className="table-header">Precio Neto</th>
+        <th className="table-header">Comisión Extra</th>
+        <th className="table-header">Tarifa Servicio</th>
+        <th className="table-header">4x1000</th>
+        <th className="table-header">Ganancia Bruta</th>
+        <th className="table-header">Rappi</th>
+        <th className="table-header">Observaciones</th>
+        {isAsesorSelectionMode && (
+          <th className="table-header">Seleccionar Asesor</th>
+        )}
+      </tr>
+    );
+  }, [isDeleteMode, isAsesorSelectionMode]);
+
+  // Replace handleToggleAsesorSelection with handleToggleAsesorMode
+  const handleToggleAsesorMode = useCallback(async () => {
+    try {
+      const result = await toggleAsesorSelectionAction();
+      if (result.success) {
+        setIsAsesorSelectionMode((prev) => !prev);
+        setSelectedAsesores(new Set());
+      }
+    } catch (error) {
+      console.error('Error toggling asesor selection:', error);
+    }
+  }, []);
 
   return (
     <div className="relative">
@@ -1290,10 +1366,22 @@ export default function TransactionTable({
         data={data}
         onFilterAction={handleFilterData}
         onDateFilterChangeAction={handleDateFilterChange}
-        onGenerateCuadreAction={(records: TransactionRecord[]) => {
-          localStorage.setItem('cuadreRecords', JSON.stringify(records));
-          router.push('/cuadre');
+        onToggleAsesorSelectionAction={handleToggleAsesorMode}
+        onGenerateCuadreAction={(records) => {
+          const selectedRecords = records.filter((r) =>
+            selectedAsesores.has(r.id)
+          );
+          if (selectedRecords.length > 0) {
+            localStorage.setItem(
+              'cuadreRecords',
+              JSON.stringify(selectedRecords)
+            );
+            router.push('/cuadre');
+          }
         }}
+        hasSearchResults={hasSearchResults}
+        isAsesorSelectionMode={isAsesorSelectionMode}
+        hasSelectedAsesores={selectedAsesores.size > 0}
       />
 
       {showTotals ? (
@@ -1535,6 +1623,7 @@ export default function TransactionTable({
                       <td className="table-cell whitespace-nowrap">
                         {renderInput(rowWithFormulas, 'observaciones')}
                       </td>
+                      {isAsesorSelectionMode && renderAsesorSelect(row)}
                     </tr>
                   );
                 })}

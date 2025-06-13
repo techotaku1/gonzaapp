@@ -1,7 +1,8 @@
-/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState } from 'react';
+
+import Image from 'next/image';
 
 import * as Clerk from '@clerk/elements/common';
 import * as SignIn from '@clerk/elements/sign-in';
@@ -67,11 +68,19 @@ export default function SignInPage() {
               <h1 className="font-display mb-4 text-5xl font-bold tracking-tight text-indigo-600">
                 GonzaApp
               </h1>
-              <img
-                src="/logo2.png"
-                alt="Logo"
-                className="mx-auto h-24 w-24 object-contain"
-              />
+              <div className="relative mx-auto h-24 w-24">
+                <Image
+                  src="/logo2.png"
+                  alt="Logo"
+                  fill
+                  priority
+                  sizes="(max-width: 96px) 100vw, 96px"
+                  style={{
+                    objectFit: 'contain',
+                  }}
+                  quality={100}
+                />
+              </div>
               <h2 className="mt-4 text-xl font-medium tracking-tight text-neutral-950">
                 Iniciar Sesión
               </h2>
