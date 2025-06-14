@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -12,6 +12,8 @@ import type { TransactionRecord } from '~/types';
 
 interface SummaryRecord extends TransactionRecord {
   totalCombinado: number;
+  groupId?: string; // Add groupId to identify cuadre groups
+  createdAt?: Date; // Add timestamp for when the cuadre was created
 }
 
 export default function CuadrePage() {
@@ -20,36 +22,57 @@ export default function CuadrePage() {
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Load records from localStorage and merge with existing ones
     const savedRecords = localStorage.getItem('cuadreRecords');
+    const existingCuadres = localStorage.getItem('existingCuadres');
+
+    let allRecords: SummaryRecord[] = [];
+
+    // Load existing cuadres if any
+    if (existingCuadres) {
+      try {
+        const parsedRecords = JSON.parse(existingCuadres) as SummaryRecord[];
+        // Ensure dates are properly parsed
+        allRecords = parsedRecords.map((record) => ({
+          ...record,
+          fecha: new Date(record.fecha),
+          fechaCliente: record.fechaCliente
+            ? new Date(record.fechaCliente)
+            : null,
+          createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
+        }));
+      } catch (error) {
+        console.error('Error loading existing cuadres:', error);
+      }
+    }
+
+    // Add new records if any
     if (savedRecords) {
       try {
         const newRecords = JSON.parse(savedRecords) as TransactionRecord[];
-        setSummaryData((prevData) => {
-          // Create a map of existing records by ID
-          const existingRecordsMap = new Map(
-            prevData.map((record) => [record.id, record])
-          );
+        const groupId = crypto.randomUUID();
+        const newGroupRecords = newRecords.map((record) => ({
+          ...record,
+          fecha: new Date(record.fecha),
+          fechaCliente: record.fechaCliente
+            ? new Date(record.fechaCliente)
+            : null,
+          totalCombinado: record.precioNeto + record.tarifaServicio,
+          groupId,
+          createdAt: new Date(),
+        }));
 
-          // Merge new records with existing ones
-          newRecords.forEach((record) => {
-            existingRecordsMap.set(record.id, {
-              ...existingRecordsMap.get(record.id), // Preserve existing data
-              ...record, // Override with new data
-              fecha: new Date(record.fecha),
-              totalCombinado: record.precioNeto + record.tarifaServicio,
-            });
-          });
+        allRecords = [...allRecords, ...newGroupRecords];
 
-          return Array.from(existingRecordsMap.values());
-        });
-
-        // Clear the localStorage after merging
-        localStorage.removeItem('cuadreRecords');
+        // Save all records back to localStorage
+        localStorage.setItem('existingCuadres', JSON.stringify(allRecords));
+        localStorage.removeItem('cuadreRecords'); // Clear the temporary storage
       } catch (error) {
-        console.error('Error loading cuadre records:', error);
+        console.error('Error processing new records:', error);
       }
     }
+
+    // Update state with all records
+    setSummaryData(allRecords);
   }, []);
 
   const handleSaveOperation = useCallback(
@@ -58,8 +81,8 @@ export default function CuadrePage() {
         setIsSaving(true);
         const result = await updateRecords(records);
         if (result.success) {
-          // Actualizar localStorage con los datos más recientes
-          localStorage.setItem('cuadreRecords', JSON.stringify(records));
+          // Update localStorage with all current records
+          localStorage.setItem('existingCuadres', JSON.stringify(records));
         }
         return result;
       } catch (error) {
@@ -96,6 +119,24 @@ export default function CuadrePage() {
       return newData;
     });
   };
+
+  // Group records by groupId for display
+  const groupedRecords = useMemo(() => {
+    const groups = new Map<string, SummaryRecord[]>();
+
+    summaryData.forEach((record) => {
+      const groupId = record.groupId ?? 'ungrouped';
+      const existingGroup = groups.get(groupId) ?? [];
+      groups.set(groupId, [...existingGroup, record]);
+    });
+
+    // Sort groups by creation date (newest first)
+    return Array.from(groups.entries()).sort(([, a], [, b]) => {
+      const dateA = a[0]?.createdAt ?? new Date(0);
+      const dateB = b[0]?.createdAt ?? new Date(0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [summaryData]);
 
   return (
     <div className="p-8">
@@ -146,127 +187,145 @@ export default function CuadrePage() {
           )}
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
-        <table className="cuadre-table">
-          <thead>
-            <tr>
-              {[
-                'Fecha',
-                'Placa',
-                'Emitido Por',
-                'Asesor',
-                'Total (Precio + Tarifa)',
-                'Banco',
-                'Banco 2',
-                'Fecha Cliente',
-                'Referencia',
-              ].map((header) => (
-                <th
-                  key={header}
-                  className="cuadre-header font-lexend relative border-r bg-white"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {summaryData.map((record) => (
-              <tr key={record.id} className="border-b hover:bg-gray-50">
-                <td className="cuadre-cell font-lexend">
-                  {record.fecha.toLocaleDateString()}
-                </td>
-                <td className="cuadre-cell font-lexend uppercase">
-                  {record.placa}
-                </td>
-                <td className="cuadre-cell font-lexend">{record.emitidoPor}</td>
-                <td className="cuadre-cell font-lexend">{record.asesor}</td>
-                <td className="cuadre-cell font-lexend">
-                  ${record.totalCombinado.toLocaleString()}
-                </td>
-                <td className="cuadre-cell">
-                  <select
-                    value={record.banco ?? ''}
-                    onChange={(e) =>
-                      handleUpdateBancoReferencia(
-                        record.id,
-                        'banco',
-                        e.target.value
-                      )
-                    }
-                    className="cuadre-select font-lexend"
-                  >
-                    <option value="">Seleccionar...</option>
-                    {bancoOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="cuadre-cell">
-                  <select
-                    value={record.banco2 ?? ''}
-                    onChange={(e) =>
-                      handleUpdateBancoReferencia(
-                        record.id,
-                        'banco2',
-                        e.target.value
-                      )
-                    }
-                    className="cuadre-select font-lexend"
-                  >
-                    <option value="">Seleccionar...</option>
-                    {bancoOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="cuadre-cell date-column font-lexend">
-                  <input
-                    type="datetime-local"
-                    value={
-                      record.fechaCliente
-                        ? new Date(record.fechaCliente)
-                            .toISOString()
-                            .slice(0, 16)
-                        : ''
-                    }
-                    onChange={(e) => {
-                      const date = e.target.value
-                        ? new Date(e.target.value)
-                        : null;
-                      handleUpdateBancoReferencia(
-                        record.id,
-                        'fechaCliente',
-                        date
-                      );
-                    }}
-                    className="cuadre-input" // Added text-xs class
-                  />
-                </td>
-                <td className="cuadre-cell border-r-0">
-                  <input
-                    type="text"
-                    value={record.referencia ?? ''}
-                    onChange={(e) =>
-                      handleUpdateBancoReferencia(
-                        record.id,
-                        'referencia',
-                        e.target.value
-                      )
-                    }
-                    className="cuadre-input font-lexend"
-                    placeholder="Referencia..."
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {groupedRecords.map(([groupId, records]) => (
+        <div key={groupId} className="mb-8">
+          <h3 className="mb-4 text-lg font-semibold">
+            Cuadre{' '}
+            {records[0]?.createdAt
+              ? new Date(records[0].createdAt).toLocaleDateString('es-CO', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                })
+              : 'Sin fecha'}{' '}
+            ({records.length} registros)
+          </h3>
+          <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+            <table className="cuadre-table">
+              <thead>
+                <tr>
+                  {[
+                    'Fecha',
+                    'Placa',
+                    'Emitido Por',
+                    'Asesor',
+                    'Total (Precio + Tarifa)',
+                    'Banco',
+                    'Banco 2',
+                    'Fecha Cliente',
+                    'Referencia',
+                  ].map((header) => (
+                    <th
+                      key={header}
+                      className="cuadre-header font-lexend relative border-r bg-white"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {records.map((record) => (
+                  <tr key={record.id} className="border-b hover:bg-gray-50">
+                    <td className="cuadre-cell font-lexend">
+                      {record.fecha.toLocaleDateString()}
+                    </td>
+                    <td className="cuadre-cell font-lexend uppercase">
+                      {record.placa}
+                    </td>
+                    <td className="cuadre-cell font-lexend">
+                      {record.emitidoPor}
+                    </td>
+                    <td className="cuadre-cell font-lexend">{record.asesor}</td>
+                    <td className="cuadre-cell font-lexend">
+                      ${record.totalCombinado.toLocaleString()}
+                    </td>
+                    <td className="cuadre-cell">
+                      <select
+                        value={record.banco ?? ''}
+                        onChange={(e) =>
+                          handleUpdateBancoReferencia(
+                            record.id,
+                            'banco',
+                            e.target.value
+                          )
+                        }
+                        className="cuadre-select font-lexend"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {bancoOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="cuadre-cell">
+                      <select
+                        value={record.banco2 ?? ''}
+                        onChange={(e) =>
+                          handleUpdateBancoReferencia(
+                            record.id,
+                            'banco2',
+                            e.target.value
+                          )
+                        }
+                        className="cuadre-select font-lexend"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {bancoOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="cuadre-cell date-column font-lexend">
+                      <input
+                        type="datetime-local"
+                        value={
+                          record.fechaCliente
+                            ? new Date(record.fechaCliente)
+                                .toISOString()
+                                .slice(0, 16)
+                            : ''
+                        }
+                        onChange={(e) => {
+                          const date = e.target.value
+                            ? new Date(e.target.value)
+                            : null;
+                          handleUpdateBancoReferencia(
+                            record.id,
+                            'fechaCliente',
+                            date
+                          );
+                        }}
+                        className="cuadre-input" // Added text-xs class
+                      />
+                    </td>
+                    <td className="cuadre-cell border-r-0">
+                      <input
+                        type="text"
+                        value={record.referencia ?? ''}
+                        onChange={(e) =>
+                          handleUpdateBancoReferencia(
+                            record.id,
+                            'referencia',
+                            e.target.value
+                          )
+                        }
+                        className="cuadre-input font-lexend"
+                        placeholder="Referencia..."
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
