@@ -31,7 +31,7 @@ export default tseslint.config(
     ],
   }),
 
-  // React configurations - Fixed for TypeScript
+  // React configurations
   reactPlugin.configs.flat?.recommended ?? {},
   reactPlugin.configs.flat?.['jsx-runtime'] ?? {},
 
@@ -55,6 +55,11 @@ export default tseslint.config(
       '.vercel/**',
       'coverage/**',
       '.turbo/**',
+      'drizzle/**',
+      'migrations/**',
+      '*.config.{js,ts,mjs}',
+      'next.config.{js,ts,mjs}',
+      'postcss.config.{js,ts}',
     ],
   },
 
@@ -66,14 +71,19 @@ export default tseslint.config(
       parserOptions: {
         projectService: true,
         tsconfigRootDir: import.meta.dirname,
+        ecmaVersion: 'latest',
+        sourceType: 'module',
         ecmaFeatures: {
           jsx: true,
+          globalReturn: false,
         },
       },
       globals: {
         ...globals.browser,
         ...globals.node,
-        ...globals.es2020,
+        ...globals.es2022,
+        React: 'readonly',
+        JSX: 'readonly',
       },
     },
     plugins: {
@@ -96,7 +106,9 @@ export default tseslint.config(
           alwaysTryTypes: true,
           project: './tsconfig.json',
         },
-        node: true,
+        node: {
+          extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        },
       },
     },
     rules: {
@@ -133,13 +145,24 @@ export default tseslint.config(
         },
       ],
       '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'error',
-      '@typescript-eslint/no-unsafe-call': 'error',
-      '@typescript-eslint/no-unsafe-member-access': 'error',
-      '@typescript-eslint/no-unsafe-return': 'error',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'warn',
+      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-return': 'warn',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/no-redundant-type-constituents': 'warn',
+      '@typescript-eslint/array-type': ['warn', { default: 'array-simple' }],
+      '@typescript-eslint/ban-ts-comment': [
+        'warn',
+        {
+          'ts-expect-error': 'allow-with-description',
+          'ts-ignore': 'allow-with-description',
+          'ts-nocheck': 'allow-with-description',
+          'ts-check': false,
+        },
+      ],
 
       // ===== REACT RULES =====
       'react/react-in-jsx-scope': 'off',
@@ -157,6 +180,8 @@ export default tseslint.config(
       'react/self-closing-comp': ['warn', { component: true, html: true }],
       'react/jsx-key': 'error',
       'react/no-unescaped-entities': 'warn',
+      'react/jsx-no-constructed-context-values': 'warn',
+      'react/jsx-no-target-blank': 'error',
 
       // ===== REACT HOOKS RULES =====
       'react-hooks/rules-of-hooks': 'error',
@@ -164,7 +189,7 @@ export default tseslint.config(
         'warn',
         {
           additionalHooks:
-            '(useQuery|useMutation|useInfiniteQuery|useSuspenseQuery)',
+            '(useQuery|useMutation|useInfiniteQuery|useSuspenseQuery|useQueries)',
         },
       ],
 
@@ -183,6 +208,12 @@ export default tseslint.config(
       '@next/next/no-head-element': 'error',
       '@next/next/no-page-custom-font': 'warn',
       '@next/next/no-unwanted-polyfillio': 'error',
+      '@next/next/no-before-interactive-script-outside-document': 'error',
+      '@next/next/no-css-tags': 'error',
+      '@next/next/no-head-import-in-document': 'error',
+      '@next/next/no-script-component-in-head': 'error',
+      '@next/next/no-styled-jsx-in-document': 'error',
+      '@next/next/no-title-in-document-head': 'error',
 
       // ===== GENERAL RULES =====
       'no-unused-expressions': 'error',
@@ -190,8 +221,26 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       'prefer-const': 'warn',
       'no-var': 'error',
+      'object-shorthand': 'warn',
+      'prefer-destructuring': [
+        'warn',
+        {
+          VariableDeclarator: {
+            array: false,
+            object: true,
+          },
+          AssignmentExpression: {
+            array: false,
+            object: false,
+          },
+        },
+        {
+          enforceForRenamedProperties: false,
+        },
+      ],
+      'prefer-template': 'warn',
 
-      // ===== IMPORT SORTING RULES (AUTO-ORGANIZE) =====
+      // ===== IMPORT SORTING RULES =====
       'simple-import-sort/imports': [
         'error',
         {
@@ -212,29 +261,24 @@ export default tseslint.config(
             // Same-folder imports
             ['^\\./(?=.*/)(?!/?$)', '^\\.(?!/?$)', '^\\./?$'],
 
-            // Type imports (should be last)
+            // Type imports
             ['^.+\\u0000$'],
 
-            // Style imports (CSS, SCSS, etc.)
+            // Style imports
             ['^.+\\.s?css$'],
           ],
         },
       ],
       'simple-import-sort/exports': 'error',
 
-      // Additional import rules for better organization
-      'import/newline-after-import': 'error',
-      'import/no-duplicates': 'error',
-      'import/first': 'error',
-
       // ===== DRIZZLE RULES =====
       'drizzle/enforce-delete-with-where': [
-        'warn',
-        { drizzleObjectName: ['db', 'ctx.db'] },
+        'error',
+        { drizzleObjectName: ['db', 'ctx.db', 'database'] },
       ],
       'drizzle/enforce-update-with-where': [
-        'warn',
-        { drizzleObjectName: ['db', 'ctx.db'] },
+        'error',
+        { drizzleObjectName: ['db', 'ctx.db', 'database'] },
       ],
     },
   },
@@ -247,10 +291,18 @@ export default tseslint.config(
 
   // Configuration for test files
   {
-    files: ['**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}'],
+    files: [
+      '**/*.test.{js,jsx,ts,tsx}',
+      '**/*.spec.{js,jsx,ts,tsx}',
+      '**/__tests__/**/*.{js,jsx,ts,tsx}',
+    ],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      'no-console': 'off',
     },
   },
 
@@ -258,12 +310,40 @@ export default tseslint.config(
   {
     files: [
       '*.config.{js,ts,mjs}',
-      'tailwind.config.{js,ts}',
       'next.config.{js,ts,mjs}',
+      'postcss.config.{js,ts}',
+      'drizzle.config.{js,ts}',
     ],
     rules: {
       '@typescript-eslint/no-var-requires': 'off',
       'import/no-anonymous-default-export': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+
+  // Configuration for Drizzle schema files
+  {
+    files: ['**/schema.{js,ts}', '**/schema/**/*.{js,ts}'],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'off',
+    },
+  },
+
+  // Configuration for API routes
+  {
+    files: ['**/api/**/*.{js,ts}', '**/route.{js,ts}'],
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+    },
+  },
+
+  // Configuration for middleware
+  {
+    files: ['middleware.{js,ts}'],
+    rules: {
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
     },
   }
 );

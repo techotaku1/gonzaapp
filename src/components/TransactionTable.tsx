@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { BiWorld } from 'react-icons/bi';
+import { MdOutlineTableChart } from 'react-icons/md';
 import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
@@ -643,7 +645,7 @@ export default function TransactionTable({
               value={formatValue(value)}
               onChange={(e) => {
                 try {
-                  const inputDate = new Date(e.target.value + ':00Z');
+                  const inputDate = new Date(`${e.target.value}:00Z`);
                   handleInputChange(row.id, field, inputDate);
                 } catch (error) {
                   console.error('Error converting date:', error);
@@ -1192,7 +1194,7 @@ export default function TransactionTable({
   const _TableHeader = useCallback(() => {
     return (
       <tr>
-        {isDeleteMode && <th className="table-header">Eliminar</th>}
+        {isDeleteMode ? <th className="table-header">Eliminar</th> : null}
         <th className="table-header">Fecha</th>
         <th className="table-header">Trámite</th>
         <th className="table-header">Seleccionar</th>
@@ -1216,9 +1218,9 @@ export default function TransactionTable({
         <th className="table-header">Ganancia Bruta</th>
         <th className="table-header">Rappi</th>
         <th className="table-header">Observaciones</th>
-        {isAsesorSelectionMode && (
+        {isAsesorSelectionMode ? (
           <th className="table-header">Seleccionar Asesor</th>
-        )}
+        ) : null}
       </tr>
     );
   }, [isDeleteMode, isAsesorSelectionMode]);
@@ -1246,6 +1248,18 @@ export default function TransactionTable({
       void router.push('/cuadre');
     }, 500); // Espera medio segundo para que se vea la animación
   }, [router]);
+
+  // Estado para animar el botón de totales
+  const [isTotalsButtonLoading, setIsTotalsButtonLoading] = useState(false);
+
+  // Handler para el botón de totales con animación y spinner
+  const handleToggleTotals = useCallback(() => {
+    setIsTotalsButtonLoading(true);
+    setTimeout(() => {
+      setShowTotals((prev) => !prev);
+      setIsTotalsButtonLoading(false);
+    }, 400); // Duración de la animación/spinner
+  }, []);
 
   return (
     <div className="relative">
@@ -1324,22 +1338,56 @@ export default function TransactionTable({
                 )}
               </span>
             </button>
-            {isDeleteMode && rowsToDelete.size > 0 && (
+            {isDeleteMode && rowsToDelete.size > 0 ? (
               <button
                 onClick={handleDeleteSelected}
                 className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
               >
                 Eliminar ({rowsToDelete.size})
               </button>
-            )}
+            ) : null}
           </div>
 
-          {/* Botón Ver Totales */}
+          {/* Botón Ver Totales / Ver Registros con iconos y spinner y ancho fijo */}
           <button
-            onClick={() => setShowTotals(!showTotals)}
-            className="h-10 rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-600"
+            onClick={handleToggleTotals}
+            disabled={isTotalsButtonLoading}
+            className="relative flex h-10 min-w-[170px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
           >
-            {showTotals ? 'Ver Registros' : 'Ver Totales'}
+            <span className="flex w-full items-center justify-center">
+              {isTotalsButtonLoading ? (
+                <>
+                  {/* Spinner2 centrado absoluto sobre el botón */}
+                  <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+                    <Icons.spinner2 className="h-5 w-5 fill-white" />
+                  </span>
+                  {/* Espacio reservado para el texto, invisible pero ocupa el mismo ancho */}
+                  <span className="invisible flex items-center">
+                    {showTotals ? (
+                      <>
+                        <MdOutlineTableChart className="mr-1 h-5 w-5" />
+                        Ver Registros
+                      </>
+                    ) : (
+                      <>
+                        <BiWorld className="mr-1 h-5 w-5" />
+                        Ver Totales
+                      </>
+                    )}
+                  </span>
+                </>
+              ) : showTotals ? (
+                <>
+                  <MdOutlineTableChart className="mr-1 h-5 w-5" />
+                  Ver Registros
+                </>
+              ) : (
+                <>
+                  <BiWorld className="mr-1 h-5 w-5" />
+                  Ver Totales
+                </>
+              )}
+            </span>
           </button>
 
           {/* Botón Exportar a Excel */}
@@ -1521,7 +1569,7 @@ export default function TransactionTable({
                         row.pagado ? getEmitidoPorClass(row.emitidoPor) : ''
                       }`}
                     >
-                      {isDeleteMode && (
+                      {isDeleteMode ? (
                         <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
                           <div className="flex h-full items-center justify-center">
                             <input
@@ -1532,7 +1580,7 @@ export default function TransactionTable({
                             />
                           </div>
                         </td>
-                      )}
+                      ) : null}
                       <td
                         className={`table-cell whitespace-nowrap ${
                           index === 0 ? 'border-r-0' : ''

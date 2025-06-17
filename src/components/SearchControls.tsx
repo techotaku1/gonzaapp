@@ -130,7 +130,7 @@ export default function SearchControls({
         <button
           onClick={handleDateRangeFilter}
           disabled={isLoading || !startDate || !endDate}
-          className="flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 -mr-2 text-white hover:bg-indigo-600 disabled:opacity-50"
         >
           {isLoading ? (
             <>
