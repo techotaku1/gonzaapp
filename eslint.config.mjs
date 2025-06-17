@@ -5,6 +5,7 @@ import eslintPluginImport from 'eslint-plugin-import';
 import eslintPluginNext from '@next/eslint-plugin-next';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import pluginQuery from '@tanstack/eslint-plugin-query';
 
 const compat = new FlatCompat({
   baseDirectory: import.meta.dirname,
@@ -76,6 +77,9 @@ export default tseslint.config(
     ],
     plugins: {
       '@typescript-eslint': tseslint.plugin,
+      '@tanstack/query': pluginQuery,
+      '@next/next': eslintPluginNext.configs,
+      import: eslintPluginImport.configs,
     },
     rules: {
       // TypeScript rules
@@ -150,7 +154,11 @@ export default tseslint.config(
       ],
       'import/no-duplicates': 'warn',
       'import/newline-after-import': 'warn',
-      'import/no-unresolved': 'warn',
+      'import/no-unresolved': ['error', { commonjs: true }],
+      'import/named': 'error',
+      'import/namespace': 'error',
+      'import/default': 'error',
+      'import/export': 'error',
 
       // General rules
       'no-unused-expressions': 'error',
@@ -165,20 +173,39 @@ export default tseslint.config(
         'warn',
         { drizzleObjectName: ['db', 'ctx.db'] },
       ],
+
+      // TanStack Query rules
+      '@tanstack/query/exhaustive-deps': 'error',
+      '@tanstack/query/no-rest-destructuring': 'warn',
+      '@tanstack/query/stable-query-client': 'error',
+      '@tanstack/query/no-unstable-deps': 'warn',
+      '@tanstack/query/infinite-query-property-order': 'error',
+      '@tanstack/query/no-void-query-fn': 'error',
+
+      // Next.js specific rules
+      '@next/next/google-font-display': 'error',
+      '@next/next/no-img-element': 'error',
+      '@next/next/no-html-link-for-pages': 'error',
     },
     settings: {
       'import/resolver': {
-        alias: {
-          map: [['./src']],
-          extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        },
         typescript: {
           alwaysTryTypes: true,
           project: './tsconfig.json',
         },
+        node: {
+          extensions: ['.js', '.jsx', '.ts', '.tsx'],
+        },
       },
-      react: { version: 'detect' },
-      next: { rootDir: process.cwd() },
+      'import/parsers': {
+        '@typescript-eslint/parser': ['.ts', '.tsx'],
+      },
+      'import/extensions': ['.js', '.jsx', '.ts', '.tsx'],
+      'import/core-modules': [],
+      'import/ignore': ['node_modules', '\\.(css|scss|sass|less|styl)$'],
+      next: {
+        rootDir: './',
+      },
     },
   },
   {
