@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 
 import * as XLSX from 'xlsx';
 
+import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
@@ -150,8 +151,15 @@ export default function TransactionTable({
 
   // Add a ref to always keep the latest data for debounced save
   const latestDataRef = useRef<TransactionRecord[]>(initialData);
-  // Nuevo: ref para controlar si hay un guardado pendiente
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Usar useDebouncedSave para auto-guardar solo cuando el usuario deja de editar
+  const debouncedSave = useDebouncedSave(
+    async (records) => {
+      return await onUpdateRecordAction(records);
+    },
+    () => setIsSaving(false),
+    800 // ms después de dejar de editar
+  );
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -268,19 +276,6 @@ export default function TransactionTable({
     },
     [onUpdateRecordAction]
   );
-
-  // Cambia el debounce a un valor menor para guardar más rápido, pero sin bloquear la UI
-  // const DEBOUNCE_DELAY = 400; // ms
-
-  // Use SWR-based debounced save, but always use the latest data from the ref
-  const triggerAutoSave = useCallback(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    setIsSaving(true);
-    saveTimeoutRef.current = setTimeout(async () => {
-      await onUpdateRecordAction(latestDataRef.current);
-      setIsSaving(false);
-    }, 800); // 800ms después de la última interacción
-  }, [onUpdateRecordAction]);
 
   // Update filtered data when date filter changes
   useEffect(() => {
@@ -438,7 +433,8 @@ export default function TransactionTable({
         });
 
         latestDataRef.current = newData;
-        triggerAutoSave();
+        setIsSaving(true);
+        debouncedSave(newData);
         return newData;
       });
 
@@ -457,7 +453,7 @@ export default function TransactionTable({
         }
       }
     },
-    [triggerAutoSave, groupedByDate]
+    [debouncedSave, groupedByDate]
   );
 
   const formatCurrency = (value: number): string => {
