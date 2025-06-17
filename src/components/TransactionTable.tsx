@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
@@ -194,14 +195,8 @@ export default function TransactionTable({
     setPendingEdits({});
   }, [pendingEdits, debouncedSave]);
 
-  // Nuevo: Debounce para flushPendingEdits
-  const flushTimeout = useRef<NodeJS.Timeout | null>(null);
-  const scheduleFlush = useCallback(() => {
-    if (flushTimeout.current) clearTimeout(flushTimeout.current);
-    flushTimeout.current = setTimeout(() => {
-      flushPendingEdits();
-    }, 800);
-  }, [flushPendingEdits]);
+  // useDebouncedCallback para llamar flushPendingEdits después de 600ms sin cambios
+  const debouncedFlush = useDebouncedCallback(flushPendingEdits, 600);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -456,8 +451,8 @@ export default function TransactionTable({
           const tipoVehiculo =
             field === 'tipoVehiculo'
               ? newValue
-              : prevEdits.tipoVehiculo ??
-                data.find((r) => r.id === id)?.tipoVehiculo;
+              : (prevEdits.tipoVehiculo ??
+                data.find((r) => r.id === id)?.tipoVehiculo);
           const cilindraje =
             field === 'cilindraje'
               ? newValue
@@ -476,7 +471,7 @@ export default function TransactionTable({
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
       });
-      scheduleFlush();
+      debouncedFlush();
 
       // Actualiza la página si cambia la fecha
       if (field === 'fecha' && value) {
@@ -493,8 +488,15 @@ export default function TransactionTable({
         }
       }
     },
-    [data, groupedByDate, scheduleFlush]
+    [data, groupedByDate, debouncedFlush]
   );
+
+  // Limpia debounce al desmontar
+  useEffect(() => {
+    return () => {
+      debouncedFlush.cancel();
+    };
+  }, [debouncedFlush]);
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('es-CO', {
