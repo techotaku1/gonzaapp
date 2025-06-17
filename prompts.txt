@@ -1,2 +1,0 @@
-id	Fecha	Tramite	Matricula	Pagado	Boleta	Boletas Registradas	Emitido Por:	Placa	Documento	#	Nombre	Cilindraje	Tipo Vehiculo	Celular	Ciudad	Asesor	Novedad	Precio Neto	Comision Extra	Tarifa Servicio	4x1000	Ganancia Bruta	Rappi	Observaciones
-3bbddae0	2/5/2025	Soat		TRUE	TRUE	$2,931,400.00	Panel Juan	KLY44E	Cedula	31212516	CLEMENCIA SOLANO HERNANDEZ	124			PRADERA	WILLIAM		$326,300.00	FALSE	$20,000.00	-$1,305.00	$18,695.00	FALSE	

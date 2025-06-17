@@ -107,7 +107,7 @@
     },
     {
       "rule": "@typescript-eslint/no-unused-vars",
-      "severity": "off"
+      "severity": "warn"
     },
     {
       "rule": "import/no-anonymous-default-export",
