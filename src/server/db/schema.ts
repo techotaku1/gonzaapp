@@ -1,10 +1,10 @@
 import {
-  pgTable,
-  varchar,
   boolean,
-  timestamp,
-  integer,
   decimal,
+  integer,
+  pgTable,
+  timestamp,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 export const transactions = pgTable('transactions', {

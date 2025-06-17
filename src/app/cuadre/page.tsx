@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo,useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import Header from '~/components/Header';
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { updateRecords } from '~/server/actions/tableGeneral';
 import { bancoOptions } from '~/utils/constants';
-import '~/styles/deleteButton.css';
-import Header from '~/components/Header';
 
 import type { TransactionRecord } from '~/types';
+
+import '~/styles/deleteButton.css';
 
 interface SummaryRecord extends TransactionRecord {
   totalCombinado: number;

@@ -1,11 +1,12 @@
-import '~/styles/globals.css';
+import { type Metadata } from 'next';
 import { Delius, Lexend } from 'next/font/google';
 
 import { esMX } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
-import { type Metadata } from 'next';
 
 import ClientLayout from '~/components/ClientLayout';
+
+import '~/styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'GonzaApp',

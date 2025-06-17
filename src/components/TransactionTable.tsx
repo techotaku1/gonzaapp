@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo,useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -15,15 +15,16 @@ import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 
-import '~/styles/buttonLoader.css';
-import '~/styles/deleteButton.css';
-import '~/styles/exportButton.css';
-import '~/styles/buttonSpinner.css';
 import ExportDateRangeModal from './ExportDateRangeModal';
 import HeaderTitles from './HeaderTitles';
 import { Icons } from './icons';
 import SearchControls from './SearchControls';
 import TransactionTotals from './TransactionTotals';
+
+import '~/styles/buttonLoader.css';
+import '~/styles/deleteButton.css';
+import '~/styles/exportButton.css';
+import '~/styles/buttonSpinner.css';
 
 interface SaveResult {
   success: boolean;

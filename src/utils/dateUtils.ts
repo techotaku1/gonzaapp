@@ -1,5 +1,5 @@
 import { TZDate } from '@date-fns/tz';
-import { format, startOfDay, endOfDay } from 'date-fns';
+import { endOfDay,format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const TIMEZONE = 'America/Bogota';

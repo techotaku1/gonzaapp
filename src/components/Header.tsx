@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
 
-import { UserButton, useUser, SignedIn } from '@clerk/nextjs';
+import { SignedIn,UserButton, useUser } from '@clerk/nextjs';
 
 export default function Header() {
   const { user } = useUser();

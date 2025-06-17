@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { eq, desc, inArray } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';

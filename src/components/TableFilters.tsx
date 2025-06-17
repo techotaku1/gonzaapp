@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback,useState } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 
 import type { TransactionRecord } from '~/types';
+
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface TableFiltersProps {
   data: TransactionRecord[];

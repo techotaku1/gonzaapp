@@ -6,6 +6,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '~/lib/react-query';
 
 import ActivityMonitor from './ActivityMonitor';
+
 import '~/styles/background.css';
 
 export default function ClientLayout({
