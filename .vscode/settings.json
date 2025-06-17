@@ -102,8 +102,12 @@
       "severity": "off"
     },
     {
+      "rule": "simple-import-sort/imports",
+      "severity": "off"
+    },
+    {
       "rule": "@typescript-eslint/no-unused-vars",
-      "severity": "warn"
+      "severity": "off"
     },
     {
       "rule": "import/no-anonymous-default-export",

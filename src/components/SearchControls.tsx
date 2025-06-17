@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import DatePicker from 'react-datepicker';
-
-import 'react-datepicker/dist/react-datepicker.css';
 
 import { Icons } from './icons';
 
 import type { TransactionRecord } from '~/types';
+
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface SearchControlsProps {
   data: TransactionRecord[];
@@ -155,7 +155,7 @@ export default function SearchControls({
             </>
           )}
         </button>
-        {(startDate ?? endDate) && !isLoading && (
+        {(startDate ?? endDate) && !isLoading ? (
           <button
             onClick={() => {
               setStartDate(null);
@@ -166,7 +166,7 @@ export default function SearchControls({
           >
             Limpiar Filtro
           </button>
-        )}
+        ) : null}
       </div>
 
       <div className="ml-auto flex items-center gap-2">

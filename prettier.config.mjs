@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * @see https://prettier.io/docs/configuration
  * @type {import("prettier").Config & import("prettier-plugin-tailwindcss").PluginOptions}

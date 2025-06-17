@@ -1,88 +1,98 @@
-import * as fs from 'fs';
+// @ts-check
+
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
-import eslintPluginImport from 'eslint-plugin-import';
-import eslintPluginNext from '@next/eslint-plugin-next';
+import pluginQuery from '@tanstack/eslint-plugin-query';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
-import pluginQuery from '@tanstack/eslint-plugin-query';
 
 const compat = new FlatCompat({
   baseDirectory: import.meta.dirname,
   recommendedConfig: js.configs.recommended,
 });
 
-// Función para obtener directorios a ordenar
-function getDirectoriesToSort() {
-  const ignoredSortingDirectories = [
-    '.git',
-    '.next',
-    '.vscode',
-    'node_modules',
-  ];
-  return fs
-    .readdirSync(process.cwd())
-    .filter((file) => fs.statSync(process.cwd() + '/' + file).isDirectory())
-    .filter((f) => !ignoredSortingDirectories.includes(f));
-}
-
 export default tseslint.config(
+  // Base configurations
+  js.configs.recommended,
+
+  // Next.js 15 specific configurations
+  ...compat.config({
+    extends: ['next/core-web-vitals', 'next/typescript'],
+  }),
+
+  // React configurations - Fixed for TypeScript
+  reactPlugin.configs.flat?.recommended ?? {},
+  reactPlugin.configs.flat?.['jsx-runtime'] ?? {},
+
+  // TypeScript configurations
+  ...tseslint.configs.recommendedTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
+
+  // TanStack Query configuration
+  ...pluginQuery.configs['flat/recommended'],
+
+  // Ignore patterns
   {
     ignores: [
-      '.git/',
+      '**/node_modules/**',
       '.next/**',
-      'node_modules/**',
-      'dist/**',
-      'build/**',
-      'coverage/**',
       'out/**',
       'public/**',
-      '*.min.js',
-      '*.d.ts',
+      'dist/**',
+      'build/**',
       '**/*.d.ts',
       '.vercel/**',
-      'src/components/**/ui/**',
+      'coverage/**',
+      '.turbo/**',
     ],
   },
-  js.configs.recommended,
-  tseslint.configs.recommended,
+
+  // Main configuration
   {
     files: ['**/*.{js,jsx,mjs,cjs,ts,tsx}'],
     languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
       parser: tseslint.parser,
       parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
-        ecmaFeatures: { jsx: true },
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+        ecmaFeatures: {
+          jsx: true,
+        },
       },
       globals: {
         ...globals.browser,
         ...globals.node,
-        ...globals.es2022,
+        ...globals.es2020,
       },
     },
-    extends: [
-      'eslint:recommended',
-      'next/core-web-vitals',
-      'next/typescript',
-      'plugin:@next/next/recommended',
-      'plugin:@typescript-eslint/recommended',
-      'plugin:@typescript-eslint/recommended-type-checked',
-      'plugin:@typescript-eslint/stylistic-type-checked',
-      'plugin:import/recommended',
-      'plugin:drizzle/recommended',
-      'prettier',
-    ],
     plugins: {
       '@typescript-eslint': tseslint.plugin,
       '@tanstack/query': pluginQuery,
-      '@next/next': eslintPluginNext.configs,
-      import: eslintPluginImport.configs,
+      react: reactPlugin,
+      'react-hooks': reactHooks,
+      'simple-import-sort': simpleImportSort,
+    },
+    settings: {
+      react: {
+        version: 'detect',
+        runtime: 'automatic',
+      },
+      next: {
+        rootDir: './',
+      },
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          project: './tsconfig.json',
+        },
+        node: true,
+      },
     },
     rules: {
-      // TypeScript rules
+      // ===== TYPESCRIPT RULES =====
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
@@ -99,82 +109,63 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-definitions': ['warn', 'interface'],
       '@typescript-eslint/consistent-type-imports': [
         'warn',
-        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+        {
+          prefer: 'type-imports',
+          fixStyle: 'inline-type-imports',
+          disallowTypeAnnotations: false,
+        },
       ],
       '@typescript-eslint/no-misused-promises': [
         'warn',
-        { checksVoidReturn: { arguments: false, attributes: false } },
+        {
+          checksVoidReturn: {
+            arguments: false,
+            attributes: false,
+          },
+        },
       ],
       '@typescript-eslint/no-floating-promises': 'warn',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+      '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/no-unnecessary-condition': 'warn',
 
-      // React rules
+      // ===== REACT RULES =====
       'react/react-in-jsx-scope': 'off',
+      'react/jsx-uses-react': 'off',
+      'react/prop-types': 'off',
+      'react/jsx-boolean-value': ['warn', 'never'],
+      'react/jsx-closing-bracket-location': ['warn', 'line-aligned'],
+      'react/jsx-curly-brace-presence': [
+        'warn',
+        { props: 'never', children: 'never' },
+      ],
+      'react/jsx-fragments': ['warn', 'syntax'],
+      'react/jsx-no-leaked-render': ['error', { validStrategies: ['ternary'] }],
+      'react/jsx-no-useless-fragment': 'warn',
+      'react/hook-use-state': 'error',
+      'react/no-array-index-key': 'warn',
+      'react/no-invalid-html-attribute': 'warn',
+      'react/no-unstable-nested-components': ['error', { allowAsProps: true }],
       'react/self-closing-comp': ['warn', { component: true, html: true }],
+      'react/jsx-key': 'error',
+      'react/no-unescaped-entities': 'warn',
 
-      // Import rules
-      'import/order': [
+      // ===== REACT HOOKS RULES =====
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': [
         'warn',
         {
-          'newlines-between': 'always',
-          groups: [
-            'external',
-            'builtin',
-            'internal',
-            'sibling',
-            'parent',
-            'index',
-          ],
-          pathGroups: [
-            ...getDirectoriesToSort().map((singleDir) => ({
-              pattern: `${singleDir}/**`,
-              group: 'internal',
-            })),
-            { pattern: 'react', group: 'external', position: 'before' },
-            { pattern: 'next/**', group: 'external', position: 'before' },
-            {
-              pattern: '@/components/**',
-              group: 'internal',
-              position: 'after',
-            },
-            { pattern: '@/lib/**', group: 'internal', position: 'after' },
-            { pattern: '@/styles/**', group: 'internal', position: 'after' },
-            { pattern: 'public/**', group: 'internal', position: 'after' },
-          ],
-          pathGroupsExcludedImportTypes: ['react', 'internal'],
-          alphabetize: {
-            order: 'asc',
-            caseInsensitive: true,
-          },
+          additionalHooks:
+            '(useQuery|useMutation|useInfiniteQuery|useSuspenseQuery)',
         },
       ],
-      'import/no-duplicates': 'warn',
-      'import/newline-after-import': 'warn',
-      'import/no-unresolved': ['error', { commonjs: true }],
-      'import/named': 'error',
-      'import/namespace': 'error',
-      'import/default': 'error',
-      'import/export': 'error',
 
-      // General rules
-      'no-unused-expressions': 'error',
-      'no-duplicate-imports': 'error',
-
-      // Drizzle rules
-      'drizzle/enforce-delete-with-where': [
-        'warn',
-        { drizzleObjectName: ['db', 'ctx.db'] },
-      ],
-      'drizzle/enforce-update-with-where': [
-        'warn',
-        { drizzleObjectName: ['db', 'ctx.db'] },
-      ],
-
-      // TanStack Query rules
+      // ===== TANSTACK QUERY RULES =====
       '@tanstack/query/exhaustive-deps': 'error',
       '@tanstack/query/no-rest-destructuring': 'warn',
       '@tanstack/query/stable-query-client': 'error',
@@ -182,34 +173,84 @@ export default tseslint.config(
       '@tanstack/query/infinite-query-property-order': 'error',
       '@tanstack/query/no-void-query-fn': 'error',
 
-      // Next.js specific rules
+      // ===== NEXT.JS 15 SPECIFIC RULES =====
       '@next/next/google-font-display': 'error',
       '@next/next/no-img-element': 'error',
       '@next/next/no-html-link-for-pages': 'error',
-    },
-    settings: {
-      'import/resolver': {
-        typescript: {
-          alwaysTryTypes: true,
-          project: './tsconfig.json',
+      '@next/next/no-head-element': 'error',
+      '@next/next/no-page-custom-font': 'warn',
+      '@next/next/no-unwanted-polyfillio': 'error',
+
+      // ===== GENERAL RULES =====
+      'no-unused-expressions': 'error',
+      'no-duplicate-imports': 'error',
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
+      'prefer-const': 'warn',
+      'no-var': 'error',
+
+      // ===== IMPORT SORTING RULES (AUTO-ORGANIZE) =====
+      'simple-import-sort/imports': [
+        'error',
+        {
+          groups: [
+            // React and Next.js imports first
+            ['^react$', '^react/'],
+            ['^next', '^@next'],
+
+            // External packages
+            ['^@?\\w'],
+
+            // Internal imports with aliases
+            ['^@/', '^~/'],
+
+            // Parent imports
+            ['^\\.\\.(?!/?$)', '^\\.\\./?$'],
+
+            // Same-folder imports
+            ['^\\./(?=.*/)(?!/?$)', '^\\.(?!/?$)', '^\\./?$'],
+
+            // Type imports (should be last)
+            ['^.+\\u0000$'],
+
+            // Style imports (CSS, SCSS, etc.)
+            ['^.+\\.s?css$'],
+          ],
         },
-        node: {
-          extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        },
-      },
-      'import/parsers': {
-        '@typescript-eslint/parser': ['.ts', '.tsx'],
-      },
-      'import/extensions': ['.js', '.jsx', '.ts', '.tsx'],
-      'import/core-modules': [],
-      'import/ignore': ['node_modules', '\\.(css|scss|sass|less|styl)$'],
-      next: {
-        rootDir: './',
-      },
+      ],
+      'simple-import-sort/exports': 'error',
+
+      // Additional import rules for better organization
+      'import/newline-after-import': 'error',
+      'import/no-duplicates': 'error',
+      'import/first': 'error',
     },
   },
+
+  // Disable type-checked rules for JS files
   {
-    files: ['**/*.js'],
-    extends: [tseslint.configs.disableTypeChecked],
+    files: ['**/*.js', '**/*.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+
+  // Configuration for test files
+  {
+    files: ['**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+
+  // Configuration for config files
+  {
+    files: [
+      '*.config.{js,ts,mjs}',
+      'tailwind.config.{js,ts}',
+      'next.config.{js,ts,mjs}',
+    ],
+    rules: {
+      '@typescript-eslint/no-var-requires': 'off',
+      'import/no-anonymous-default-export': 'off',
+    },
   }
 );
