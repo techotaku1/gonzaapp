@@ -1,71 +1,50 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
+
+import { useSWRConfig } from 'swr';
 
 import type { TransactionRecord } from '~/types';
 
-interface SaveResult {
-  success: boolean;
-  error?: string;
-}
+const CACHE_KEY = '/api/transactions';
+const DEBOUNCE_DELAY = 800; // ms
 
 export function useDebouncedSave(
-  onSave: (records: TransactionRecord[]) => Promise<SaveResult>,
+  onSave: (
+    records: TransactionRecord[]
+  ) => Promise<{ success: boolean; error?: string }>,
   onSuccess: () => void,
-  delay = 2000 // Increased default delay to 2 seconds
+  delay = DEBOUNCE_DELAY
 ) {
+  const { mutate } = useSWRConfig();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordsRef = useRef<TransactionRecord[]>([]);
-  const pendingChangesRef = useRef(false);
-  const lastSaveRef = useRef<number>(Date.now());
-  const changeBufferRef = useRef<Set<string>>(new Set());
-
-  const minTimeBetweenSaves = 1000; // Minimum 1 second between saves
-  const bufferSize = 3; // Minimum changes before triggering a save
-
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
 
   const save = useCallback(
     (records: TransactionRecord[]) => {
       recordsRef.current = records;
-      pendingChangesRef.current = true;
-
-      // Add change to buffer
-      const changeId = Date.now().toString();
-      changeBufferRef.current.add(changeId);
-
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // Only save if we have enough changes or enough time has passed
-      const shouldSave =
-        changeBufferRef.current.size >= bufferSize ||
-        Date.now() - lastSaveRef.current >= minTimeBetweenSaves;
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
       timeoutRef.current = setTimeout(async () => {
-        if (pendingChangesRef.current && shouldSave) {
-          try {
+        // Optimistic update with SWR mutate
+        await mutate(
+          CACHE_KEY,
+          async () => {
             const result = await onSave(recordsRef.current);
             if (result.success) {
-              pendingChangesRef.current = false;
-              lastSaveRef.current = Date.now();
-              changeBufferRef.current.clear();
               onSuccess();
+              return recordsRef.current;
             }
-          } catch (error) {
-            console.error('Error saving:', error);
-          } finally {
-            timeoutRef.current = null;
+            throw new Error(result.error ?? 'Error saving');
+          },
+          {
+            optimisticData: recordsRef.current,
+            rollbackOnError: true,
+            populateCache: true,
+            revalidate: false,
           }
-        }
+        );
       }, delay);
     },
-    [delay, onSave, onSuccess]
+    [mutate, onSave, onSuccess, delay]
   );
 
   return save;

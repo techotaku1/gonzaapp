@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo,useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -265,14 +265,12 @@ export default function TransactionTable({
     [onUpdateRecordAction]
   );
 
-  const handleSaveSuccess = useCallback(() => {
-    setIsSaving(false);
-  }, []);
-
+  // Use SWR-based debounced save
+  const handleSaveSuccess = useCallback(() => setIsSaving(false), []);
   const debouncedSave = useDebouncedSave(
-    handleSaveOperation,
+    onUpdateRecordAction,
     handleSaveSuccess,
-    4000
+    800 // Fast debounce for SWR
   );
 
   // Update filtered data when date filter changes
@@ -394,14 +392,8 @@ export default function TransactionTable({
               // Update the field value first
               switch (field) {
                 case 'fecha':
-                  if (value instanceof Date) {
-                    updatedRow[field] = value;
-                  } else {
-                    const newDate = new Date(value as string);
-                    if (!isNaN(newDate.getTime())) {
-                      updatedRow[field] = newDate;
-                    }
-                  }
+                  updatedRow[field] =
+                    value instanceof Date ? value : new Date(value as string);
                   break;
                 case 'precioNeto':
                 case 'tarifaServicio':
@@ -418,21 +410,15 @@ export default function TransactionTable({
                   updatedRow[field] = value as never;
               }
             } catch (err) {
-              const customError = err as CustomError;
-              console.error('Error updating field:', customError.message);
+              // Only log error, don't throw
+              if (typeof err === 'object' && err && 'message' in err) {
+                // Error object has a message property; handle/log if needed
+              }
               return row;
             }
 
             // Auto-calculate SOAT price when vehicle type changes
             if (field === 'tipoVehiculo' || field === 'cilindraje') {
-              const updatedRow = { ...row };
-              if (field === 'tipoVehiculo') {
-                updatedRow.tipoVehiculo = value as string;
-              } else if (field === 'cilindraje') {
-                updatedRow.cilindraje = value as number;
-              }
-
-              // Calculate SOAT price when both tipoVehiculo and cilindraje are available
               if (updatedRow.tipoVehiculo) {
                 const soatPrice = calculateSoatPrice(
                   updatedRow.tipoVehiculo,
@@ -442,27 +428,24 @@ export default function TransactionTable({
                   updatedRow.precioNeto = soatPrice;
                 }
               }
-              return updatedRow;
             }
-
             return updatedRow;
           }
           return row;
         });
 
         setIsSaving(true);
-        void debouncedSave(newData);
+        debouncedSave(newData);
         return newData;
       });
 
-      // Cuando se cambia la fecha, actualizar la página actual
+      // Update page if date changes
       if (field === 'fecha' && value) {
         const dateStr = (
           value instanceof Date ? value : new Date(value as string)
         )
           .toISOString()
           .split('T')[0];
-        // Encontrar la página correspondiente a la nueva fecha
         const pageIndex = groupedByDate.findIndex(
           ([gDate]) => gDate === dateStr
         );
@@ -831,27 +814,30 @@ export default function TransactionTable({
   }, [currentDateGroup]);
 
   // Add pagination controls component
-  const Pagination = () => (
-    <div className="mt-4 flex justify-center gap-2">
-      <button
-        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-        disabled={currentPage === 1}
-        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
-      >
-        Anterior
-      </button>
-      <span className="font-display flex items-center px-4 text-sm text-black">
-        Página {currentPage} de {totalPages}
-      </span>
-      <button
-        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-        disabled={currentPage === totalPages}
-        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
-      >
-        Siguiente
-      </button>
-    </div>
-  );
+  const PaginationControls = useCallback(() => {
+    if (dateFilter.startDate || dateFilter.endDate) return null;
+    return (
+      <div className="mt-4 flex justify-center gap-2">
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+          className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
+        >
+          Anterior
+        </button>
+        <span className="font-display flex items-center px-4 text-sm text-black">
+          Página {currentPage} de {totalPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+          className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
+        >
+          Siguiente
+        </button>
+      </div>
+    );
+  }, [currentPage, totalPages, dateFilter]);
 
   const handleZoomOut = useCallback(() => {
     setZoom((prev) => {
@@ -1047,7 +1033,6 @@ export default function TransactionTable({
 
         const fileName = `registros_${formatDateForFileName(start)}_a_${formatDateForFileName(end)}.xlsx`;
         XLSX.writeFile(wb, fileName);
-
       } catch (error) {
         console.error('Error al exportar:', error);
         if (error instanceof Error) {
@@ -1333,7 +1318,7 @@ export default function TransactionTable({
           <button
             onClick={handleNavigateToCuadre}
             disabled={isNavigatingToCuadre}
-            className="active:scale-95 flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600 active:scale-95 disabled:opacity-50"
           >
             {isNavigatingToCuadre ? (
               <>
@@ -1691,7 +1676,7 @@ export default function TransactionTable({
       )}
 
       {!showTotals && !dateFilter.startDate && !dateFilter.endDate && (
-        <Pagination />
+        <PaginationControls />
       )}
 
       {/* Add the payment UI */}
