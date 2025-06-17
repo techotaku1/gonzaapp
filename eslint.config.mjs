@@ -1,36 +1,56 @@
+import * as fs from 'fs';
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
-import tseslintPlugin from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
+import eslintPluginImport from 'eslint-plugin-import';
+import eslintPluginNext from '@next/eslint-plugin-next';
 import globals from 'globals';
-import pluginQuery from '@tanstack/eslint-plugin-query';
+import tseslint from 'typescript-eslint';
 
 const compat = new FlatCompat({
   baseDirectory: import.meta.dirname,
   recommendedConfig: js.configs.recommended,
 });
 
-const eslintConfig = [
-  // 🔹 Ignorar archivos innecesarios
+// Función para obtener directorios a ordenar
+function getDirectoriesToSort() {
+  const ignoredSortingDirectories = [
+    '.git',
+    '.next',
+    '.vscode',
+    'node_modules',
+  ];
+  return fs
+    .readdirSync(process.cwd())
+    .filter((file) => fs.statSync(process.cwd() + '/' + file).isDirectory())
+    .filter((f) => !ignoredSortingDirectories.includes(f));
+}
+
+export default tseslint.config(
   {
     ignores: [
-      '**/node_modules/**',
+      '.git/',
       '.next/**',
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      'coverage/**',
       'out/**',
       'public/**',
-      'dist/**',
+      '*.min.js',
+      '*.d.ts',
       '**/*.d.ts',
       '.vercel/**',
+      'src/components/**/ui/**',
     ],
   },
-
-  // 🔹 Configuración para archivos JS/TS
+  js.configs.recommended,
+  tseslint.configs.recommended,
   {
     files: ['**/*.{js,jsx,mjs,cjs,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      parser: tsParser,
+      parser: tseslint.parser,
       parserOptions: {
         project: './tsconfig.json',
         tsconfigRootDir: process.cwd(),
@@ -42,32 +62,6 @@ const eslintConfig = [
         ...globals.es2022,
       },
     },
-    linterOptions: {
-      reportUnusedDisableDirectives: false, // Change this to false
-      noInlineConfig: false,
-    },
-    plugins: {
-      '@typescript-eslint': tseslintPlugin,
-    },
-    rules: {
-      'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': [
-        'warn', // Change to warn instead of error
-        {
-          args: 'all',
-          argsIgnorePattern: '^_',
-          caughtErrors: 'all',
-          caughtErrorsIgnorePattern: '^_',
-          destructuredArrayIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          ignoreRestSiblings: true,
-        },
-      ],
-    },
-  },
-
-  // 🔹 Configuración de Next.js, TypeScript e Importaciones
-  ...compat.config({
     extends: [
       'eslint:recommended',
       'next/core-web-vitals',
@@ -80,12 +74,14 @@ const eslintConfig = [
       'plugin:drizzle/recommended',
       'prettier',
     ],
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+    },
     rules: {
-      // ⚠️ **Advertencias de Código**
-      'no-console': 'off',
+      // TypeScript rules
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
-        'warn', // Make sure this is also warn here
+        'warn',
         {
           args: 'all',
           argsIgnorePattern: '^_',
@@ -101,54 +97,39 @@ const eslintConfig = [
         'warn',
         { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
       ],
-      '@typescript-eslint/require-await': 'warn',
       '@typescript-eslint/no-misused-promises': [
         'warn',
         { checksVoidReturn: { arguments: false, attributes: false } },
       ],
       '@typescript-eslint/no-floating-promises': 'warn',
-
-      // 🚨 **Errores Críticos**
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-unsafe-call': 'error',
       '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
-      'no-unused-expressions': 'error',
-      'no-duplicate-imports': 'error',
 
-      // 🔹 **Next.js y React**
+      // React rules
       'react/react-in-jsx-scope': 'off',
-      'react/self-closing-comp': [
-        'warn',
-        {
-          component: true,
-          html: true,
-        },
-      ],
+      'react/self-closing-comp': ['warn', { component: true, html: true }],
 
-      // 🔹 **Drizzle ORM**
-      'drizzle/enforce-delete-with-where': [
-        'warn',
-        { drizzleObjectName: ['db', 'ctx.db'] },
-      ],
-      'drizzle/enforce-update-with-where': [
-        'warn',
-        { drizzleObjectName: ['db', 'ctx.db'] },
-      ],
-
-      // 🔹 **Orden de Imports**
+      // Import rules
       'import/order': [
         'warn',
         {
           'newlines-between': 'always',
           groups: [
-            ['builtin', 'external'],
+            'external',
+            'builtin',
             'internal',
-            ['parent', 'sibling', 'index'],
-            'type',
+            'sibling',
+            'parent',
+            'index',
           ],
           pathGroups: [
+            ...getDirectoriesToSort().map((singleDir) => ({
+              pattern: `${singleDir}/**`,
+              group: 'internal',
+            })),
             { pattern: 'react', group: 'external', position: 'before' },
             { pattern: 'next/**', group: 'external', position: 'before' },
             {
@@ -158,22 +139,37 @@ const eslintConfig = [
             },
             { pattern: '@/lib/**', group: 'internal', position: 'after' },
             { pattern: '@/styles/**', group: 'internal', position: 'after' },
+            { pattern: 'public/**', group: 'internal', position: 'after' },
           ],
-          pathGroupsExcludedImportTypes: ['react'],
+          pathGroupsExcludedImportTypes: ['react', 'internal'],
           alphabetize: {
             order: 'asc',
             caseInsensitive: true,
           },
         },
       ],
-      'import/no-unresolved': 'warn',
       'import/no-duplicates': 'warn',
       'import/newline-after-import': 'warn',
+      'import/no-unresolved': 'warn',
+
+      // General rules
+      'no-unused-expressions': 'error',
+      'no-duplicate-imports': 'error',
+
+      // Drizzle rules
+      'drizzle/enforce-delete-with-where': [
+        'warn',
+        { drizzleObjectName: ['db', 'ctx.db'] },
+      ],
+      'drizzle/enforce-update-with-where': [
+        'warn',
+        { drizzleObjectName: ['db', 'ctx.db'] },
+      ],
     },
     settings: {
       'import/resolver': {
         alias: {
-          map: [['@', './src']],
+          map: [['./src']],
           extensions: ['.js', '.jsx', '.ts', '.tsx'],
         },
         typescript: {
@@ -184,22 +180,9 @@ const eslintConfig = [
       react: { version: 'detect' },
       next: { rootDir: process.cwd() },
     },
-  }),
-
-  // Configuración de TanStack Query
-  {
-    plugins: {
-      '@tanstack/query': pluginQuery,
-    },
-    rules: {
-      '@tanstack/query/exhaustive-deps': 'error',
-      '@tanstack/query/no-rest-destructuring': 'warn',
-      '@tanstack/query/stable-query-client': 'error',
-      '@tanstack/query/no-unstable-deps': 'warn',
-      '@tanstack/query/infinite-query-property-order': 'error',
-      '@tanstack/query/no-void-query-fn': 'error',
-    },
   },
-];
-
-export default eslintConfig;
+  {
+    files: ['**/*.js'],
+    extends: [tseslint.configs.disableTypeChecked],
+  }
+);
