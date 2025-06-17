@@ -128,7 +128,6 @@ export default function TransactionTable({
   const [totalSelected, setTotalSelected] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [_selectedPlates, setSelectedPlates] = useState<string[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
@@ -152,12 +151,20 @@ export default function TransactionTable({
   // Add a ref to always keep the latest data for debounced save
   const latestDataRef = useRef<TransactionRecord[]>(initialData);
 
-  // Usar useDebouncedSave para auto-guardar solo cuando el usuario deja de editar
+  // Cambia la lógica para que el indicador "Guardando cambios..." solo se muestre cuando realmente se está guardando (no cuando el usuario está editando).
+  // Se logra con un nuevo estado: isActuallySaving
+
+  const [isActuallySaving, setIsActuallySaving] = useState(false);
+
+  // Usar useDebouncedSave, pero controlar el estado de guardado real
   const debouncedSave = useDebouncedSave(
     async (records) => {
+      setIsActuallySaving(true); // Solo aquí se activa el spinner
       return await onUpdateRecordAction(records);
     },
-    () => setIsSaving(false),
+    () => {
+      setIsActuallySaving(false); // Se apaga el spinner solo cuando termina el guardado real
+    },
     800 // ms después de dejar de editar
   );
 
@@ -259,7 +266,6 @@ export default function TransactionTable({
 
   const handleSaveOperation = useCallback(
     async (records: TransactionRecord[]): Promise<SaveResult> => {
-      setIsSaving(true);
       try {
         const result = await onUpdateRecordAction(records);
         if (result.success) {
@@ -270,8 +276,6 @@ export default function TransactionTable({
         const customError = error as CustomError;
         console.error('Error saving changes:', customError.message);
         return { success: false, error: 'Failed to save changes' };
-      } finally {
-        setIsSaving(false);
       }
     },
     [onUpdateRecordAction]
@@ -433,7 +437,6 @@ export default function TransactionTable({
         });
 
         latestDataRef.current = newData;
-        setIsSaving(true);
         debouncedSave(newData);
         return newData;
       });
@@ -1345,7 +1348,7 @@ export default function TransactionTable({
 
           {/* Auto-save indicator and date */}
           <div className="flex h-10 items-center gap-4">
-            {isSaving ? (
+            {isActuallySaving ? (
               <span className="flex h-10 items-center gap-2 rounded-md bg-blue-300 px-4 py-2 text-sm font-bold text-blue-800">
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                   <circle
