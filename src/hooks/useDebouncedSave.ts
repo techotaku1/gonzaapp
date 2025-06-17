@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { mutate } from 'swr';
 
 import type { TransactionRecord } from '~/types';
 
@@ -11,15 +10,16 @@ interface SaveResult {
 export function useDebouncedSave(
   onSave: (records: TransactionRecord[]) => Promise<SaveResult>,
   onSuccess: () => void,
-  delay = 2000
+  delay = 2000 // Increased default delay to 2 seconds
 ) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingRef = useRef<TransactionRecord[]>([]);
-  const batchSizeRef = useRef(0);
-  const lastSaveRef = useRef(Date.now());
+  const recordsRef = useRef<TransactionRecord[]>([]);
+  const pendingChangesRef = useRef(false);
+  const lastSaveRef = useRef<number>(Date.now());
+  const changeBufferRef = useRef<Set<string>>(new Set());
 
-  const BATCH_SIZE_LIMIT = 5;
-  const MIN_INTERVAL = 1000;
+  const minTimeBetweenSaves = 1000; // Minimum 1 second between saves
+  const bufferSize = 3; // Minimum changes before triggering a save
 
   useEffect(() => {
     return () => {
@@ -30,40 +30,40 @@ export function useDebouncedSave(
   }, []);
 
   const save = useCallback(
-    async (records: TransactionRecord[]) => {
-      pendingRef.current = records;
-      batchSizeRef.current++;
+    (records: TransactionRecord[]) => {
+      recordsRef.current = records;
+      pendingChangesRef.current = true;
 
-      const shouldSaveNow =
-        batchSizeRef.current >= BATCH_SIZE_LIMIT ||
-        Date.now() - lastSaveRef.current >= MIN_INTERVAL;
+      // Add change to buffer
+      const changeId = Date.now().toString();
+      changeBufferRef.current.add(changeId);
 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
 
-      const processSave = async () => {
-        if (pendingRef.current.length) {
+      // Only save if we have enough changes or enough time has passed
+      const shouldSave =
+        changeBufferRef.current.size >= bufferSize ||
+        Date.now() - lastSaveRef.current >= minTimeBetweenSaves;
+
+      timeoutRef.current = setTimeout(async () => {
+        if (pendingChangesRef.current && shouldSave) {
           try {
-            const result = await onSave(pendingRef.current);
+            const result = await onSave(recordsRef.current);
             if (result.success) {
-              // Update SWR cache
-              await mutate('/api/transactions', pendingRef.current, false);
+              pendingChangesRef.current = false;
               lastSaveRef.current = Date.now();
-              batchSizeRef.current = 0;
+              changeBufferRef.current.clear();
               onSuccess();
             }
           } catch (error) {
-            console.error('Save error:', error);
+            console.error('Error saving:', error);
+          } finally {
+            timeoutRef.current = null;
           }
         }
-      };
-
-      if (shouldSaveNow) {
-        await processSave();
-      } else {
-        timeoutRef.current = setTimeout(processSave, delay);
-      }
+      }, delay);
     },
     [delay, onSave, onSuccess]
   );
