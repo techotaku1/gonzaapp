@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useTransactions } from '~/hooks/useTransactions';
-import { usePaginatedTransactions } from '~/hooks/usePaginatedTransactions';
 
 import { useRouter } from 'next/navigation';
 
@@ -122,22 +120,8 @@ export default function TransactionTable({
   initialData: TransactionRecord[];
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
 }) {
-  // Update to remove unused variables
-  const { transactions } = useTransactions();
-
-  // Initialize data with transactions or initialData
-  const [data, setData] = useState<TransactionRecord[]>(
-    transactions ?? initialData
-  );
-
-  // Update effect to sync data with transactions
-  useEffect(() => {
-    if (transactions?.length > 0) {
-      setData(transactions);
-    }
-  }, [transactions]);
-
   const router = useRouter();
+  const [data, setData] = useState<TransactionRecord[]>(initialData);
   const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
@@ -163,12 +147,6 @@ export default function TransactionTable({
 
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
-
-  const {
-    currentPageData,
-    isLoading: isPaginationLoading,
-    totalPages: paginationTotalPages,
-  } = usePaginatedTransactions(currentPage, dateFilter);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -370,13 +348,15 @@ export default function TransactionTable({
       .map(([date, records]) => createDateGroup(date, records));
   }, [filteredData, createDateGroup]);
 
-  // Update paginatedData to use SWR pagination
+  // Update paginatedData to handle dates correctly
   const paginatedData = useMemo(() => {
     if (dateFilter.startDate && dateFilter.endDate) {
       return filteredData;
     }
-    return currentPageData;
-  }, [currentPageData, dateFilter, filteredData]);
+
+    const currentGroup = groupedByDate[currentPage - 1];
+    return currentGroup ? currentGroup.records : [];
+  }, [groupedByDate, currentPage, dateFilter, filteredData]);
 
   // Update current date display when page changes
   useEffect(() => {
@@ -820,12 +800,13 @@ export default function TransactionTable({
   );
 
   // Memoize the current date group and related data
-  const { currentDateGroup } = useMemo(() => {
+  const { currentDateGroup, totalPages } = useMemo(() => {
     const defaultDate = new Date().toISOString().split('T')[0]!;
     const defaultGroup = createDateGroup(defaultDate, []);
 
     return {
       currentDateGroup: groupedByDate[currentPage - 1] ?? defaultGroup,
+      totalPages: groupedByDate.length,
     };
   }, [groupedByDate, currentPage, createDateGroup]);
 
@@ -853,19 +834,17 @@ export default function TransactionTable({
     <div className="mt-4 flex justify-center gap-2">
       <button
         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-        disabled={currentPage === 1 || isPaginationLoading}
+        disabled={currentPage === 1}
         className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
       >
         Anterior
       </button>
       <span className="font-display flex items-center px-4 text-sm text-black">
-        Página {currentPage} de {paginationTotalPages}
+        Página {currentPage} de {totalPages}
       </span>
       <button
-        onClick={() =>
-          setCurrentPage((p) => Math.min(paginationTotalPages, p + 1))
-        }
-        disabled={currentPage === paginationTotalPages || isPaginationLoading}
+        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+        disabled={currentPage === totalPages}
         className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
       >
         Siguiente
@@ -1358,7 +1337,7 @@ export default function TransactionTable({
           <button
             onClick={handleNavigateToCuadre}
             disabled={isNavigatingToCuadre}
-            className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600 active:scale-95 disabled:opacity-50"
+            className="active:scale-95 flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-white hover:bg-orange-600 disabled:opacity-50"
           >
             {isNavigatingToCuadre ? (
               <>
