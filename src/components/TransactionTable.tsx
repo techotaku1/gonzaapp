@@ -151,7 +151,7 @@ export default function TransactionTable({
   // Add a ref to always keep the latest data for debounced save
   const latestDataRef = useRef<TransactionRecord[]>(initialData);
   // Nuevo: ref para controlar si hay un guardado pendiente
-  const isPendingSave = useRef(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -273,15 +273,13 @@ export default function TransactionTable({
   // const DEBOUNCE_DELAY = 400; // ms
 
   // Use SWR-based debounced save, but always use the latest data from the ref
-  const debouncedSave = useCallback(() => {
-    if (isPendingSave.current) return; // Ya hay un guardado pendiente, no lanzar otro
-    isPendingSave.current = true;
+  const triggerAutoSave = useCallback(() => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setIsSaving(true);
-    setTimeout(async () => {
+    saveTimeoutRef.current = setTimeout(async () => {
       await onUpdateRecordAction(latestDataRef.current);
       setIsSaving(false);
-      isPendingSave.current = false;
-    }, 400);
+    }, 800); // 800ms después de la última interacción
   }, [onUpdateRecordAction]);
 
   // Update filtered data when date filter changes
@@ -423,8 +421,6 @@ export default function TransactionTable({
             } catch {
               return row;
             }
-
-            // Auto-calculate SOAT price when vehicle type changes
             if (field === 'tipoVehiculo' || field === 'cilindraje') {
               if (updatedRow.tipoVehiculo) {
                 const soatPrice = calculateSoatPrice(
@@ -441,9 +437,8 @@ export default function TransactionTable({
           return row;
         });
 
-        // Actualiza el ref ANTES de lanzar el debouncedSave
         latestDataRef.current = newData;
-        debouncedSave();
+        triggerAutoSave();
         return newData;
       });
 
@@ -462,7 +457,7 @@ export default function TransactionTable({
         }
       }
     },
-    [debouncedSave, groupedByDate]
+    [triggerAutoSave, groupedByDate]
   );
 
   const formatCurrency = (value: number): string => {
