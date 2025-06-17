@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -149,6 +149,9 @@ export default function TransactionTable({
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
 
+  // Add a ref to always keep the latest data for debounced save
+  const latestDataRef = useRef<TransactionRecord[]>(initialData);
+
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
     const record = data.find((r) => r.id === id);
@@ -268,12 +271,15 @@ export default function TransactionTable({
   // Cambia el debounce a un valor menor para guardar más rápido, pero sin bloquear la UI
   // const DEBOUNCE_DELAY = 400; // ms
 
-  // Use SWR-based debounced save con delay menor y sin bloquear la UI
+  // Use SWR-based debounced save, but always use the latest data from the ref
   const handleSaveSuccess = useCallback(() => {
     setIsSaving(false);
   }, []);
   const debouncedSave = useDebouncedSave(
-    onUpdateRecordAction,
+    async () => {
+      // Always use the latest data for saving
+      return await onUpdateRecordAction(latestDataRef.current);
+    },
     handleSaveSuccess,
     400
   );
@@ -435,6 +441,8 @@ export default function TransactionTable({
           return row;
         });
 
+        // Always update the ref before triggering debounced save
+        latestDataRef.current = newData;
         setIsSaving(true);
         debouncedSave(newData);
         return newData;
