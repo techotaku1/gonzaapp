@@ -265,12 +265,17 @@ export default function TransactionTable({
     [onUpdateRecordAction]
   );
 
-  // Use SWR-based debounced save
-  const handleSaveSuccess = useCallback(() => setIsSaving(false), []);
+  // Cambia el debounce a un valor menor para guardar más rápido, pero sin bloquear la UI
+  // const DEBOUNCE_DELAY = 400; // ms
+
+  // Use SWR-based debounced save con delay menor y sin bloquear la UI
+  const handleSaveSuccess = useCallback(() => {
+    setIsSaving(false);
+  }, []);
   const debouncedSave = useDebouncedSave(
     onUpdateRecordAction,
     handleSaveSuccess,
-    800 // Fast debounce for SWR
+    400
   );
 
   // Update filtered data when date filter changes
@@ -409,11 +414,7 @@ export default function TransactionTable({
                 default:
                   updatedRow[field] = value as never;
               }
-            } catch (err) {
-              // Only log error, don't throw
-              if (typeof err === 'object' && err && 'message' in err) {
-                // Error object has a message property; handle/log if needed
-              }
+            } catch {
               return row;
             }
 
@@ -439,7 +440,7 @@ export default function TransactionTable({
         return newData;
       });
 
-      // Update page if date changes
+      // Actualiza la página si cambia la fecha
       if (field === 'fecha' && value) {
         const dateStr = (
           value instanceof Date ? value : new Date(value as string)
