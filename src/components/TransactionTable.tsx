@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 
 import * as XLSX from 'xlsx';
 
-import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
@@ -151,6 +150,8 @@ export default function TransactionTable({
 
   // Add a ref to always keep the latest data for debounced save
   const latestDataRef = useRef<TransactionRecord[]>(initialData);
+  // Nuevo: ref para controlar si hay un guardado pendiente
+  const isPendingSave = useRef(false);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -272,17 +273,16 @@ export default function TransactionTable({
   // const DEBOUNCE_DELAY = 400; // ms
 
   // Use SWR-based debounced save, but always use the latest data from the ref
-  const handleSaveSuccess = useCallback(() => {
-    setIsSaving(false);
-  }, []);
-  const debouncedSave = useDebouncedSave(
-    async () => {
-      // Always use the latest data for saving
-      return await onUpdateRecordAction(latestDataRef.current);
-    },
-    handleSaveSuccess,
-    400
-  );
+  const debouncedSave = useCallback(() => {
+    if (isPendingSave.current) return; // Ya hay un guardado pendiente, no lanzar otro
+    isPendingSave.current = true;
+    setIsSaving(true);
+    setTimeout(async () => {
+      await onUpdateRecordAction(latestDataRef.current);
+      setIsSaving(false);
+      isPendingSave.current = false;
+    }, 400);
+  }, [onUpdateRecordAction]);
 
   // Update filtered data when date filter changes
   useEffect(() => {
@@ -441,10 +441,9 @@ export default function TransactionTable({
           return row;
         });
 
-        // Always update the ref before triggering debounced save
+        // Actualiza el ref ANTES de lanzar el debouncedSave
         latestDataRef.current = newData;
-        setIsSaving(true);
-        debouncedSave(newData);
+        debouncedSave();
         return newData;
       });
 
