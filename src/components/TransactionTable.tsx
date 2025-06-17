@@ -156,6 +156,11 @@ export default function TransactionTable({
 
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
+  // Nuevo: Mantener un estado local para los edits en curso (debounced)
+  const [pendingEdits, setPendingEdits] = useState<
+    Record<string, Partial<TransactionRecord>>
+  >({});
+
   // Usar useDebouncedSave, pero controlar el estado de guardado real
   const debouncedSave = useDebouncedSave(
     async (records) => {
@@ -167,6 +172,36 @@ export default function TransactionTable({
     },
     800 // ms después de dejar de editar
   );
+
+  // Nueva función para aplicar los edits pendientes al dataset principal y disparar el autosave
+  const flushPendingEdits = useCallback(() => {
+    setData((prevData) => {
+      let changed = false;
+      const newData = prevData.map((row) => {
+        const edits = pendingEdits[row.id];
+        if (edits) {
+          changed = true;
+          return { ...row, ...edits };
+        }
+        return row;
+      });
+      if (changed) {
+        latestDataRef.current = newData;
+        debouncedSave(newData);
+      }
+      return newData;
+    });
+    setPendingEdits({});
+  }, [pendingEdits, debouncedSave]);
+
+  // Nuevo: Debounce para flushPendingEdits
+  const flushTimeout = useRef<NodeJS.Timeout | null>(null);
+  const scheduleFlush = useCallback(() => {
+    if (flushTimeout.current) clearTimeout(flushTimeout.current);
+    flushTimeout.current = setTimeout(() => {
+      flushPendingEdits();
+    }, 800);
+  }, [flushPendingEdits]);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -392,54 +427,56 @@ export default function TransactionTable({
   // ...Type-safe input change handler
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
-      setData((prevData) => {
-        const newData = prevData.map((row) => {
-          if (row.id === id) {
-            const updatedRow = { ...row };
-            try {
-              // Update the field value first
-              switch (field) {
-                case 'fecha':
-                  updatedRow[field] =
-                    value instanceof Date ? value : new Date(value as string);
-                  break;
-                case 'precioNeto':
-                case 'tarifaServicio':
-                case 'impuesto4x1000':
-                case 'gananciaBruta':
-                case 'boletasRegistradas':
-                case 'cilindraje':
-                  updatedRow[field] =
-                    typeof value === 'string'
-                      ? Number(value) || 0
-                      : (value as number);
-                  break;
-                default:
-                  updatedRow[field] = value as never;
-              }
-            } catch {
-              return row;
-            }
-            if (field === 'tipoVehiculo' || field === 'cilindraje') {
-              if (updatedRow.tipoVehiculo) {
-                const soatPrice = calculateSoatPrice(
-                  updatedRow.tipoVehiculo,
-                  updatedRow.cilindraje
-                );
-                if (soatPrice > 0) {
-                  updatedRow.precioNeto = soatPrice;
-                }
-              }
-            }
-            return updatedRow;
+      setPendingEdits((prev) => {
+        const prevEdits = prev[id] ?? {};
+        let newValue = value;
+        // Normaliza tipos para campos numéricos
+        if (
+          [
+            'precioNeto',
+            'tarifaServicio',
+            'impuesto4x1000',
+            'gananciaBruta',
+            'boletasRegistradas',
+            'cilindraje',
+          ].includes(field)
+        ) {
+          newValue =
+            typeof value === 'string' ? Number(value) || 0 : (value as number);
+        }
+        // Si se cambia tipoVehiculo o cilindraje, recalcula precioNeto
+        const extra: Partial<TransactionRecord> = {};
+        if (
+          (field === 'tipoVehiculo' || field === 'cilindraje') &&
+          (field === 'tipoVehiculo'
+            ? newValue
+            : prevEdits.tipoVehiculo ||
+              data.find((r) => r.id === id)?.tipoVehiculo)
+        ) {
+          const tipoVehiculo =
+            field === 'tipoVehiculo'
+              ? newValue
+              : prevEdits.tipoVehiculo ??
+                data.find((r) => r.id === id)?.tipoVehiculo;
+          const cilindraje =
+            field === 'cilindraje'
+              ? newValue
+              : (prevEdits.cilindraje ??
+                data.find((r) => r.id === id)?.cilindraje);
+          const soatPrice = calculateSoatPrice(
+            tipoVehiculo as string,
+            cilindraje as number | null
+          );
+          if (soatPrice > 0) {
+            extra.precioNeto = soatPrice;
           }
-          return row;
-        });
-
-        latestDataRef.current = newData;
-        debouncedSave(newData);
-        return newData;
+        }
+        return {
+          ...prev,
+          [id]: { ...prevEdits, [field]: newValue, ...extra },
+        };
       });
+      scheduleFlush();
 
       // Actualiza la página si cambia la fecha
       if (field === 'fecha' && value) {
@@ -456,7 +493,7 @@ export default function TransactionTable({
         }
       }
     },
-    [debouncedSave, groupedByDate]
+    [data, groupedByDate, scheduleFlush]
   );
 
   const formatCurrency = (value: number): string => {
@@ -478,7 +515,11 @@ export default function TransactionTable({
       field: keyof TransactionRecord,
       type: InputType = 'text'
     ) => {
-      const value = row[field];
+      // Usa el valor editado si existe
+      const value =
+        pendingEdits[row.id]?.[field] !== undefined
+          ? pendingEdits[row.id]?.[field]
+          : row[field];
       const isMoneyField = [
         'precioNeto',
         'tarifaServicio',
@@ -782,7 +823,7 @@ export default function TransactionTable({
         </div>
       );
     },
-    [handleInputChange]
+    [handleInputChange, pendingEdits]
   );
 
   // Memoize the current date group and related data
