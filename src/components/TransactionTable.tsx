@@ -1047,11 +1047,6 @@ export default function TransactionTable({
         const fileName = `registros_${formatDateForFileName(start)}_a_${formatDateForFileName(end)}.xlsx`;
         XLSX.writeFile(wb, fileName);
 
-        console.log(
-          `Exportados ${excelData.length} registros del ${formatDateForFileName(
-            start
-          )} al ${formatDateForFileName(end)}`
-        );
       } catch (error) {
         console.error('Error al exportar:', error);
         if (error instanceof Error) {
