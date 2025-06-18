@@ -45,7 +45,8 @@ type HandleInputChange = (
 const getEmitidoPorClass = (value: string): string => {
   if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
   if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
-  if (value.includes('Panel William')) return 'emitido-por-panel-william'; // Nueva condición
+  if (value.includes('Panel William')) return 'emitido-por-panel-william';
+  if (value.includes('Panel Gloria')) return 'emitido-por-panel-gloria'; // Nueva condición
   if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
   if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
   if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
