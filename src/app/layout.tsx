@@ -4,9 +4,9 @@ import { Delius, Lexend } from 'next/font/google';
 import { esMX } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
 
-import Providers from './providers';
-
 import ClientLayout from '~/components/ClientLayout';
+
+import Providers from './providers';
 
 import '~/styles/globals.css';
 
