@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo,useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import Header from '~/components/Header';
@@ -185,9 +186,9 @@ export default function CuadrePage() {
         <div className="p-8">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push('/')}
-                className="active:scale-95 flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-white hover:bg-gray-600"
+              <Link
+                href="/"
+                className="flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-white hover:bg-gray-600 active:scale-95"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -202,7 +203,7 @@ export default function CuadrePage() {
                   />
                 </svg>
                 Volver al Inicio
-              </button>
+              </Link>
             </div>
             <div className="flex flex-col items-end gap-2">
               <h1 className="text-2xl font-bold">Cuadre de Registros</h1>

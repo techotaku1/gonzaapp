@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
-
+import { useProgress } from '@bprogress/next';
+import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
 import { useDebouncedCallback } from 'use-debounce';
@@ -101,10 +101,6 @@ const novedadOptions = [
 const tipoVehiculoOptions = vehicleTypes;
 type _TipoVehiculoOption = (typeof tipoVehiculoOptions)[number];
 
-// Add this type for error handling
-interface CustomError {
-  message: string;
-}
 
 const formatColombiaDate = (date: Date): string => {
   const colombiaDate = getColombiaDate(date);
@@ -127,6 +123,7 @@ export default function TransactionTable({
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
 }) {
   const router = useRouter();
+  const progress = useProgress();
   const [data, setData] = useState<TransactionRecord[]>(initialData);
   const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -244,6 +241,7 @@ export default function TransactionTable({
   };
 
   const addNewRow = async () => {
+    progress.start(0.3);
     setIsAddingRow(true);
     try {
       const now = new Date();
@@ -295,6 +293,7 @@ export default function TransactionTable({
       }
     } finally {
       setIsAddingRow(false);
+      progress.stop();
     }
   };
 
@@ -306,10 +305,15 @@ export default function TransactionTable({
           setData(records);
         }
         return result;
-      } catch (error) {
-        const customError = error as CustomError;
-        console.error('Error saving changes:', customError.message);
-        return { success: false, error: 'Failed to save changes' };
+      } catch (error: unknown) {
+        let errorMsg = 'Failed to save changes';
+        if (error instanceof Error) {
+          errorMsg = error.message;
+          console.error('Error saving changes:', error.message);
+        } else {
+          console.error('Error saving changes:', error);
+        }
+        return { success: false, error: errorMsg };
       }
     },
     [onUpdateRecordAction]
@@ -1082,7 +1086,7 @@ export default function TransactionTable({
 
         const fileName = `registros_${formatDateForFileName(start)}_a_${formatDateForFileName(end)}.xlsx`;
         XLSX.writeFile(wb, fileName);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error al exportar:', error);
         if (error instanceof Error) {
           alert(`Error al exportar los datos: ${error.message}`);
@@ -1247,7 +1251,7 @@ export default function TransactionTable({
     setIsNavigatingToCuadre(true);
     setZoom(0.5); // Hace zoom out
     setTimeout(() => {
-      void router.push('/cuadre');
+      router.push('/cuadre', { startPosition: 0.3 });
     }, 500); // Espera medio segundo para que se vea la animación
   }, [router]);
 
@@ -1511,7 +1515,7 @@ export default function TransactionTable({
               'cuadreRecords',
               JSON.stringify(selectedRecords)
             );
-            router.push('/cuadre');
+            router.push('/cuadre', { startPosition: 0.3 });
           }
         }}
         hasSearchResults={hasSearchResults}
