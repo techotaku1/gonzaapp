@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import Link from 'next/link';
+
 import DatePicker from 'react-datepicker';
 
 import { Icons } from './icons';
@@ -41,6 +43,7 @@ export default function SearchControls({
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingCuadre, setIsGeneratingCuadre] = useState(false);
+  const [shouldNavigate, setShouldNavigate] = useState(false);
 
   // Memoize the filtering logic to prevent infinite loops
   const filteredData = useMemo(() => {
@@ -88,6 +91,7 @@ export default function SearchControls({
   const handleGenerateCuadre = useCallback(() => {
     setIsGeneratingCuadre(true);
     onGenerateCuadreAction(data);
+    setShouldNavigate(true);
   }, [data, onGenerateCuadreAction]);
 
   // Add minDate handling
@@ -130,7 +134,7 @@ export default function SearchControls({
         <button
           onClick={handleDateRangeFilter}
           disabled={isLoading || !startDate || !endDate}
-          className="flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 -mr-2 text-white hover:bg-indigo-600 disabled:opacity-50"
+          className="-mr-2 flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-50"
         >
           {isLoading ? (
             <>
@@ -193,20 +197,32 @@ export default function SearchControls({
           )}
         </button>
 
-        <button
-          onClick={handleGenerateCuadre}
-          disabled={!hasSelectedAsesores || isGeneratingCuadre}
-          className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-        >
-          {isGeneratingCuadre ? (
-            <>
-              <Icons.spinner className="h-4 w-4 animate-spin" />
-              <span>Generando...</span>
-            </>
-          ) : (
-            <span>Generar Cuadre</span>
-          )}
-        </button>
+        {/* Botón Generar Cuadre con Link */}
+        {shouldNavigate ? (
+          <Link
+            href="/cuadre"
+            className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+            prefetch={false}
+          >
+            <Icons.spinner className="h-4 w-4 animate-spin" />
+            <span>Redirigiendo...</span>
+          </Link>
+        ) : (
+          <button
+            onClick={handleGenerateCuadre}
+            disabled={!hasSelectedAsesores || isGeneratingCuadre}
+            className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+          >
+            {isGeneratingCuadre ? (
+              <>
+                <Icons.spinner className="h-4 w-4 animate-spin" />
+                <span>Generando...</span>
+              </>
+            ) : (
+              <span>Generar Cuadre</span>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
