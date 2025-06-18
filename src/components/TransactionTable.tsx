@@ -63,7 +63,8 @@ const getEmitidoPorClass = (value: string): string => {
 const emitidoPorOptions = [
   'Panel Juan',
   'Panel Evelio',
-  'Panel William', // Nueva opción añadida
+  'Panel William',
+  'Panel Gloria',
   'Previ usuario',
   'Previ pública',
   'Previ Sonia',

@@ -5,6 +5,7 @@ import { esMX } from '@clerk/localizations';
 import { ClerkProvider } from '@clerk/nextjs';
 
 import ClientLayout from '~/components/ClientLayout';
+import Providers from './providers';
 
 import '~/styles/globals.css';
 
@@ -35,7 +36,9 @@ export default function RootLayout({
     <ClerkProvider localization={esMX}>
       <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
         <body>
-          <ClientLayout>{children}</ClientLayout>
+          <Providers>
+            <ClientLayout>{children}</ClientLayout>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

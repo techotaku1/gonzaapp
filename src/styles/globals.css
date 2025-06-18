@@ -14,6 +14,11 @@
   ::file-selector-button {
     border-color: var(--color-gray-600, currentColor);
   }
+  
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
 
   button:not(:disabled),
   [role='button']:not(:disabled) {
@@ -279,6 +284,9 @@
   }
   .emitido-por-panel-william {
     @apply bg-sky-300 text-sky-800;
+  }
+  .emitido-por-panel-juan {
+    @apply bg-orange-300 text-orange-800;
   }
   .emitido-por-previ-usuario {
     @apply bg-purple-300 text-purple-800;
