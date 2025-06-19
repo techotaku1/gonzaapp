@@ -63,6 +63,9 @@ export async function createRecord(
       rappi: record.rappi,
       observaciones: record.observaciones ?? null,
       banco: record.banco ?? null,
+      banco2: record.banco2 ?? null, // Agregado
+      fechaCliente: record.fechaCliente ? new Date(record.fechaCliente) : null, // Agregado
+      referencia: record.referencia ?? null, // Agregado
     };
 
     await db.insert(transactions).values(newRecord);
@@ -108,6 +111,11 @@ export async function updateRecords(
           rappi: record.rappi,
           observaciones: record.observaciones ?? null,
           banco: record.banco ?? null,
+          banco2: record.banco2 ?? null, // Agregado
+          fechaCliente: record.fechaCliente
+            ? new Date(record.fechaCliente)
+            : null, // Agregado
+          referencia: record.referencia ?? null, // Agregado
         };
 
         await db

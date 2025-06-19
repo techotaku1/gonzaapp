@@ -18,11 +18,10 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "forceConsistentCasingInFileNames": true,
-    "noUncheckedIndexedAccess": true,
-    "declaration": true,
     "jsx": "preserve",
     "incremental": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": false,
     "baseUrl": ".",
     "paths": {
       "~/*": [
@@ -33,13 +32,15 @@
       {
         "name": "next"
       }
-    ],
+    ]
   },
   "include": [
     "**/*",
     ".*/**/*",
     "./**/.*",
     "next-env.d.ts",
+    "next-video.config.js",
+    "video.d.ts",
     ".next/types/**/*.ts",
     "src/types/**/*.ts",
     "src/types/**/*.d.ts"
@@ -48,6 +49,8 @@
     "node_modules",
     ".next",
     "build",
-    ".vercel"
+    "dist",
+    ".vercel",
+    "coverage"
   ]
 }

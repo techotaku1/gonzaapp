@@ -1,36 +1,22 @@
 // @ts-check
 
-import { FlatCompat } from '@eslint/eslintrc';
+import eslintPluginNext from '@next/eslint-plugin-next';
+
 import js from '@eslint/js';
+import prettier from 'eslint-config-prettier';
+import drizzlePlugin from 'eslint-plugin-drizzle';
+import importPlugin from 'eslint-plugin-import';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-  recommendedConfig: js.configs.recommended,
-});
-
-export default tseslint.config(
-  // Base configurations
+export default [
   js.configs.recommended,
-
-  // Next.js 15 specific configurations
-  ...compat.config({
-    extends: ['next/core-web-vitals', 'next/typescript'],
-  }),
-
-  // React configurations - Fixed for TypeScript
-  reactPlugin.configs.flat?.recommended ?? {},
-  reactPlugin.configs.flat?.['jsx-runtime'] ?? {},
-
-  // TypeScript configurations
   ...tseslint.configs.recommendedTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
 
-  // Ignore patterns
   {
     ignores: [
       '**/node_modules/**',
@@ -43,7 +29,6 @@ export default tseslint.config(
       '.vercel/**',
       'coverage/**',
       '.turbo/**',
-      // 🔽 Ignorar carpetas de UI específicas
       'src/components/estudiantes/ui/**',
       'src/components/educadores/ui/**',
       'src/components/admin/ui/**',
@@ -51,7 +36,6 @@ export default tseslint.config(
     ],
   },
 
-  // Main configuration
   {
     files: ['**/*.{js,jsx,mjs,cjs,ts,tsx}'],
     languageOptions: {
@@ -74,6 +58,9 @@ export default tseslint.config(
       react: reactPlugin,
       'react-hooks': reactHooks,
       'simple-import-sort': simpleImportSort,
+      '@next/next': eslintPluginNext,
+      import: importPlugin,
+      drizzle: drizzlePlugin, // <-- Agrega el plugin Drizzle aquí
     },
     settings: {
       react: {
@@ -197,6 +184,20 @@ export default tseslint.config(
       'import/newline-after-import': 'error',
       'import/no-duplicates': 'error',
       'import/first': 'error',
+
+      // ===== DRIZZLE RULES =====
+      'drizzle/enforce-delete-with-where': [
+        'error',
+        {
+          drizzleObjectName: ['db'],
+        },
+      ],
+      'drizzle/enforce-update-with-where': [
+        'error',
+        {
+          drizzleObjectName: ['db'],
+        },
+      ],
     },
   },
 
@@ -226,5 +227,6 @@ export default tseslint.config(
       '@typescript-eslint/no-var-requires': 'off',
       'import/no-anonymous-default-export': 'off',
     },
-  }
-);
+  },
+  prettier,
+];

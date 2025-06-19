@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import Header from '~/components/Header';
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
-import { updateRecords } from '~/server/actions/tableGeneral';
+import { createRecord, updateRecords } from '~/server/actions/tableGeneral';
 import { bancoOptions } from '~/utils/constants';
 
 import type { TransactionRecord } from '~/types';
@@ -111,6 +111,7 @@ export default function CuadrePage() {
     2000
   );
 
+  // Nuevo: Guardar automáticamente en la base de datos cuando se edita un campo
   const handleUpdateBancoReferencia = (
     id: string,
     field: 'banco' | 'referencia' | 'banco2' | 'fechaCliente',
@@ -120,11 +121,74 @@ export default function CuadrePage() {
       const newData = prev.map((record) =>
         record.id === id ? { ...record, [field]: value } : record
       );
-      // Trigger auto-save
-      void debouncedSave(newData);
+      // Guardar en localStorage
+      localStorage.setItem('existingCuadres', JSON.stringify(newData));
+      // Guardar en la base de datos (solo el registro editado)
+      const updatedRecord = newData.find((r) => r.id === id);
+      if (updatedRecord) {
+        // Solo actualiza ese registro en la BD
+        void updateRecords([updatedRecord]);
+      }
       return newData;
     });
   };
+
+  // Nuevo: Al cargar la página, sincronizar con la base de datos si hay cuadre nuevos
+  useEffect(() => {
+    const savedRecords = localStorage.getItem('cuadreRecords');
+    const existingCuadres = localStorage.getItem('existingCuadres');
+
+    let allRecords: SummaryRecord[] = [];
+
+    if (existingCuadres) {
+      try {
+        const parsedRecords = JSON.parse(existingCuadres) as SummaryRecord[];
+        allRecords = parsedRecords.map((record) => ({
+          ...record,
+          fecha: new Date(record.fecha),
+          fechaCliente: record.fechaCliente
+            ? new Date(record.fechaCliente)
+            : null,
+          createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
+        }));
+      } catch (error) {
+        console.error('Error loading existing cuadres:', error);
+      }
+    }
+
+    if (savedRecords) {
+      try {
+        const newRecords = JSON.parse(savedRecords) as TransactionRecord[];
+        const groupId = crypto.randomUUID();
+        const newGroupRecords = newRecords.map((record) => ({
+          ...record,
+          fecha: new Date(record.fecha),
+          fechaCliente: record.fechaCliente
+            ? new Date(record.fechaCliente)
+            : null,
+          totalCombinado: record.precioNeto + record.tarifaServicio,
+          groupId,
+          createdAt: new Date(),
+        }));
+
+        allRecords = [...allRecords, ...newGroupRecords];
+
+        // Guardar todos los registros en localStorage
+        localStorage.setItem('existingCuadres', JSON.stringify(allRecords));
+        localStorage.removeItem('cuadreRecords');
+
+        // Guardar en la base de datos los nuevos registros (solo si no existen)
+        newGroupRecords.forEach(async (rec) => {
+          // Si el registro no existe en la BD, créalo
+          await createRecord(rec);
+        });
+      } catch (error) {
+        console.error('Error processing new records:', error);
+      }
+    }
+
+    setSummaryData(allRecords);
+  }, []);
 
   // Group records by groupId for display
   const groupedRecords = useMemo(() => {
