@@ -1,14 +1,12 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
-
 import { desc, eq, inArray } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 
 import { env } from '~/env';
 import { db } from '~/server/db';
-import { transactions } from '~/server/db/schema';
-import { type BroadcastMessage } from '~/types/broadcast';
-
+import { transactions, cuadre } from '~/server/db/schema'; // Add cuadre import
+import type { BroadcastMessage } from '~/types/broadcast';
 import type { TransactionRecord } from '~/types';
 
 export async function getTransactions(): Promise<TransactionRecord[]> {
@@ -39,16 +37,24 @@ export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const newTransaction = {
+    await db.insert(transactions).values({
       ...record,
       boletasRegistradas: Number(record.boletasRegistradas).toString(),
       precioNeto: record.precioNeto.toString(),
       tarifaServicio: record.tarifaServicio.toString(),
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
-    };
+    });
 
-    await db.insert(transactions).values(newTransaction);
+    // Create corresponding cuadre record
+    await db.insert(cuadre).values({
+      id: crypto.randomUUID(),
+      transactionId: record.id,
+      banco: '', // Initialize with empty string
+      banco2: '', // Initialize with empty string
+      fechaCliente: null,
+      referencia: '', // Initialize with empty string
+    });
 
     revalidatePath('/');
     await broadcastUpdate('CREATE', [record]);

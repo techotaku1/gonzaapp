@@ -55,9 +55,9 @@ export const cuadre = pgTable('cuadre', {
   transactionId: varchar('transaction_id')
     .notNull()
     .references(() => transactions.id),
-  banco: varchar('banco'),
-  banco2: varchar('banco2'),
-  fechaCliente: timestamp('fecha_cliente'),
-  referencia: varchar('referencia'),
+  banco: varchar('banco').notNull().default(''), // Asegurar que no sea null
+  banco2: varchar('banco2').notNull().default(''), // Asegurar que no sea null
+  fechaCliente: timestamp('fecha_cliente'), // Puede ser null
+  referencia: varchar('referencia').notNull().default(''), // Asegurar que no sea null
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });

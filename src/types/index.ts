@@ -26,10 +26,10 @@ export interface BaseTransactionRecord {
 }
 
 export interface CuadreData {
-  banco: string | null;
-  banco2: string | null;
+  banco: string;
+  banco2: string;
   fechaCliente: Date | null;
-  referencia: string | null;
+  referencia: string;
 }
 
 export type TransactionRecord = BaseTransactionRecord;
@@ -40,8 +40,12 @@ export interface CuadreRecord extends CuadreData {
   createdAt: Date;
 }
 
-export interface ExtendedSummaryRecord extends BaseTransactionRecord, CuadreData {
+export interface ExtendedSummaryRecord extends BaseTransactionRecord {
   totalCombinado: number;
+  banco: string;
+  banco2: string;
+  fechaCliente: Date | null;
+  referencia: string;
   groupId?: string;
   createdAt?: Date;
 }

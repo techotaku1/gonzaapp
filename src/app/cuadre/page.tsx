@@ -86,16 +86,18 @@ export default function CuadrePage() {
       try {
         const newRecords = JSON.parse(savedRecords) as BaseTransactionRecord[];
         const groupId = crypto.randomUUID();
-        const newGroupRecords = newRecords.map((record) => ({
-          ...record,
-          banco: null,
-          banco2: null,
-          fechaCliente: null,
-          referencia: null,
-          totalCombinado: record.precioNeto + record.tarifaServicio,
-          groupId,
-          createdAt: new Date(),
-        }));
+        const newGroupRecords: ExtendedSummaryRecord[] = newRecords.map(
+          (record) => ({
+            ...record,
+            banco: '', // Initialize with empty string instead of null
+            banco2: '', // Initialize with empty string instead of null
+            fechaCliente: null,
+            referencia: '', // Initialize with empty string instead of null
+            totalCombinado: record.precioNeto + record.tarifaServicio,
+            groupId,
+            createdAt: new Date(),
+          })
+        );
 
         allRecords = [...allRecords, ...newGroupRecords];
 
@@ -167,16 +169,18 @@ export default function CuadrePage() {
       try {
         const newRecords = JSON.parse(savedRecords) as BaseTransactionRecord[];
         const groupId = crypto.randomUUID();
-        const newGroupRecords = newRecords.map((record) => ({
-          ...record,
-          banco: null,
-          banco2: null,
-          fechaCliente: null,
-          referencia: null,
-          totalCombinado: record.precioNeto + record.tarifaServicio,
-          groupId,
-          createdAt: new Date(),
-        }));
+        const newGroupRecords: ExtendedSummaryRecord[] = newRecords.map(
+          (record) => ({
+            ...record,
+            banco: '', // Initialize with empty string instead of null
+            banco2: '', // Initialize with empty string instead of null
+            fechaCliente: null,
+            referencia: '', // Initialize with empty string instead of null
+            totalCombinado: record.precioNeto + record.tarifaServicio,
+            groupId,
+            createdAt: new Date(),
+          })
+        );
 
         allRecords = [...allRecords, ...newGroupRecords];
 
