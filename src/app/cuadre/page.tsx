@@ -27,21 +27,22 @@ export default function CuadrePage() {
   // Ref para mantener los datos actuales para el autosave
   const summaryDataRef = useRef<ExtendedSummaryRecord[]>([]);
 
-  // Hook de autosave debounced
-  const debouncedSave = useDebouncedSave<ExtendedSummaryRecord[]>(
-    async (records) => {
+  // Modificar el hook de autosave debounced para adaptarse al tipo BaseTransactionRecord
+  const debouncedSave = useDebouncedSave(
+    async (records: BaseTransactionRecord[]) => {
       setIsSaving(true);
       if (records.length === 0) return { success: false };
 
-      const record = records[0];
+      // Convierte el ExtendedSummaryRecord a BaseTransactionRecord
+      const record = records[0] as unknown as ExtendedSummaryRecord;
       if (!record) return { success: false };
 
       // Create the cuadre data from the record
       const cuadreData: CuadreData = {
-        banco: record.banco,
-        banco2: record.banco2,
-        fechaCliente: record.fechaCliente,
-        referencia: record.referencia,
+        banco: record.banco ?? null,
+        banco2: record.banco2 ?? null,
+        fechaCliente: record.fechaCliente ?? null,
+        referencia: record.referencia ?? null,
       };
 
       const result = await updateCuadreRecord(record.id, cuadreData);
@@ -131,7 +132,8 @@ export default function CuadrePage() {
       localStorage.setItem('existingCuadres', JSON.stringify(newData));
       // Actualizar ref y disparar autosave debounced
       summaryDataRef.current = newData;
-      debouncedSave(newData);
+      // Convertir ExtendedSummaryRecord[] a BaseTransactionRecord[] para el autosave
+      debouncedSave(newData as unknown as BaseTransactionRecord[]);
       return newData;
     });
   };
