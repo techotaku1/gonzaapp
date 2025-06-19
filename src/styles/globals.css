@@ -143,6 +143,10 @@
   background-color: #f9fafb;
   border-right: 1px solid var(--color-gray-600) !important;
   border-bottom: 1px solid var(--color-gray-600) !important;
+  /* Agregar estas propiedades */
+  position: -webkit-sticky;
+  position: sticky;
+  white-space: nowrap;
 }
 
 /* Contenedor de tabla con scroll */
@@ -155,8 +159,9 @@
 }
 
 @utility table-scroll-container {
-  overflow-x: auto;
+  overflow: auto;
   height: 100%;
+  width: 100%;
   position: relative;
 }
 
@@ -164,6 +169,7 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  overflow: visible;
 }
 
 /* Convert date picker styles */
@@ -415,19 +421,92 @@ select.table-select-base option {
   color: var(--color-gray-900);
 }
 
-/* Custom checkbox styles */
+@layer components {
+  /* Updated table header styles */
+  .table-header {
+    @apply sticky top-0 z-10;
+    position: -webkit-sticky;
+    background-color: #f9fafb;
+    height: 2rem;
+    line-height: 2rem;
+    padding: 0.15rem 0.5rem !important;
+    font-family: var(--font-table-text);
+    font-weight: 700;
+    color: black;
+    text-align: center;
+    vertical-align: middle;
+    border-right: 1px solid var(--color-gray-600) !important;
+    border-bottom: 1px solid var(--color-gray-600) !important;
+    min-width: min-content;
+    box-sizing: border-box;
+  }
+
+  /* Updated table container styles */
+  .table-container {
+    @apply relative rounded-lg shadow-md;
+    height: calc(92vh - 120px);
+    overflow: hidden;
+  }
+
+  .table-scroll-container {
+    @apply relative h-full w-full;
+    overflow: auto;
+    will-change: transform;
+  }
+
+  .table-wrapper {
+    @apply w-full;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* Updated checkbox cell styles */
+  .table-checkbox-cell {
+    @apply relative table-cell text-center align-middle;
+    position: relative;
+    width: 2.5rem;
+    height: 100%;
+    padding: 0 !important;
+    border-right: 1px solid var(--color-gray-600);
+    border-bottom: 1px solid var(--color-gray-600);
+  }
+
+  .table-checkbox-wrapper {
+    @apply flex h-full w-full items-center justify-center;
+    min-height: 1.5rem;
+  }
+
+  /* Updated table header styles for checkbox columns */
+  .table-header:has(+ .table-checkbox-cell),
+  .table-header:has(+ td:has(.check-label)) {
+    border-right: 1px solid var(--color-gray-600) !important;
+  }
+
+  /* Custom scrollbar styles */
+  .table-scroll-container::-webkit-scrollbar {
+    @apply h-2.5 w-2.5;
+  }
+
+  .table-scroll-container::-webkit-scrollbar-track {
+    @apply rounded bg-gray-100;
+  }
+
+  .table-scroll-container::-webkit-scrollbar-thumb {
+    @apply rounded bg-gray-400 hover:bg-gray-500;
+  }
+}
+
 .check-label {
-  display: block;
-  position: relative;
-  cursor: pointer;
-  font-size: 16px;
-  user-select: none;
-  border-right: 1px solid var(--color-gray-600) !important;
-  width: 100%;
-  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  height: 100%;
+  min-height: 1.5rem;
+  padding: 0.15rem !important;
 }
 
 .check-label input {
@@ -716,4 +795,11 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 
 .date-filter-container input[type='date']:disabled {
   @apply cursor-not-allowed opacity-50;
+}
+
+.table-wrapper thead {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background-color: #f9fafb;
 }

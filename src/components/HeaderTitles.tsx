@@ -30,13 +30,10 @@ export default function HeaderTitles({
   ];
 
   return (
-    <thead className="sticky-header">
-      <tr className="bg-gray-50">
+    <thead className="sticky top-0 z-50 bg-gray-50">
+      <tr className="[&>th]:table-header">
         {isDeleteMode && (
-          <th
-            scope="col"
-            className="table-header relative w-10 border-r border-b bg-white text-center whitespace-nowrap"
-          >
+          <th scope="col" className="w-10 whitespace-nowrap">
             <div className="absolute inset-0 flex items-center justify-center">
               <svg
                 className="h-4 w-4 text-gray-600"
@@ -55,11 +52,7 @@ export default function HeaderTitles({
           </th>
         )}
         {tableHeaders.map((header) => (
-          <th
-            key={header}
-            scope="col"
-            className="table-header relative border-r border-b border-gray-600 bg-white whitespace-nowrap"
-          >
+          <th key={header} scope="col" className="whitespace-nowrap">
             {header}
           </th>
         ))}
