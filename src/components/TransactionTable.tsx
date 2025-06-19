@@ -46,7 +46,9 @@ const getEmitidoPorClass = (value: string): string => {
   if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
   if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
   if (value.includes('Panel William')) return 'emitido-por-panel-william';
-  if (value.includes('Panel Gloria')) return 'emitido-por-panel-gloria'; // Nueva condición
+  if (value.includes('Panel Gloria')) return 'emitido-por-panel-gloria';
+  if (value.includes('Panel Sebas')) return 'emitido-por-panel-sebas';
+  if (value.includes('Panel Yuli')) return 'emitido-por-panel-yuli';
   if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
   if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
   if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
@@ -66,6 +68,8 @@ const emitidoPorOptions = [
   'Panel Evelio',
   'Panel William',
   'Panel Gloria',
+  'Panel Sebas',
+  'Panel Yuli',
   'Previ usuario',
   'Previ pública',
   'Previ Sonia',
@@ -100,7 +104,6 @@ const novedadOptions = [
 // Actualizar la definición de tipoVehiculoOptions para usar los valores del sistema de precios
 const tipoVehiculoOptions = vehicleTypes;
 type _TipoVehiculoOption = (typeof tipoVehiculoOptions)[number];
-
 
 const formatColombiaDate = (date: Date): string => {
   const colombiaDate = getColombiaDate(date);

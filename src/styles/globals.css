@@ -12,9 +12,9 @@
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-600, currentColor);
+    border-color: var(--color-gray-600, curreColor);
   }
-  
+
   input::placeholder,
   textarea::placeholder {
     color: var(--color-gray-400);
@@ -280,16 +280,22 @@
     @apply bg-green-300 text-green-800;
   }
   .emitido-por-panel-evelio {
-    @apply bg-blue-300 text-blue-800;
+    @apply bg-blue-400 text-blue-900;
   }
   .emitido-por-panel-william {
     @apply bg-sky-300 text-sky-800;
   }
   .emitido-por-panel-gloria {
-    @apply bg-orange-300 text-orange-800;
+    @apply bg-purple-300 text-purple-900;
+  }
+  .emitido-por-panel-sebas {
+    @apply bg-yellow-300 text-yellow-800;
+  }
+  .emitido-por-panel-yuli {
+    @apply bg-pink-300 text-pink-800;
   }
   .emitido-por-previ-usuario {
-    @apply bg-purple-300 text-purple-800;
+    @apply bg-fuchsia-300 text-fuchsia-900;
   }
   .emitido-por-previ-publica {
     @apply bg-rose-300 text-rose-800;
@@ -304,13 +310,13 @@
     @apply bg-cyan-300 text-cyan-800;
   }
   .emitido-por-axa-yuli {
-    @apply bg-pink-300 text-pink-800;
+    @apply bg-orange-300 text-orange-900;
   }
   .emitido-por-axa-gloria {
     @apply bg-indigo-300 text-indigo-800;
   }
   .emitido-por-axa-maryuri {
-    @apply bg-orange-300 text-orange-800;
+    @apply bg-red-200 text-red-800;
   }
   .emitido-por-mundial-nave {
     @apply bg-teal-300 text-teal-800;
@@ -319,7 +325,7 @@
     @apply bg-violet-300 text-violet-800;
   }
   .emitido-por-no-emitir {
-    @apply bg-red-300 text-red-800;
+    @apply bg-gray-400 text-gray-900;
   }
 
   /* Custom checkbox styles */
@@ -594,7 +600,7 @@
   }
 
   /* Estilos para el filtro de fechas */
-  .date-filter-container {
+  .date-fier-container {
     @apply relative flex items-center gap-2;
   }
 
@@ -614,7 +620,7 @@
     position: absolute;
     left: 0;
   }
-  
+
   .date-filter-container input[type='date']:disabled {
     @apply cursor-not-allowed opacity-50;
   }
