@@ -175,6 +175,8 @@
 /* Convert date picker styles */
 @utility table-date-field {
   appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   position: relative;
   cursor: pointer;
   text-align: center;
@@ -183,6 +185,10 @@
   font-size: 0.65rem;
   line-height: 1;
   color: black;
+  height: 1.5rem;
+  padding: 0.15rem 0.75rem !important; /* Updated padding with more space on left/right */
+  margin: 0;
+  box-sizing: border-box;
 }
 
 .table-date-field::-webkit-calendar-picker-indicator {

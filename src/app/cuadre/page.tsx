@@ -61,8 +61,11 @@ export default function CuadrePage() {
             : null,
           createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
         }));
-      } catch (error) {
-        console.error('Error loading existing cuadres:', error);
+      } catch (error: unknown) {
+        console.error(
+          'Error loading existing cuadres:',
+          error instanceof Error ? error.message : 'Unknown error'
+        );
       }
     }
 
@@ -87,8 +90,11 @@ export default function CuadrePage() {
         // Save all records back to localStorage
         localStorage.setItem('existingCuadres', JSON.stringify(allRecords));
         localStorage.removeItem('cuadreRecords'); // Clear the temporary storage
-      } catch (error) {
-        console.error('Error processing new records:', error);
+      } catch (error: unknown) {
+        console.error(
+          'Error processing new records:',
+          error instanceof Error ? error.message : 'Unknown error'
+        );
       }
     }
 
@@ -133,8 +139,11 @@ export default function CuadrePage() {
             : null,
           createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
         }));
-      } catch (error) {
-        console.error('Error loading existing cuadres:', error);
+      } catch (error: unknown) {
+        console.error(
+          'Error loading existing cuadres:',
+          error instanceof Error ? error.message : 'Unknown error'
+        );
       }
     }
 
@@ -164,8 +173,11 @@ export default function CuadrePage() {
           // Si el registro no existe en la BD, créalo
           await createRecord(rec);
         });
-      } catch (error) {
-        console.error('Error processing new records:', error);
+      } catch (error: unknown) {
+        console.error(
+          'Error processing new records:',
+          error instanceof Error ? error.message : 'Unknown error'
+        );
       }
     }
 
@@ -222,6 +234,19 @@ export default function CuadrePage() {
       setIsDeleteMode(false);
     }
   };
+
+  function getEmitidoPorClass(emitidoPor: string): string | undefined {
+    switch (emitidoPor?.toUpperCase()) {
+      case 'GONZAAPP':
+        return 'text-blue-700 font-bold';
+      case 'ASESOR':
+        return 'text-green-700 font-semibold';
+      case 'CLIENTE':
+        return 'text-purple-700 font-semibold';
+      default:
+        return 'text-gray-700';
+    }
+  }
 
   return (
     <>
@@ -394,19 +419,26 @@ export default function CuadrePage() {
                           </td>
                         )}
                         <td className="cuadre-cell font-lexend">
-                          {record.fecha.toLocaleDateString()}
+                          {new Date(record.fecha).toLocaleDateString('es-CO')}
                         </td>
-                        <td className="cuadre-cell font-lexend uppercase">
+                        <td className="cuadre-cell font-lexend font-bold uppercase">
                           {record.placa}
                         </td>
                         <td className="cuadre-cell font-lexend">
-                          {record.emitidoPor}
+                          <div
+                            className={getEmitidoPorClass(record.emitidoPor)}
+                          >
+                            {record.emitidoPor}
+                          </div>
                         </td>
-                        <td className="cuadre-cell font-lexend">
+                        <td className="cuadre-cell font-lexend font-semibold">
                           {record.asesor}
                         </td>
-                        <td className="cuadre-cell font-lexend">
-                          ${record.totalCombinado.toLocaleString()}
+                        <td className="cuadre-cell font-lexend font-bold">
+                          $
+                          {(
+                            record.precioNeto + record.tarifaServicio
+                          ).toLocaleString('es-CO')}
                         </td>
                         <td className="cuadre-cell">
                           <select
