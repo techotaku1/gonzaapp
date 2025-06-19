@@ -81,6 +81,7 @@ export default [
     rules: {
       // ===== TYPESCRIPT RULES =====
       'no-unused-vars': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
@@ -211,8 +212,8 @@ export default [
     files: ['**/*.test.{js,jsx,ts,tsx}', '**/*.spec.{js,jsx,ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-    },
+      '@typescript-eslint/no-non-null-assertion': 'off'
+        },
   },
 
   // Configuration for config files
