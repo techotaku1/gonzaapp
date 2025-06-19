@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import Header from '~/components/Header';
 import { useDebouncedSave } from '~/hooks/useDebouncedSave';
@@ -16,16 +15,32 @@ import '~/styles/deleteButton.css';
 
 interface SummaryRecord extends TransactionRecord {
   totalCombinado: number;
-  groupId?: string; // Add groupId to identify cuadre groups
-  createdAt?: Date; // Add timestamp for when the cuadre was created
+  groupId?: string;
+  createdAt?: Date;
 }
 
 export default function CuadrePage() {
-  const router = useRouter();
   const [summaryData, setSummaryData] = useState<SummaryRecord[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
+
+  // Ref para mantener los datos actuales para el autosave
+  const summaryDataRef = useRef<SummaryRecord[]>([]);
+
+  // Hook de autosave debounced
+  const debouncedSave = useDebouncedSave(
+    async (records) => {
+      setIsSaving(true);
+      const result = await updateRecords(records);
+      setIsSaving(false);
+      return result;
+    },
+    () => {
+      setIsSaving(false);
+    },
+    1000 // 1 segundo de debounce
+  );
 
   useEffect(() => {
     const savedRecords = localStorage.getItem('cuadreRecords');
@@ -81,36 +96,6 @@ export default function CuadrePage() {
     setSummaryData(allRecords);
   }, []);
 
-  const handleSaveOperation = useCallback(
-    async (records: TransactionRecord[]) => {
-      try {
-        setIsSaving(true);
-        const result = await updateRecords(records);
-        if (result.success) {
-          // Update localStorage with all current records
-          localStorage.setItem('existingCuadres', JSON.stringify(records));
-        }
-        return result;
-      } catch (error) {
-        console.error('Error saving changes:', error);
-        return { success: false, error: 'Failed to save changes' };
-      } finally {
-        setIsSaving(false);
-      }
-    },
-    []
-  );
-
-  const handleSaveSuccess = useCallback(() => {
-    setIsSaving(false);
-  }, []);
-
-  const debouncedSave = useDebouncedSave(
-    handleSaveOperation,
-    handleSaveSuccess,
-    2000
-  );
-
   // Nuevo: Guardar automáticamente en la base de datos cuando se edita un campo
   const handleUpdateBancoReferencia = (
     id: string,
@@ -123,12 +108,9 @@ export default function CuadrePage() {
       );
       // Guardar en localStorage
       localStorage.setItem('existingCuadres', JSON.stringify(newData));
-      // Guardar en la base de datos (solo el registro editado)
-      const updatedRecord = newData.find((r) => r.id === id);
-      if (updatedRecord) {
-        // Solo actualiza ese registro en la BD
-        void updateRecords([updatedRecord]);
-      }
+      // Actualizar ref y disparar autosave debounced
+      summaryDataRef.current = newData;
+      debouncedSave(newData);
       return newData;
     });
   };
