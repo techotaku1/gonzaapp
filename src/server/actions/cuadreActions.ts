@@ -5,27 +5,65 @@ import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { cuadre } from '~/server/db/schema';
+import { cuadre, transactions } from '~/server/db/schema';
 
-import type { CuadreData, CuadreRecord } from '~/types';
+import type { CuadreData, ExtendedSummaryRecord } from '~/types';
 
-export async function createCuadreRecord(
-  data: Omit<CuadreRecord, 'id' | 'createdAt'>
-): Promise<{ success: boolean; error?: string }> {
+export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
   try {
-    const id = crypto.randomUUID();
-    await db.insert(cuadre).values({
-      ...data,
-      id,
-    });
-    revalidatePath('/cuadre');
-    return { success: true };
+    const results = await db
+      .select({
+        id: transactions.id,
+        fecha: transactions.fecha,
+        tramite: transactions.tramite,
+        pagado: transactions.pagado,
+        boleta: transactions.boleta,
+        boletasRegistradas: transactions.boletasRegistradas,
+        emitidoPor: transactions.emitidoPor,
+        placa: transactions.placa,
+        tipoDocumento: transactions.tipoDocumento,
+        numeroDocumento: transactions.numeroDocumento,
+        nombre: transactions.nombre,
+        cilindraje: transactions.cilindraje,
+        tipoVehiculo: transactions.tipoVehiculo,
+        celular: transactions.celular,
+        ciudad: transactions.ciudad,
+        asesor: transactions.asesor,
+        novedad: transactions.novedad,
+        precioNeto: transactions.precioNeto,
+        comisionExtra: transactions.comisionExtra,
+        tarifaServicio: transactions.tarifaServicio,
+        impuesto4x1000: transactions.impuesto4x1000,
+        gananciaBruta: transactions.gananciaBruta,
+        rappi: transactions.rappi,
+        observaciones: transactions.observaciones,
+        banco: cuadre.banco,
+        banco2: cuadre.banco2,
+        fechaCliente: cuadre.fechaCliente,
+        referencia: cuadre.referencia,
+        createdAt: cuadre.createdAt,
+      })
+      .from(transactions)
+      .innerJoin(cuadre, eq(cuadre.transactionId, transactions.id));
+
+    return results.map((record) => ({
+      ...record,
+      fecha: new Date(record.fecha),
+      fechaCliente: record.fechaCliente ? new Date(record.fechaCliente) : null,
+      createdAt: new Date(record.createdAt ?? Date.now()),
+      boletasRegistradas: Number(record.boletasRegistradas),
+      precioNeto: Number(record.precioNeto),
+      tarifaServicio: Number(record.tarifaServicio),
+      impuesto4x1000: Number(record.impuesto4x1000),
+      gananciaBruta: Number(record.gananciaBruta),
+      banco: record.banco ?? '',
+      banco2: record.banco2 ?? '',
+      referencia: record.referencia ?? '',
+      totalCombinado: Number(record.precioNeto) + Number(record.tarifaServicio),
+    }));
   } catch (error) {
-    console.error('Error creating cuadre record:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to create record',
-    };
+    console.error('Error fetching cuadre records:', error);
+    throw error;
   }
 }
 
@@ -37,10 +75,10 @@ export async function updateCuadreRecord(
     await db
       .update(cuadre)
       .set({
-        banco: data.banco || '',
-        banco2: data.banco2 || '',
+        banco: data.banco ?? '',
+        banco2: data.banco2 ?? '',
         fechaCliente: data.fechaCliente,
-        referencia: data.referencia || '',
+        referencia: data.referencia ?? '',
       })
       .where(eq(cuadre.transactionId, transactionId));
 
@@ -55,40 +93,28 @@ export async function updateCuadreRecord(
   }
 }
 
-export async function getCuadreRecords(): Promise<CuadreRecord[]> {
+export async function createCuadreRecord(
+  transactionId: string,
+  data: CuadreData
+): Promise<{ success: boolean; error?: string }> {
   try {
-    const results = await db.select().from(cuadre);
-    return results.map((record) => ({
-      ...record,
-      fechaCliente: record.fechaCliente ? new Date(record.fechaCliente) : null,
-      createdAt: new Date(record.createdAt),
-    }));
+    await db.insert(cuadre).values({
+      id: crypto.randomUUID(),
+      transactionId,
+      banco: data.banco ?? '',
+      banco2: data.banco2 ?? '',
+      fechaCliente: data.fechaCliente,
+      referencia: data.referencia ?? '',
+      createdAt: new Date(),
+    });
+
+    revalidatePath('/cuadre');
+    return { success: true };
   } catch (error) {
-    console.error('Error fetching cuadre records:', error);
-    throw new Error('Failed to fetch cuadre records');
-  }
-}
-
-export async function getCuadreRecord(
-  id: string
-): Promise<CuadreRecord | null> {
-  try {
-    const result = await db
-      .select()
-      .from(cuadre)
-      .where(eq(cuadre.id, id))
-      .limit(1);
-    if (!result[0]) return null;
-
+    console.error('Error creating cuadre record:', error);
     return {
-      ...result[0],
-      fechaCliente: result[0].fechaCliente
-        ? new Date(result[0].fechaCliente)
-        : null,
-      createdAt: new Date(result[0].createdAt),
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create record',
     };
-  } catch (error) {
-    console.error('Error fetching cuadre record:', error);
-    throw new Error('Failed to fetch cuadre record');
   }
 }

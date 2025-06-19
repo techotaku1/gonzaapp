@@ -1,20 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-
 import Header from '~/components/Header';
-import { useDebouncedSave } from '~/hooks/useDebouncedSave';
-import { updateCuadreRecord } from '~/server/actions/cuadreActions';
+import { createCuadreRecord, getCuadreRecords, updateCuadreRecord } from '~/server/actions/cuadreActions';
 import { createRecord } from '~/server/actions/tableGeneral';
 import { bancoOptions } from '~/utils/constants';
 
-import type {
-  BaseTransactionRecord,
-  CuadreData,
-  ExtendedSummaryRecord,
-} from '~/types';
+import type { BaseTransactionRecord, CuadreData, ExtendedSummaryRecord } from '~/types';
 
 import '~/styles/deleteButton.css';
 
@@ -24,182 +17,86 @@ export default function CuadrePage() {
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
 
-  // Ref para mantener los datos actuales para el autosave
-  const summaryDataRef = useRef<ExtendedSummaryRecord[]>([]);
+  // Cargar registros de la base de datos al montar el componente
+  useEffect(() => {
+    const loadCuadreRecords = async () => {
+      try {
+        const records = await getCuadreRecords();
+        setSummaryData(records);
+      } catch (error) {
+        console.error('Error loading cuadre records:', error);
+      }
+    };
 
-  // Modificar el hook de autosave debounced para adaptarse al tipo BaseTransactionRecord
-  const debouncedSave = useDebouncedSave(
-    async (records: BaseTransactionRecord[]) => {
-      setIsSaving(true);
-      if (records.length === 0) return { success: false };
+    void loadCuadreRecords();
+  }, []);
 
-      // Convierte el ExtendedSummaryRecord a BaseTransactionRecord
-      const record = records[0] as unknown as ExtendedSummaryRecord;
-      if (!record) return { success: false };
-
-      // Create the cuadre data from the record
-      const cuadreData: CuadreData = {
-        banco: record.banco || '',
-        banco2: record.banco2 || '',
-        fechaCliente: record.fechaCliente,
-        referencia: record.referencia || '',
-      };
-
-      const result = await updateCuadreRecord(record.id, cuadreData);
-      setIsSaving(false);
-      return result;
-    },
-    () => {
-      setIsSaving(false);
-    },
-    1000 // 1 segundo de debounce
-  );
-
+  // Procesar nuevos registros del localStorage y guardarlos en BD
   useEffect(() => {
     const savedRecords = localStorage.getItem('cuadreRecords');
-    const existingCuadres = localStorage.getItem('existingCuadres');
+    if (!savedRecords) return;
 
-    let allRecords: ExtendedSummaryRecord[] = [];
-
-    // Load existing cuadres if any
-    if (existingCuadres) {
-      try {
-        const parsedRecords = JSON.parse(
-          existingCuadres
-        ) as ExtendedSummaryRecord[];
-        // Ensure dates are properly parsed
-        allRecords = parsedRecords.map((record) => ({
-          ...record,
-          fecha: new Date(record.fecha),
-          fechaCliente: record.fechaCliente
-            ? new Date(record.fechaCliente)
-            : null,
-          createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
-        }));
-      } catch (error) {
-        console.error('Error loading existing cuadres:', error);
-      }
-    }
-
-    // Add new records if any
-    if (savedRecords) {
+    const createRecords = async () => {
       try {
         const newRecords = JSON.parse(savedRecords) as BaseTransactionRecord[];
-        const groupId = crypto.randomUUID();
-        const newGroupRecords: ExtendedSummaryRecord[] = newRecords.map(
-          (record) => ({
-            ...record,
-            banco: '', // Initialize with empty string instead of null
-            banco2: '', // Initialize with empty string instead of null
+        const _groupId = crypto.randomUUID(); // Prefix with _ to mark as intentionally unused
+
+        // Crear registros en BD
+        for (const record of newRecords) {
+          await createRecord(record);
+          await createCuadreRecord(record.id, {
+            banco: '',
+            banco2: '',
             fechaCliente: null,
-            referencia: '', // Initialize with empty string instead of null
-            totalCombinado: record.precioNeto + record.tarifaServicio,
-            groupId,
-            createdAt: new Date(),
-          })
-        );
+            referencia: '',
+          });
+        }
 
-        allRecords = [...allRecords, ...newGroupRecords];
-
-        // Save all records back to localStorage
-        localStorage.setItem('existingCuadres', JSON.stringify(allRecords));
-        localStorage.removeItem('cuadreRecords'); // Clear the temporary storage
-
-        // Crear registros en la base de datos
-        void Promise.all(
-          newGroupRecords.map(async (rec) => {
-            await createRecord(rec);
-          })
-        );
+        // Recargar registros actualizados
+        const updatedRecords = await getCuadreRecords();
+        setSummaryData(updatedRecords);
+        localStorage.removeItem('cuadreRecords');
       } catch (error) {
         console.error('Error processing new records:', error);
       }
-    }
+    };
 
-    // Update state with all records
-    setSummaryData(allRecords);
+    void createRecords();
   }, []);
 
-  // Nuevo: Guardar automáticamente en la base de datos cuando se edita un campo
-  const handleUpdateBancoReferencia = (
+  const handleUpdateBancoReferencia = async (
     id: string,
     field: keyof CuadreData,
     value: string | Date | null
   ) => {
-    setSummaryData((prev) => {
-      const newData = prev.map((record) =>
-        record.id === id ? { ...record, [field]: value ?? '' } : record
+    try {
+      const record = summaryData.find((r) => r.id === id);
+      if (!record) return;
+
+      const cuadreData: CuadreData = {
+        banco: field === 'banco' ? (value as string) : record.banco,
+        banco2: field === 'banco2' ? (value as string) : record.banco2,
+        fechaCliente:
+          field === 'fechaCliente'
+            ? (value as Date | null)
+            : record.fechaCliente,
+        referencia:
+          field === 'referencia' ? (value as string) : record.referencia,
+      };
+
+      setIsSaving(true);
+      await updateCuadreRecord(id, cuadreData);
+
+      // Actualizar estado local después de guardar en BD
+      setSummaryData((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
       );
-      // Guardar en localStorage
-      localStorage.setItem('existingCuadres', JSON.stringify(newData));
-      // Actualizar ref y disparar autosave debounced
-      summaryDataRef.current = newData;
-      // Usar debouncedSave aquí
-      void debouncedSave([newData.find((r) => r.id === id)] as BaseTransactionRecord[]);
-      return newData;
-    });
+    } catch (error) {
+      console.error('Error updating record:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
-
-  // Nuevo: Al cargar la página, sincronizar con la base de datos si hay cuadre nuevos
-  useEffect(() => {
-    const savedRecords = localStorage.getItem('cuadreRecords');
-    const existingCuadres = localStorage.getItem('existingCuadres');
-
-    let allRecords: ExtendedSummaryRecord[] = [];
-
-    if (existingCuadres) {
-      try {
-        const parsedRecords = JSON.parse(
-          existingCuadres
-        ) as ExtendedSummaryRecord[];
-        allRecords = parsedRecords.map((record) => ({
-          ...record,
-          fecha: new Date(record.fecha),
-          fechaCliente: record.fechaCliente
-            ? new Date(record.fechaCliente)
-            : null,
-          createdAt: record.createdAt ? new Date(record.createdAt) : new Date(),
-        }));
-      } catch (error) {
-        console.error('Error loading existing cuadres:', error);
-      }
-    }
-
-    if (savedRecords) {
-      try {
-        const newRecords = JSON.parse(savedRecords) as BaseTransactionRecord[];
-        const groupId = crypto.randomUUID();
-        const newGroupRecords: ExtendedSummaryRecord[] = newRecords.map(
-          (record) => ({
-            ...record,
-            banco: '', // Initialize with empty string instead of null
-            banco2: '', // Initialize with empty string instead of null
-            fechaCliente: null,
-            referencia: '', // Initialize with empty string instead of null
-            totalCombinado: record.precioNeto + record.tarifaServicio,
-            groupId,
-            createdAt: new Date(),
-          })
-        );
-
-        allRecords = [...allRecords, ...newGroupRecords];
-
-        // Guardar todos los registros en localStorage
-        localStorage.setItem('existingCuadres', JSON.stringify(allRecords));
-        localStorage.removeItem('cuadreRecords');
-
-        // Guardar en la base de datos los nuevos registros (solo si no existen)
-        newGroupRecords.forEach(async (rec) => {
-          // Si el registro no existe en la BD, créalo
-          await createRecord(rec);
-        });
-      } catch (error) {
-        console.error('Error processing new records:', error);
-      }
-    }
-
-    setSummaryData(allRecords);
-  }, []);
 
   // Group records by groupId for display
   const groupedRecords = useMemo(() => {
