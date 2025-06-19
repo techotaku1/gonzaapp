@@ -628,7 +628,7 @@ export default function TransactionTable({
           <select
             value={value as string}
             onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className={`table-select-base w-[105px] rounded border ${getEmitidoPorClass(String(value ?? ''))}`}
+            className={`table-select-base w-[105px] rounded border ${getEmitidoPorClass(value as string)}`}
             title={value as string}
           >
             <option value="">Seleccionar...</option>
@@ -841,7 +841,7 @@ export default function TransactionTable({
 
   // Memoize the current date group and related data
   const { currentDateGroup, totalPages } = useMemo(() => {
-    const defaultDate = new Date().toISOString().split('T')[0];
+    const defaultDate = new Date().toISOString().split('T')[0]!;
     const defaultGroup = createDateGroup(defaultDate, []);
 
     return {
