@@ -9,7 +9,7 @@ import {
 
 export const transactions = pgTable('transactions', {
   id: varchar('id').primaryKey(),
-  fecha: timestamp('fecha').notNull(), // Cambiado de date a timestamp
+  fecha: timestamp('fecha').notNull(),
   tramite: varchar('tramite').notNull(),
   pagado: boolean('pagado').notNull().default(false),
   boleta: boolean('boleta').notNull().default(false),
@@ -44,10 +44,6 @@ export const transactions = pgTable('transactions', {
   }).notNull(),
   rappi: boolean('rappi').notNull().default(false),
   observaciones: varchar('observaciones'),
-  banco: varchar('banco'),
-  banco2: varchar('banco2'), // Nuevo campo para segundo banco
-  fechaCliente: timestamp('fecha_cliente'), // Nueva fecha para el cliente
-  referencia: varchar('referencia'),
 });
 
 export const cuadre = pgTable('cuadre', {
