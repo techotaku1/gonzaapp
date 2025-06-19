@@ -49,3 +49,15 @@ export const transactions = pgTable('transactions', {
   fechaCliente: timestamp('fecha_cliente'), // Nueva fecha para el cliente
   referencia: varchar('referencia'),
 });
+
+export const cuadre = pgTable('cuadre', {
+  id: varchar('id').primaryKey(),
+  transactionId: varchar('transaction_id')
+    .notNull()
+    .references(() => transactions.id),
+  banco: varchar('banco'),
+  banco2: varchar('banco2'),
+  fechaCliente: timestamp('fecha_cliente'),
+  referencia: varchar('referencia'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});

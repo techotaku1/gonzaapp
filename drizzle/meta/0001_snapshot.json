@@ -1,0 +1,250 @@
+{
+  "id": "fd747af0-6afe-4075-89c6-151ff9e715ab",
+  "prevId": "74bb8aa0-339b-4236-87df-c67907ac678b",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.cuadre": {
+      "name": "cuadre",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "banco": {
+          "name": "banco",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "banco2": {
+          "name": "banco2",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fecha_cliente": {
+          "name": "fecha_cliente",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "referencia": {
+          "name": "referencia",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "cuadre_transaction_id_transactions_id_fk": {
+          "name": "cuadre_transaction_id_transactions_id_fk",
+          "tableFrom": "cuadre",
+          "tableTo": "transactions",
+          "columnsFrom": [
+            "transaction_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.transactions": {
+      "name": "transactions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "fecha": {
+          "name": "fecha",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tramite": {
+          "name": "tramite",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pagado": {
+          "name": "pagado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "boleta": {
+          "name": "boleta",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "boletas_registradas": {
+          "name": "boletas_registradas",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emitido_por": {
+          "name": "emitido_por",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "placa": {
+          "name": "placa",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo_documento": {
+          "name": "tipo_documento",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "numero_documento": {
+          "name": "numero_documento",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cilindraje": {
+          "name": "cilindraje",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo_vehiculo": {
+          "name": "tipo_vehiculo",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "celular": {
+          "name": "celular",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ciudad": {
+          "name": "ciudad",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "asesor": {
+          "name": "asesor",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "novedad": {
+          "name": "novedad",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precio_neto": {
+          "name": "precio_neto",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comision_extra": {
+          "name": "comision_extra",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "tarifa_servicio": {
+          "name": "tarifa_servicio",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "impuesto_4x1000": {
+          "name": "impuesto_4x1000",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ganancia_bruta": {
+          "name": "ganancia_bruta",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rappi": {
+          "name": "rappi",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "observaciones": {
+          "name": "observaciones",
+          "type": "varchar",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

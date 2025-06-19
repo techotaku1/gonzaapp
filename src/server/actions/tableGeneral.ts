@@ -39,7 +39,7 @@ export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const newRecord = {
+    const newTransaction = {
       ...record,
       boletasRegistradas: Number(record.boletasRegistradas).toString(),
       precioNeto: record.precioNeto.toString(),
@@ -48,7 +48,8 @@ export async function createRecord(
       gananciaBruta: record.gananciaBruta.toString(),
     };
 
-    await db.insert(transactions).values(newRecord);
+    await db.insert(transactions).values(newTransaction);
+
     revalidatePath('/');
     await broadcastUpdate('CREATE', [record]);
     return { success: true };
@@ -68,7 +69,7 @@ export async function updateRecords(
     await Promise.all(
       records.map(async (record) => {
         const updateData = {
-          fecha: new Date(record.fecha), // Convertir a Date antes de guardar
+          fecha: new Date(record.fecha),
           tramite: record.tramite,
           pagado: record.pagado,
           boleta: record.boleta,
@@ -91,23 +92,15 @@ export async function updateRecords(
           gananciaBruta: record.gananciaBruta.toString(),
           rappi: record.rappi,
           observaciones: record.observaciones ?? null,
-          banco: record.banco ?? null,
-          banco2: record.banco2 ?? null, // Agregado
-          fechaCliente: record.fechaCliente
-            ? new Date(record.fechaCliente)
-            : null, // Agregado
-          referencia: record.referencia ?? null, // Agregado
         };
 
         await db
           .update(transactions)
           .set(updateData)
           .where(eq(transactions.id, record.id));
-        await broadcastUpdate('UPDATE', [record]);
       })
     );
 
-    // Solo revalidar el path, no recargar la página
     revalidatePath('/');
     return { success: true };
   } catch (error) {

@@ -13,7 +13,6 @@ import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
-import { bancoOptions } from '~/utils/constants';
 import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
@@ -279,10 +278,6 @@ export default function TransactionTable({
         gananciaBruta: 0,
         rappi: false,
         observaciones: null,
-        banco: null,
-        banco2: null, // Added missing field
-        fechaCliente: null, // Added missing field
-        referencia: null,
       };
 
       const result = await createRecord({ ...newRow, id: newRowId });
@@ -761,25 +756,6 @@ export default function TransactionTable({
                 className="text-center"
                 title={option} // Añadir título también a las opciones
               >
-                {option}
-              </option>
-            ))}
-          </select>
-        );
-      }
-
-      // Dentro de la función renderInput, añade este caso antes del return final:
-      if (field === 'banco') {
-        return (
-          <select
-            value={(value as string) || ''}
-            onChange={(e) => handleInputChange(row.id, field, e.target.value)}
-            className="table-select-base w-[120px] rounded border border-gray-600"
-            title={value as string}
-          >
-            <option value="">Seleccionar...</option>
-            {bancoOptions.map((option) => (
-              <option key={option} value={option} className="text-center">
                 {option}
               </option>
             ))}

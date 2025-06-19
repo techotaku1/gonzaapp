@@ -1,4 +1,4 @@
-export interface TransactionRecord {
+export interface BaseTransactionRecord {
   id: string;
   fecha: Date;
   tramite: string;
@@ -23,8 +23,25 @@ export interface TransactionRecord {
   gananciaBruta: number;
   rappi: boolean;
   observaciones: string | null;
+}
+
+export interface CuadreData {
   banco: string | null;
-  banco2: string | null; // Nuevo campo
-  fechaCliente: Date | null; // Nuevo campo
+  banco2: string | null;
+  fechaCliente: Date | null;
   referencia: string | null;
+}
+
+export type TransactionRecord = BaseTransactionRecord;
+
+export interface CuadreRecord extends CuadreData {
+  id: string;
+  transactionId: string;
+  createdAt: Date;
+}
+
+export interface ExtendedSummaryRecord extends BaseTransactionRecord, CuadreData {
+  totalCombinado: number;
+  groupId?: string;
+  createdAt?: Date;
 }
