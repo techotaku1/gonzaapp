@@ -30,19 +30,19 @@ export async function createCuadreRecord(
 }
 
 export async function updateCuadreRecord(
-  id: string,
+  transactionId: string,
   data: CuadreData
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db
       .update(cuadre)
       .set({
-        banco: data.banco,
-        banco2: data.banco2,
-        fechaCliente: data.fechaCliente ? new Date(data.fechaCliente) : null,
-        referencia: data.referencia,
+        banco: data.banco || '',
+        banco2: data.banco2 || '',
+        fechaCliente: data.fechaCliente,
+        referencia: data.referencia || '',
       })
-      .where(eq(cuadre.id, id));
+      .where(eq(cuadre.transactionId, transactionId));
 
     revalidatePath('/cuadre');
     return { success: true };

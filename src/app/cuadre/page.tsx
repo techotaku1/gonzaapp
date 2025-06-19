@@ -39,10 +39,10 @@ export default function CuadrePage() {
 
       // Create the cuadre data from the record
       const cuadreData: CuadreData = {
-        banco: record.banco ?? null,
-        banco2: record.banco2 ?? null,
-        fechaCliente: record.fechaCliente ?? null,
-        referencia: record.referencia ?? null,
+        banco: record.banco || '',
+        banco2: record.banco2 || '',
+        fechaCliente: record.fechaCliente,
+        referencia: record.referencia || '',
       };
 
       const result = await updateCuadreRecord(record.id, cuadreData);
@@ -128,14 +128,14 @@ export default function CuadrePage() {
   ) => {
     setSummaryData((prev) => {
       const newData = prev.map((record) =>
-        record.id === id ? { ...record, [field]: value } : record
+        record.id === id ? { ...record, [field]: value ?? '' } : record
       );
       // Guardar en localStorage
       localStorage.setItem('existingCuadres', JSON.stringify(newData));
       // Actualizar ref y disparar autosave debounced
       summaryDataRef.current = newData;
-      // Convertir ExtendedSummaryRecord[] a BaseTransactionRecord[] para el autosave
-      debouncedSave(newData as unknown as BaseTransactionRecord[]);
+      // Usar debouncedSave aquí
+      void debouncedSave([newData.find((r) => r.id === id)] as BaseTransactionRecord[]);
       return newData;
     });
   };
