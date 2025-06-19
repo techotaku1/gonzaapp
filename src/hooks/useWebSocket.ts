@@ -1,33 +1,30 @@
 import useSWRSubscription from 'swr/subscription';
 
-import { env } from '~/env';
-
-import type { TransactionRecord } from '~/types';
+import { type TransactionRecord } from '~/types';
+import { type BroadcastMessage } from '~/types/broadcast';
 
 export function useWebSocket() {
   return useSWRSubscription('/api/transactions', (_key, { next }) => {
-    try {
-      // Validate and create WebSocket URL
-      const wsUrl = new URL(env.NEXT_PUBLIC_WS_URL as string);
-      const ws = new WebSocket(wsUrl);
+    const eventSource = new EventSource('/api/broadcast');
 
-      ws.addEventListener('message', (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data as string) as TransactionRecord[];
-          next(null, data);
-        } catch (_error) {
-          next(new Error('Failed to parse WebSocket message'));
+    eventSource.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data as string) as BroadcastMessage;
+        if (message.type === 'UPDATE') {
+          next(null, message.data as TransactionRecord[]);
         }
-      });
+      } catch (_error) {
+        next(new Error('Failed to parse message'));
+      }
+    };
 
-      ws.addEventListener('error', () => {
-        next(new Error('WebSocket connection error'));
-      });
+    eventSource.onerror = () => {
+      next(new Error('EventSource connection error'));
+      eventSource.close();
+    };
 
-      return () => ws.close();
-    } catch (_error) {
-      next(new Error('Failed to create WebSocket connection'));
-      return () => undefined;
-    }
+    return () => {
+      eventSource.close();
+    };
   });
 }

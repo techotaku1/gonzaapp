@@ -4,8 +4,10 @@ import { revalidatePath } from 'next/cache';
 
 import { desc, eq, inArray } from 'drizzle-orm';
 
+import { env } from '~/env';
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';
+import { type BroadcastMessage } from '~/types/broadcast';
 
 import type { TransactionRecord } from '~/types';
 
@@ -34,42 +36,21 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
 }
 
 export async function createRecord(
-  record: TransactionRecord // Cambiar para aceptar el ID
+  record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const newRecord = {
-      id: record.id, // Usar el ID proporcionado
-      fecha: new Date(record.fecha),
-      tramite: record.tramite,
-      pagado: record.pagado,
-      boleta: record.boleta,
-      boletasRegistradas: record.boletasRegistradas.toString(),
-      emitidoPor: record.emitidoPor,
-      placa: record.placa,
-      tipoDocumento: record.tipoDocumento,
-      numeroDocumento: record.numeroDocumento,
-      nombre: record.nombre,
-      cilindraje: record.cilindraje ?? null,
-      tipoVehiculo: record.tipoVehiculo ?? null,
-      celular: record.celular ?? null,
-      ciudad: record.ciudad,
-      asesor: record.asesor,
-      novedad: record.novedad ?? null,
+      ...record,
+      boletasRegistradas: Number(record.boletasRegistradas).toString(),
       precioNeto: record.precioNeto.toString(),
-      comisionExtra: record.comisionExtra,
       tarifaServicio: record.tarifaServicio.toString(),
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
-      rappi: record.rappi,
-      observaciones: record.observaciones ?? null,
-      banco: record.banco ?? null,
-      banco2: record.banco2 ?? null, // Agregado
-      fechaCliente: record.fechaCliente ? new Date(record.fechaCliente) : null, // Agregado
-      referencia: record.referencia ?? null, // Agregado
     };
 
     await db.insert(transactions).values(newRecord);
     revalidatePath('/');
+    await broadcastUpdate('CREATE', [record]);
     return { success: true };
   } catch (error) {
     console.error('Error creating record:', error);
@@ -122,6 +103,7 @@ export async function updateRecords(
           .update(transactions)
           .set(updateData)
           .where(eq(transactions.id, record.id));
+        await broadcastUpdate('UPDATE', [record]);
       })
     );
 
@@ -144,6 +126,7 @@ export async function deleteRecords(
   try {
     await db.delete(transactions).where(inArray(transactions.id, ids));
     revalidatePath('/');
+    await broadcastUpdate('DELETE', ids);
     return { success: true };
   } catch (error) {
     console.error('Error deleting records:', error);
@@ -152,5 +135,21 @@ export async function deleteRecords(
       error:
         error instanceof Error ? error.message : 'Failed to delete records',
     };
+  }
+}
+
+async function broadcastUpdate(
+  type: BroadcastMessage['type'],
+  data: TransactionRecord[] | string[]
+): Promise<void> {
+  try {
+    const url = env.NEXT_PUBLIC_WS_BROADCAST_URL;
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data }),
+    });
+  } catch (error) {
+    console.error('Error broadcasting update:', error);
   }
 }

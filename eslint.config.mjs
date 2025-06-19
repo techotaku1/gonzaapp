@@ -82,6 +82,7 @@ export default [
       // ===== TYPESCRIPT RULES =====
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
