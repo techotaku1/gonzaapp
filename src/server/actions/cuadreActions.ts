@@ -98,13 +98,23 @@ export async function createCuadreRecord(
   data: CuadreData
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Validar fechas y strings
+    const safeData = {
+      ...data,
+      banco: data.banco || '',
+      banco2: data.banco2 || '',
+      referencia: data.referencia || '',
+      fechaCliente:
+        data.fechaCliente instanceof Date || data.fechaCliente === null
+          ? data.fechaCliente
+          : data.fechaCliente
+            ? new Date(data.fechaCliente)
+            : null,
+    };
     await db.insert(cuadre).values({
       id: crypto.randomUUID(),
       transactionId,
-      banco: data.banco ?? '',
-      banco2: data.banco2 ?? '',
-      fechaCliente: data.fechaCliente,
-      referencia: data.referencia ?? '',
+      ...safeData,
       createdAt: new Date(),
     });
 
@@ -114,7 +124,10 @@ export async function createCuadreRecord(
     console.error('Error creating cuadre record:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create record',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to create cuadre record',
     };
   }
 }

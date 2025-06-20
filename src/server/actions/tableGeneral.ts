@@ -76,35 +76,33 @@ export async function updateRecords(
   try {
     await Promise.all(
       records.map(async (record) => {
-        const updateData = {
-          fecha: new Date(record.fecha),
-          tramite: record.tramite,
-          pagado: record.pagado,
-          boleta: record.boleta,
-          boletasRegistradas: record.boletasRegistradas.toString(),
-          emitidoPor: record.emitidoPor,
-          placa: record.placa,
-          tipoDocumento: record.tipoDocumento,
-          numeroDocumento: record.numeroDocumento,
-          nombre: record.nombre,
-          cilindraje: record.cilindraje ?? null,
-          tipoVehiculo: record.tipoVehiculo ?? null,
-          celular: record.celular ?? null,
-          ciudad: record.ciudad,
-          asesor: record.asesor,
-          novedad: record.novedad ?? null,
-          precioNeto: record.precioNeto.toString(),
-          comisionExtra: record.comisionExtra,
-          tarifaServicio: record.tarifaServicio.toString(),
-          impuesto4x1000: record.impuesto4x1000.toString(),
-          gananciaBruta: record.gananciaBruta.toString(),
-          rappi: record.rappi,
-          observaciones: record.observaciones ?? null,
+        // Asegurar que los campos not null nunca sean null ni undefined
+        const safeRecord = {
+          ...record,
+          ciudad: record.ciudad || '',
+          nombre: record.nombre || '',
+          tramite: record.tramite || '',
+          emitidoPor: record.emitidoPor || '',
+          tipoDocumento: record.tipoDocumento || '',
+          numeroDocumento: record.numeroDocumento || '',
+          asesor: record.asesor || '',
+          fecha:
+            record.fecha instanceof Date
+              ? record.fecha
+              : new Date(record.fecha),
         };
-
         await db
           .update(transactions)
-          .set(updateData)
+          .set({
+            ...safeRecord,
+            boletasRegistradas: Number(
+              safeRecord.boletasRegistradas
+            ).toString(),
+            precioNeto: safeRecord.precioNeto.toString(),
+            tarifaServicio: safeRecord.tarifaServicio.toString(),
+            impuesto4x1000: safeRecord.impuesto4x1000.toString(),
+            gananciaBruta: safeRecord.gananciaBruta.toString(),
+          })
           .where(eq(transactions.id, record.id));
       })
     );

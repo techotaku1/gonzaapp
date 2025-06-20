@@ -6,6 +6,8 @@ import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
+// Hook para escuchar cambios globales en los datos (por ejemplo, SWR)
+import useSWR from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
@@ -814,6 +816,29 @@ export default function TransactionTable({
     },
     [handleInputChange, pendingEdits]
   );
+
+  // Usar SWR para obtener siempre la versión más reciente de la BD
+  const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
+    fallbackData: initialData,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshInterval: 10000, // Refresca cada 10 segundos
+  });
+
+  // Sincronizar el estado local con la data de SWR, pero mergeando edits pendientes
+  useEffect(() => {
+    if (!swrData) return;
+    setData((_prevData) => {
+      // Si hay edits pendientes, mergearlos sobre la data nueva
+      if (Object.keys(pendingEdits).length > 0) {
+        return swrData.map((row) => {
+          const edit = pendingEdits[row.id];
+          return edit ? { ...row, ...edit } : row;
+        });
+      }
+      return swrData;
+    });
+  }, [swrData, pendingEdits]);
 
   // Memoize the current date group and related data
   const { currentDateGroup, totalPages } = useMemo(() => {
