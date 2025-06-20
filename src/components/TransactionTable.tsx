@@ -181,6 +181,8 @@ export default function TransactionTable({
 
   // Nueva función para aplicar los edits pendientes al dataset principal y disparar el autosave
   const flushPendingEdits = useCallback(() => {
+    // Guardar solo si hay edits pendientes
+    if (Object.keys(pendingEdits).length === 0) return;
     setData((prevData) => {
       let changed = false;
       const newData = prevData.map((row) => {
@@ -193,15 +195,15 @@ export default function TransactionTable({
       });
       if (changed) {
         latestDataRef.current = newData;
-        void debouncedSave.save(newData); // <-- USAR .save
+        void debouncedSave.save(newData);
       }
       return newData;
     });
     setPendingEdits({});
   }, [pendingEdits, debouncedSave]);
 
-  // useDebouncedCallback para llamar flushPendingEdits después de 600ms sin cambios
-  const debouncedFlush = useDebouncedCallback(flushPendingEdits, 600);
+  // useDebouncedCallback para llamar flushPendingEdits después de 800ms sin cambios (más tiempo para escritura rápida)
+  const debouncedFlush = useDebouncedCallback(flushPendingEdits, 800);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -519,16 +521,17 @@ export default function TransactionTable({
     return Number(cleanValue) || 0;
   };
 
+  // En renderInput, mostrar siempre el valor de pendingEdits si existe, y solo usar el valor de row si no hay edición pendiente
   const renderInput = useCallback(
     (
       row: TransactionRecord,
       field: keyof TransactionRecord,
       type: InputType = 'text'
     ) => {
-      // Usa el valor editado si existe
+      // Usa el valor editado si existe, si no, el valor de row
       const value =
-        pendingEdits[row.id]?.[field] !== undefined
-          ? pendingEdits[row.id]?.[field]
+        pendingEdits[row.id] && pendingEdits[row.id][field] !== undefined
+          ? pendingEdits[row.id][field]
           : row[field];
       const isMoneyField = [
         'precioNeto',
