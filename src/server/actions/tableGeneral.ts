@@ -4,7 +4,6 @@ import { revalidatePath } from 'next/cache';
 
 import { desc, eq, inArray } from 'drizzle-orm';
 
-import { env } from '~/env';
 import { db } from '~/server/db';
 import { cuadre, transactions } from '~/server/db/schema'; // Add cuadre import
 
@@ -145,7 +144,16 @@ async function broadcastUpdate(
   data: TransactionRecord[] | string[]
 ): Promise<void> {
   try {
-    const url = env.NEXT_PUBLIC_WS_BROADCAST_URL;
+    // Usa solo la variable que tienes en tu .env
+    let baseUrl = process.env.NEXT_PUBLIC_URL_BASE || 'http://localhost:3000';
+
+    // Ensure baseUrl is absolute and has protocol
+    if (!/^https?:\/\//.test(baseUrl)) {
+      baseUrl = `http://${baseUrl}`;
+    }
+
+    const url = `${baseUrl.replace(/\/$/, '')}/api/broadcast`;
+
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
