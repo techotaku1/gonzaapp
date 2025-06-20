@@ -145,7 +145,7 @@ async function broadcastUpdate(
 ): Promise<void> {
   try {
     // Usa solo la variable que tienes en tu .env
-    let baseUrl = process.env.NEXT_PUBLIC_URL_BASE || 'http://localhost:3000';
+    let baseUrl = process.env.NEXT_PUBLIC_URL_BASE ?? 'http://localhost:3000';
 
     // Ensure baseUrl is absolute and has protocol
     if (!/^https?:\/\//.test(baseUrl)) {

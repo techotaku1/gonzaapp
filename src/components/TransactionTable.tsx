@@ -191,7 +191,7 @@ export default function TransactionTable({
       });
       if (changed) {
         latestDataRef.current = newData;
-        debouncedSave(newData);
+        void debouncedSave.save(newData); // <-- USAR .save
       }
       return newData;
     });

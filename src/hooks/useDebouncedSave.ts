@@ -1,51 +1,66 @@
 import { useCallback, useRef } from 'react';
 
 import { useSWRConfig } from 'swr';
+import { useDebouncedCallback } from 'use-debounce'; // Change to use the library
 
 import type { TransactionRecord } from '~/types';
 
 const CACHE_KEY = '/api/transactions';
-const DEBOUNCE_DELAY = 800; // ms
 
 export function useDebouncedSave(
   onSave: (
     records: TransactionRecord[]
   ) => Promise<{ success: boolean; error?: string }>,
   onSuccess: () => void,
-  delay = DEBOUNCE_DELAY
+  delay = 1000
 ) {
   const { mutate } = useSWRConfig();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const recordsRef = useRef<TransactionRecord[]>([]);
 
-  const save = useCallback(
-    (records: TransactionRecord[]) => {
-      recordsRef.current = records;
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-
-      timeoutRef.current = setTimeout(async () => {
-        // Optimistic update with SWR mutate
+  const debouncedSave = useDebouncedCallback(
+    async (records: TransactionRecord[]) => {
+      try {
         await mutate(
           CACHE_KEY,
           async () => {
-            const result = await onSave(recordsRef.current);
+            const result = await onSave(records);
             if (result.success) {
               onSuccess();
-              return recordsRef.current;
+              return records;
             }
             throw new Error(result.error ?? 'Error saving');
           },
           {
-            optimisticData: recordsRef.current,
+            optimisticData: records,
             rollbackOnError: true,
-            populateCache: true,
             revalidate: false,
           }
         );
-      }, delay);
+      } catch (error) {
+        console.error('Error in debouncedSave:', error);
+      }
     },
-    [mutate, onSave, onSuccess, delay]
+    delay,
+    // Add options for better control
+    {
+      maxWait: 2000, // Maximum time to wait before forcing an update
+      leading: false, // Don't execute on the leading edge
+      trailing: true, // Execute on the trailing edge
+    }
   );
 
-  return save;
+  const save = useCallback(
+    (records: TransactionRecord[]) => {
+      recordsRef.current = records;
+      return debouncedSave(records);
+    },
+    [debouncedSave]
+  );
+
+  return {
+    save,
+    isPending: debouncedSave.isPending,
+    flush: debouncedSave.flush,
+    cancel: debouncedSave.cancel,
+  };
 }
