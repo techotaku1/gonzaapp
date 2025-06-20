@@ -175,6 +175,10 @@ export default function TransactionTable({
     },
     () => {
       setIsActuallySaving(false); // Se apaga el spinner solo cuando termina el guardado real
+      // Limpiar pendingEdits SOLO si el guardado fue exitoso
+      setPendingEdits({});
+      // Actualizar data SOLO si el guardado fue exitoso
+      setData(latestDataRef.current);
     },
     800 // ms después de dejar de editar
   );
@@ -183,24 +187,19 @@ export default function TransactionTable({
   const flushPendingEdits = useCallback(() => {
     // Guardar solo si hay edits pendientes
     if (Object.keys(pendingEdits).length === 0) return;
-    setData((prevData) => {
-      let changed = false;
-      const newData = prevData.map((row) => {
-        const edits = pendingEdits[row.id];
-        if (edits) {
-          changed = true;
-          return { ...row, ...edits };
-        }
-        return row;
-      });
-      if (changed) {
-        latestDataRef.current = newData;
-        void debouncedSave.save(newData);
+    // Creamos una copia de los datos actuales con los edits aplicados
+    const newData = data.map((row) => {
+      const edits = pendingEdits[row.id];
+      if (edits) {
+        return { ...row, ...edits };
       }
-      return newData;
+      return row;
     });
-    setPendingEdits({});
-  }, [pendingEdits, debouncedSave]);
+    // Guardamos pero NO actualizamos el estado data aquí, solo si el guardado fue exitoso
+    latestDataRef.current = newData;
+    void debouncedSave.save(newData);
+    // NO limpiar pendingEdits aquí, solo cuando el guardado fue exitoso
+  }, [pendingEdits, data, debouncedSave]);
 
   // useDebouncedCallback para llamar flushPendingEdits después de 800ms sin cambios (más tiempo para escritura rápida)
   const debouncedFlush = useDebouncedCallback(flushPendingEdits, 800);
@@ -832,16 +831,10 @@ export default function TransactionTable({
   useEffect(() => {
     if (!swrData) return;
     setData((_prevData) => {
-      // Si hay edits pendientes, mergearlos sobre la data nueva
-      if (Object.keys(pendingEdits).length > 0) {
-        return swrData.map((row) => {
-          const edit = pendingEdits[row.id];
-          return edit ? { ...row, ...edit } : row;
-        });
-      }
+      // Si hay edits pendientes, NO los sobrescribas, solo actualiza data base
       return swrData;
     });
-  }, [swrData, pendingEdits]);
+  }, [swrData]);
 
   // Memoize the current date group and related data
   const { currentDateGroup, totalPages } = useMemo(() => {

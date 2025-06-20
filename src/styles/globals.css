@@ -155,7 +155,7 @@
   overflow: hidden;
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-  height: calc(92vh - 120px);
+  height: calc(92vh - 20px); /* +100px respecto a antes */
 }
 
 @utility table-scroll-container {
@@ -450,7 +450,7 @@ select.table-select-base option {
   /* Updated table container styles */
   .table-container {
     @apply relative rounded-lg shadow-md;
-    height: calc(92vh - 120px);
+    height: calc(92vh - 20px);
     overflow: hidden;
   }
 
