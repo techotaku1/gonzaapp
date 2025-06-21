@@ -52,7 +52,11 @@ export const cuadre = pgTable('cuadre', {
     .notNull()
     .references(() => transactions.id),
   banco: varchar('banco').notNull().default(''), // Asegurar que no sea null
-  banco2: varchar('banco2').notNull().default(''), // Asegurar que no sea null
+  monto: decimal('monto', {
+    precision: 12,
+    scale: 2,
+  }), // Nuevo campo para monto
+  pagado: boolean('pagado').default(false), // Nuevo campo pagado
   fechaCliente: timestamp('fecha_cliente'), // Puede ser null
   referencia: varchar('referencia').notNull().default(''), // Asegurar que no sea null
   createdAt: timestamp('created_at').notNull().defaultNow(),

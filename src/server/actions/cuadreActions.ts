@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { cuadre, transactions } from '~/server/db/schema';
@@ -38,7 +38,8 @@ export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
         rappi: transactions.rappi,
         observaciones: transactions.observaciones,
         banco: cuadre.banco,
-        banco2: cuadre.banco2,
+        monto: cuadre.monto,
+        pagadoCuadre: cuadre.pagado, // para distinguir de pagado de transacciones
         fechaCliente: cuadre.fechaCliente,
         referencia: cuadre.referencia,
         createdAt: cuadre.createdAt,
@@ -46,21 +47,31 @@ export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
       .from(transactions)
       .innerJoin(cuadre, eq(cuadre.transactionId, transactions.id));
 
-    return results.map((record) => ({
-      ...record,
-      fecha: new Date(record.fecha),
-      fechaCliente: record.fechaCliente ? new Date(record.fechaCliente) : null,
-      createdAt: new Date(record.createdAt ?? Date.now()),
-      boletasRegistradas: Number(record.boletasRegistradas),
-      precioNeto: Number(record.precioNeto),
-      tarifaServicio: Number(record.tarifaServicio),
-      impuesto4x1000: Number(record.impuesto4x1000),
-      gananciaBruta: Number(record.gananciaBruta),
-      banco: record.banco ?? '',
-      banco2: record.banco2 ?? '',
-      referencia: record.referencia ?? '',
-      totalCombinado: Number(record.precioNeto) + Number(record.tarifaServicio),
-    }));
+    return results.map((record) => {
+      const { tarifaServicio, ...rest } = record;
+      return {
+        ...rest,
+        fecha: new Date(record.fecha),
+        fechaCliente: record.fechaCliente
+          ? new Date(record.fechaCliente)
+          : null,
+        createdAt: new Date(record.createdAt ?? Date.now()),
+        boletasRegistradas: Number(record.boletasRegistradas),
+        precioNeto: Number(record.precioNeto),
+        tarifaServicio: Number(record.tarifaServicio),
+        impuesto4x1000: Number(record.impuesto4x1000),
+        gananciaBruta: Number(record.gananciaBruta),
+        banco: record.banco ?? '',
+        monto:
+          record.monto !== undefined && record.monto !== null
+            ? Number(record.monto)
+            : 0,
+        pagado: record.pagadoCuadre ?? false,
+        referencia: record.referencia ?? '',
+        totalCombinado:
+          Number(record.precioNeto) + Number(record.tarifaServicio),
+      };
+    });
   } catch (error) {
     console.error('Error fetching cuadre records:', error);
     throw error;
@@ -75,10 +86,13 @@ export async function updateCuadreRecord(
     await db
       .update(cuadre)
       .set({
-        banco: data.banco ?? '',
-        banco2: data.banco2 ?? '',
-        fechaCliente: data.fechaCliente,
-        referencia: data.referencia ?? '',
+        ...(data.banco !== undefined && { banco: data.banco }),
+        ...(data.monto !== undefined && { monto: data.monto?.toString() }),
+        ...(data.pagado !== undefined && { pagado: data.pagado }),
+        ...(data.fechaCliente !== undefined && {
+          fechaCliente: data.fechaCliente,
+        }),
+        ...(data.referencia !== undefined && { referencia: data.referencia }),
       })
       .where(eq(cuadre.transactionId, transactionId));
 
@@ -95,26 +109,23 @@ export async function updateCuadreRecord(
 
 export async function createCuadreRecord(
   transactionId: string,
-  data: CuadreData
+  data: {
+    banco: string;
+    monto?: number;
+    pagado?: boolean;
+    fechaCliente?: Date | null;
+    referencia?: string;
+  }
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Validar fechas y strings
-    const safeData = {
-      ...data,
-      banco: data.banco || '',
-      banco2: data.banco2 || '',
-      referencia: data.referencia || '',
-      fechaCliente:
-        data.fechaCliente instanceof Date || data.fechaCliente === null
-          ? data.fechaCliente
-          : data.fechaCliente
-            ? new Date(data.fechaCliente)
-            : null,
-    };
     await db.insert(cuadre).values({
       id: crypto.randomUUID(),
       transactionId,
-      ...safeData,
+      banco: data.banco ?? '',
+      monto: data.monto?.toString() ?? '0',
+      pagado: data.pagado ?? false,
+      fechaCliente: data.fechaCliente ?? null,
+      referencia: data.referencia ?? '',
       createdAt: new Date(),
     });
 
@@ -128,6 +139,23 @@ export async function createCuadreRecord(
         error instanceof Error
           ? error.message
           : 'Failed to create cuadre record',
+    };
+  }
+}
+
+export async function deleteCuadreRecords(
+  ids: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.delete(cuadre).where(inArray(cuadre.id, ids));
+    revalidatePath('/cuadre');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting cuadre records:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to delete records',
     };
   }
 }

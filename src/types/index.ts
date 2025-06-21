@@ -27,7 +27,8 @@ export interface BaseTransactionRecord {
 
 export interface CuadreData {
   banco: string;
-  banco2: string;
+  monto?: number;
+  pagado?: boolean;
   fechaCliente: Date | null;
   referencia: string;
 }
@@ -43,7 +44,8 @@ export interface CuadreRecord extends CuadreData {
 export interface ExtendedSummaryRecord extends BaseTransactionRecord {
   totalCombinado: number;
   banco: string;
-  banco2: string;
+  monto: number;
+  pagado: boolean;
   fechaCliente: Date | null;
   referencia: string;
   groupId?: string;

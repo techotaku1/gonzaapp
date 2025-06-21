@@ -1,21 +1,59 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+
 import Link from 'next/link';
+
+import { useDebouncedCallback } from 'use-debounce';
+
 import Header from '~/components/Header';
-import { createCuadreRecord, getCuadreRecords, updateCuadreRecord } from '~/server/actions/cuadreActions';
+import {
+  createCuadreRecord,
+  deleteCuadreRecords, // importar la nueva función
+  getCuadreRecords,
+  updateCuadreRecord,
+} from '~/server/actions/cuadreActions';
 import { createRecord } from '~/server/actions/tableGeneral';
 import { bancoOptions } from '~/utils/constants';
+import {
+  fromDatetimeLocalStringToColombiaDate,
+  toColombiaDatetimeLocalString,
+} from '~/utils/dateUtils';
 
-import type { BaseTransactionRecord, CuadreData, ExtendedSummaryRecord } from '~/types';
+import type {
+  BaseTransactionRecord,
+  CuadreData,
+  ExtendedSummaryRecord,
+} from '~/types';
 
 import '~/styles/deleteButton.css';
 
 export default function CuadrePage() {
   const [summaryData, setSummaryData] = useState<ExtendedSummaryRecord[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
+  const [editValues, setEditValues] = useState<
+    Record<string, Partial<CuadreData>>
+  >({});
+
+  // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
+  const debouncedSave = useDebouncedCallback(
+    async (pendingEdits: Record<string, Partial<CuadreData>>) => {
+      const updates = Object.entries(pendingEdits).map(
+        async ([id, changes]) => {
+          for (const [field, value] of Object.entries(changes)) {
+            await handleUpdateBancoReferencia(
+              id,
+              field as keyof CuadreData,
+              value as string | number | boolean | Date | null
+            );
+          }
+        }
+      );
+      await Promise.all(updates);
+    },
+    800
+  );
 
   // Cargar registros de la base de datos al montar el componente
   useEffect(() => {
@@ -46,7 +84,8 @@ export default function CuadrePage() {
           await createRecord(record);
           await createCuadreRecord(record.id, {
             banco: '',
-            banco2: '',
+            monto: 0,
+            pagado: false,
             fechaCliente: null,
             referencia: '',
           });
@@ -64,28 +103,26 @@ export default function CuadrePage() {
     void createRecords();
   }, []);
 
+  // Adaptar el handler para los nuevos campos y tipos
   const handleUpdateBancoReferencia = async (
     id: string,
     field: keyof CuadreData,
-    value: string | Date | null
+    value: string | number | boolean | Date | null
   ) => {
     try {
       const record = summaryData.find((r) => r.id === id);
       if (!record) return;
 
-      const cuadreData: CuadreData = {
-        banco: field === 'banco' ? (value as string) : record.banco,
-        banco2: field === 'banco2' ? (value as string) : record.banco2,
-        fechaCliente:
-          field === 'fechaCliente'
-            ? (value as Date | null)
-            : record.fechaCliente,
-        referencia:
-          field === 'referencia' ? (value as string) : record.referencia,
-      };
+      // Construir el objeto cuadreData solo con el campo a actualizar
+      const cuadreData: Partial<CuadreData> = {};
+      if (field === 'banco') cuadreData.banco = value as string;
+      if (field === 'monto') cuadreData.monto = value as number;
+      if (field === 'pagado') cuadreData.pagado = value as boolean;
+      if (field === 'fechaCliente')
+        cuadreData.fechaCliente = value as Date | null;
+      if (field === 'referencia') cuadreData.referencia = value as string;
 
-      setIsSaving(true);
-      await updateCuadreRecord(id, cuadreData);
+      await updateCuadreRecord(id, cuadreData as CuadreData);
 
       // Actualizar estado local después de guardar en BD
       setSummaryData((prev) =>
@@ -93,21 +130,59 @@ export default function CuadrePage() {
       );
     } catch (error) {
       console.error('Error updating record:', error);
-    } finally {
-      setIsSaving(false);
     }
+  };
+
+  // Nueva función para manejar cambios locales
+  const handleLocalEdit = (
+    id: string,
+    field: keyof CuadreData,
+    value: string | number | boolean | Date | null
+  ) => {
+    setEditValues((prev) => {
+      const updated = {
+        ...prev,
+        [id]: {
+          ...prev[id],
+          [field]: value,
+        },
+      };
+      debouncedSave(updated);
+      return updated;
+    });
+    setSummaryData((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
   };
 
   // Group records by groupId for display
   const groupedRecords = useMemo(() => {
     const groups = new Map<string, ExtendedSummaryRecord[]>();
-
-    summaryData.forEach((record) => {
+    const seenIds = new Set<string>();
+    // Filtrar duplicados por id
+    const uniqueSummaryData = summaryData.filter((rec) => {
+      if (seenIds.has(rec.id)) return false;
+      seenIds.add(rec.id);
+      return true;
+    });
+    // Ordenar por fecha descendente y luego por asesor (alfabético) ascendente
+    uniqueSummaryData.sort((a, b) => {
+      const dateA =
+        a.fecha instanceof Date
+          ? a.fecha.getTime()
+          : new Date(a.fecha).getTime();
+      const dateB =
+        b.fecha instanceof Date
+          ? b.fecha.getTime()
+          : new Date(b.fecha).getTime();
+      if (dateA !== dateB) return dateB - dateA;
+      return (a.asesor ?? '').localeCompare(b.asesor ?? '');
+    });
+    uniqueSummaryData.forEach((record) => {
       const groupId = record.groupId ?? 'ungrouped';
       const existingGroup = groups.get(groupId) ?? [];
       groups.set(groupId, [...existingGroup, record]);
     });
-
     // Sort groups by creation date (newest first)
     return Array.from(groups.entries()).sort(([, a], [, b]) => {
       const dateA = a[0]?.createdAt ?? new Date(0);
@@ -132,20 +207,22 @@ export default function CuadrePage() {
     setRowsToDelete(newSelected);
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (rowsToDelete.size === 0) return;
 
     if (confirm(`¿Está seguro de eliminar ${rowsToDelete.size} registros?`)) {
-      setSummaryData((prev) =>
-        prev.filter((record) => !rowsToDelete.has(record.id))
-      );
-      // Update localStorage after deletion
-      const updatedRecords = summaryData.filter(
-        (record) => !rowsToDelete.has(record.id)
-      );
-      localStorage.setItem('existingCuadres', JSON.stringify(updatedRecords));
-      setRowsToDelete(new Set());
-      setIsDeleteMode(false);
+      // Eliminar de la base de datos
+      const ids = Array.from(rowsToDelete);
+      const res = await deleteCuadreRecords(ids);
+      if (res.success) {
+        setSummaryData((prev) =>
+          prev.filter((record) => !rowsToDelete.has(record.id))
+        );
+        setRowsToDelete(new Set());
+        setIsDeleteMode(false);
+      } else {
+        alert('Error eliminando registros: ' + (res.error ?? ''));
+      }
     }
   };
 
@@ -233,7 +310,8 @@ export default function CuadrePage() {
                     </button>
                   )}
                 </div>
-                {isSaving ? (
+                {/* Auto-save status */}
+                {debouncedSave.isPending() ? (
                   <span className="flex items-center gap-2 rounded-md bg-blue-300 px-3 py-2.5 text-sm font-bold text-blue-800">
                     <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                       <circle
@@ -297,22 +375,39 @@ export default function CuadrePage() {
                           </div>
                         </th>
                       )}
-                      {[
-                        'Fecha',
-                        'Placa',
-                        'Emitido Por',
-                        'Asesor',
-                        'Total (Precio + Tarifa)',
-                        'Banco',
-                        'Banco 2',
-                        'Fecha Cliente',
-                        'Referencia',
-                      ].map((header) => (
+                      {(
+                        [
+                          'Fecha',
+                          'Placa',
+                          'Emitido Por',
+                          'Asesor',
+                          'Tarifa Servicio',
+                          'Total (Precio + Tarifa)',
+                          'Banco',
+                          'Monto',
+                          'Fecha Cliente',
+                          'Referencia',
+                          'Pagado',
+                        ] as const
+                      ).map((header) => (
                         <th
                           key={header}
-                          className="cuadre-header font-lexend relative border-r bg-white"
+                          className={
+                            header === 'Pagado'
+                              ? 'cuadre-header font-lexend relative w-16 border-r bg-white'
+                              : 'cuadre-header font-lexend relative border-r bg-white'
+                          }
                         >
-                          {header}
+                          {header === 'Pagado' ? (
+                            <span
+                              className="font-lexend"
+                              style={{ fontSize: '0.7rem' }}
+                            >
+                              {header}
+                            </span>
+                          ) : (
+                            header
+                          )}
                         </th>
                       ))}
                     </tr>
@@ -348,88 +443,180 @@ export default function CuadrePage() {
                         <td className="cuadre-cell font-lexend font-semibold">
                           {record.asesor}
                         </td>
+                        {/* Tarifa Servicio solo texto */}
+                        <td className="cuadre-cell font-lexend">
+                          ${' '}
+                          {Number(record.tarifaServicio).toLocaleString(
+                            'es-CO'
+                          )}
+                        </td>
+                        {/* Total (Precio + Tarifa) */}
                         <td className="cuadre-cell font-lexend font-bold">
                           $
                           {(
-                            record.precioNeto + record.tarifaServicio
+                            record.precioNeto + (record.tarifaServicio ?? 0)
                           ).toLocaleString('es-CO')}
                         </td>
+                        {/* Banco */}
                         <td className="cuadre-cell">
                           <select
-                            value={record.banco ?? ''}
+                            value={
+                              editValues[record.id]?.banco ?? record.banco ?? ''
+                            }
                             onChange={(e) =>
-                              handleUpdateBancoReferencia(
+                              handleLocalEdit(
                                 record.id,
                                 'banco',
                                 e.target.value
                               )
                             }
-                            className="cuadre-select font-lexend"
-                          >
-                            <option value="">Seleccionar...</option>
-                            {bancoOptions.map((option) => (
-                              <option key={option} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="cuadre-cell">
-                          <select
-                            value={record.banco2 ?? ''}
-                            onChange={(e) =>
-                              handleUpdateBancoReferencia(
-                                record.id,
-                                'banco2',
-                                e.target.value
-                              )
+                            className="cuadre-select font-lexend text-xs"
+                            style={{ fontSize: '0.75rem' }}
+                            title={
+                              editValues[record.id]?.banco ?? record.banco ?? ''
                             }
-                            className="cuadre-select font-lexend"
                           >
                             <option value="">Seleccionar...</option>
                             {bancoOptions.map((option) => (
-                              <option key={option} value={option}>
+                              <option
+                                key={option}
+                                value={option}
+                                title={option}
+                              >
                                 {option}
                               </option>
                             ))}
                           </select>
                         </td>
+                        {/* Monto */}
+                        <td className="cuadre-cell">
+                          <div style={{ position: 'relative', width: '100%' }}>
+                            <span
+                              style={{
+                                position: 'absolute',
+                                left: 10,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: '#888',
+                                pointerEvents: 'none',
+                                fontSize: '1rem',
+                              }}
+                            >
+                              $
+                            </span>
+                            <input
+                              type="number"
+                              value={
+                                editValues[record.id]?.monto === 0 ||
+                                editValues[record.id]?.monto === undefined
+                                  ? ''
+                                  : (editValues[record.id]?.monto ??
+                                    (record.monto === 0 ? '' : record.monto))
+                              }
+                              onChange={(e) =>
+                                handleLocalEdit(
+                                  record.id,
+                                  'monto',
+                                  e.target.value === ''
+                                    ? 0
+                                    : Number(e.target.value)
+                                )
+                              }
+                              className="cuadre-input font-lexend"
+                              style={{
+                                paddingLeft: '1.5rem',
+                                appearance: 'textfield',
+                                WebkitAppearance: 'none',
+                                MozAppearance: 'textfield',
+                                marginLeft: 0,
+                                width: '90%',
+                              }}
+                            />
+                          </div>
+                        </td>
+                        {/* Fecha Cliente */}
                         <td className="cuadre-cell date-column font-lexend">
                           <input
                             type="datetime-local"
                             value={
-                              record.fechaCliente
-                                ? new Date(record.fechaCliente)
-                                    .toISOString()
-                                    .slice(0, 16)
-                                : ''
+                              editValues[record.id]?.fechaCliente
+                                ? toColombiaDatetimeLocalString(
+                                    new Date(
+                                      editValues[record.id]?.fechaCliente ?? ''
+                                    )
+                                  )
+                                : record.fechaCliente
+                                  ? toColombiaDatetimeLocalString(
+                                      new Date(record.fechaCliente)
+                                    )
+                                  : ''
                             }
-                            onChange={(e) => {
-                              const date = e.target.value
-                                ? new Date(e.target.value)
-                                : null;
-                              handleUpdateBancoReferencia(
+                            onChange={(e) =>
+                              handleLocalEdit(
                                 record.id,
                                 'fechaCliente',
-                                date
-                              );
-                            }}
-                            className="cuadre-input" // Added text-xs class
+                                e.target.value
+                                  ? fromDatetimeLocalStringToColombiaDate(
+                                      e.target.value
+                                    )
+                                  : null
+                              )
+                            }
+                            className="cuadre-input"
+                            style={{ width: '100px' }}
+                            title={
+                              editValues[record.id]?.fechaCliente
+                                ? new Date(
+                                    editValues[record.id]?.fechaCliente ?? ''
+                                  ).toLocaleString('es-CO', { hour12: false })
+                                : record.fechaCliente
+                                  ? new Date(
+                                      record.fechaCliente
+                                    ).toLocaleString('es-CO', { hour12: false })
+                                  : ''
+                            }
                           />
                         </td>
+                        {/* Referencia */}
                         <td className="cuadre-cell border-r-0">
                           <input
                             type="text"
-                            value={record.referencia ?? ''}
+                            value={
+                              editValues[record.id]?.referencia ??
+                              record.referencia ??
+                              ''
+                            }
                             onChange={(e) =>
-                              handleUpdateBancoReferencia(
+                              handleLocalEdit(
                                 record.id,
                                 'referencia',
                                 e.target.value
                               )
                             }
                             className="cuadre-input font-lexend"
-                            placeholder="Referencia..."
+                          />
+                        </td>
+                        {/* Pagado checkbox al final, ancho reducido */}
+                        <td
+                          className="cuadre-cell"
+                          style={{
+                            width: '3.5rem',
+                            minWidth: '3.5rem',
+                            maxWidth: '3.5rem',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              editValues[record.id]?.pagado ?? !!record.pagado
+                            }
+                            onChange={(e) =>
+                              handleLocalEdit(
+                                record.id,
+                                'pagado',
+                                e.target.checked
+                              )
+                            }
                           />
                         </td>
                       </tr>

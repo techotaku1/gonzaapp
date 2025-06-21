@@ -660,11 +660,22 @@ select.cuadre-select option {
   min-width: 0;
 }
 
-/* Specific style for datetime inputs */
+/* Quitar flechitas de los inputs type number en todos los navegadores */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Reducir el ancho del input de fecha del cliente en la tabla cuadre */
 input[type='datetime-local'].cuadre-input {
-  min-width: 130px;
+  min-width: 100px;
+  width: 100px;
   font-size: 0.7rem;
-  padding: 0.25rem 0.5rem; /* Updated padding */
+  padding: 0.25rem 0.5rem;
 }
 
 /* Ocultar elementos específicos de Clerk */

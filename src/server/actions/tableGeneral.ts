@@ -53,7 +53,8 @@ export async function createRecord(
       id: crypto.randomUUID(),
       transactionId: record.id,
       banco: '',
-      banco2: '',
+      monto: '0', // Nuevo campo
+      pagado: false, // Nuevo campo
       fechaCliente: null,
       referencia: '',
       createdAt: new Date(),
