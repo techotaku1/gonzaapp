@@ -473,7 +473,19 @@ export default function CuadrePage() {
                           />
                         </div>
                       </td>
-                      <td className="cuadre-cell date-column font-lexend">
+                      <td
+                        className="cuadre-cell date-column font-lexend"
+                        title={
+                          (editValues[record.id]?.fechaCliente
+                            ? new Date(
+                                editValues[record.id]?.fechaCliente ?? ''
+                              )
+                            : record.fechaCliente
+                              ? new Date(record.fechaCliente)
+                              : null
+                          )?.toLocaleString('es-CO', { hour12: true }) ?? ''
+                        }
+                      >
                         <input
                           type="datetime-local"
                           value={
@@ -502,18 +514,6 @@ export default function CuadrePage() {
                           }
                           className="cuadre-input"
                           style={{ width: '100px' }}
-                          title={
-                            editValues[record.id]?.fechaCliente
-                              ? new Date(
-                                  editValues[record.id]?.fechaCliente ?? ''
-                                ).toLocaleString('es-CO', { hour12: false })
-                              : record.fechaCliente
-                                ? new Date(record.fechaCliente).toLocaleString(
-                                    'es-CO',
-                                    { hour12: false }
-                                  )
-                                : ''
-                          }
                         />
                       </td>
                       <td className="cuadre-cell border-r-0">
