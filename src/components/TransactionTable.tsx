@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
-import { TZDate } from '@date-fns/tz';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
 // Hook para escuchar cambios globales en los datos (por ejemplo, SWR)
@@ -347,10 +346,10 @@ export default function TransactionTable({
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la hora actual en Bogotá correctamente usando TZDate
-      const tzNow = new TZDate(new Date(), 'America/Bogota');
-      // Convertir a Date estándar para guardar
-      const colombiaDate = new Date(tzNow.getTime());
+      // Ajustar la hora restando 5 horas para Colombia
+      const now = new Date();
+      now.setHours(now.getHours() - 5);
+      const colombiaDate = now;
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: colombiaDate,
