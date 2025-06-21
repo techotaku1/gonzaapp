@@ -196,8 +196,140 @@ export default function TransactionTable({
     // NO limpiar pendingEdits aquí, solo cuando el guardado fue exitoso
   }, [pendingEdits, data, debouncedSave]);
 
-  // useDebouncedCallback para llamar flushPendingEdits después de 800ms sin cambios
-  const debouncedFlush = useDebouncedCallback(flushPendingEdits, 800);
+  // Memoize createDateGroup function
+  const createDateGroup = useCallback(
+    (date: string, records: TransactionRecord[]): DateGroup => {
+      const group = [date, records] as const;
+      return Object.assign(group, {
+        date,
+        records,
+        [Symbol.iterator]: Array.prototype[Symbol.iterator],
+      }) as DateGroup;
+    },
+    []
+  );
+
+  // Agrupación por fecha
+  const groupedByDate = useMemo(() => {
+    const groups = new Map<string, TransactionRecord[]>();
+    const dataToGroup = [...filteredData];
+    dataToGroup.forEach((record) => {
+      if (!(record.fecha instanceof Date)) return;
+      const dateKey = getDateKey(record.fecha);
+      if (!dateKey) return;
+      const existingGroup = groups.get(dateKey) ?? [];
+      groups.set(dateKey, [...existingGroup, record]);
+    });
+    groups.forEach((records, key) => {
+      const sortedRecords = records.sort((a, b) => {
+        const dateA = toColombiaDate(new Date(b.fecha));
+        const dateB = toColombiaDate(new Date(a.fecha));
+        return dateA.getTime() - dateB.getTime();
+      });
+      groups.set(key, sortedRecords);
+    });
+    return Array.from(groups.entries())
+      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+      .map(([date, records]) => createDateGroup(date, records));
+  }, [filteredData, createDateGroup]);
+
+  // Debounced flush que toma editValues como argumento
+  const debouncedFlush = useDebouncedCallback(
+    (pendingEdits: Record<string, Partial<TransactionRecord>>) => {
+      if (Object.keys(pendingEdits).length === 0) return;
+      const newData = data.map((row) => {
+        const edits = pendingEdits[row.id];
+        if (edits) {
+          return { ...row, ...edits };
+        }
+        return row;
+      });
+      setIsActuallySaving(true);
+      onUpdateRecordAction(newData).then((result) => {
+        setIsActuallySaving(false);
+        if (result.success) {
+          setEditValues({});
+          setData(newData);
+        }
+      });
+    },
+    800
+  );
+
+  // Estado para valores en edición por fila/campo
+  const [editValues, setEditValues] = useState<
+    Record<string, Partial<TransactionRecord>>
+  >({});
+
+  // ÚNICA definición de handleInputChange
+  const handleInputChange: HandleInputChange = useCallback(
+    (id, field, value) => {
+      setEditValues((prev) => {
+        const prevEdits = prev[id] ?? {};
+        let newValue = value;
+        if (
+          [
+            'precioNeto',
+            'tarifaServicio',
+            'impuesto4x1000',
+            'gananciaBruta',
+            'boletasRegistradas',
+            'cilindraje',
+          ].includes(field as string)
+        ) {
+          newValue =
+            typeof value === 'string' ? Number(value) || 0 : (value as number);
+        }
+        const extra: Partial<TransactionRecord> = {};
+        if (
+          (field === 'tipoVehiculo' || field === 'cilindraje') &&
+          (field === 'tipoVehiculo'
+            ? newValue
+            : prevEdits.tipoVehiculo ||
+              data.find((r) => r.id === id)?.tipoVehiculo)
+        ) {
+          const tipoVehiculo =
+            field === 'tipoVehiculo'
+              ? newValue
+              : (prevEdits.tipoVehiculo ??
+                data.find((r) => r.id === id)?.tipoVehiculo);
+          const cilindraje =
+            field === 'cilindraje'
+              ? newValue
+              : (prevEdits.cilindraje ??
+                data.find((r) => r.id === id)?.cilindraje);
+          const soatPrice = calculateSoatPrice(
+            tipoVehiculo as string,
+            cilindraje as number | null
+          );
+          if (soatPrice > 0) {
+            extra.precioNeto = soatPrice;
+          }
+        }
+        const updated = {
+          ...prev,
+          [id]: { ...prevEdits, [field]: newValue, ...extra },
+        };
+        debouncedFlush(updated);
+        return updated;
+      });
+      // Cambio de página si cambia la fecha
+      if (field === 'fecha' && value) {
+        const dateStr = (
+          value instanceof Date ? value : new Date(value as string)
+        )
+          .toISOString()
+          .split('T')[0];
+        const pageIndex = groupedByDate.findIndex(
+          ([gDate]) => gDate === dateStr
+        );
+        if (pageIndex !== -1) {
+          setCurrentPage(pageIndex + 1);
+        }
+      }
+    },
+    [data, groupedByDate, debouncedFlush]
+  );
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -359,21 +491,17 @@ export default function TransactionTable({
     []
   );
 
-  // Update groupedByDate useMemo to include createDateGroup in dependencies
+  // Agrupación por fecha
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
     const dataToGroup = [...filteredData];
-
     dataToGroup.forEach((record) => {
       if (!(record.fecha instanceof Date)) return;
       const dateKey = getDateKey(record.fecha);
       if (!dateKey) return;
-
       const existingGroup = groups.get(dateKey) ?? [];
       groups.set(dateKey, [...existingGroup, record]);
     });
-
-    // Sort records within each group
     groups.forEach((records, key) => {
       const sortedRecords = records.sort((a, b) => {
         const dateA = toColombiaDate(new Date(b.fecha));
@@ -382,8 +510,6 @@ export default function TransactionTable({
       });
       groups.set(key, sortedRecords);
     });
-
-    // Create final array of DateGroups
     return Array.from(groups.entries())
       .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
       .map(([date, records]) => createDateGroup(date, records));
@@ -426,7 +552,7 @@ export default function TransactionTable({
   // ...Type-safe input change handler
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
-      setPendingEdits((prev) => {
+      setEditValues((prev) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
         // Normaliza tipos para campos numéricos
@@ -470,14 +596,14 @@ export default function TransactionTable({
             extra.precioNeto = soatPrice;
           }
         }
-        return {
+        const updated = {
           ...prev,
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
+        debouncedFlush(updated);
+        return updated;
       });
-      debouncedFlush();
-
-      // Actualiza la página si cambia la fecha
+      // Cambio de página si cambia la fecha
       if (field === 'fecha' && value) {
         const dateStr = (
           value instanceof Date ? value : new Date(value as string)
@@ -492,7 +618,7 @@ export default function TransactionTable({
         }
       }
     },
-    [data, groupedByDate, debouncedFlush]
+    [data, groupedByDate]
   );
 
   // Limpia debounce al desmontar
@@ -524,8 +650,8 @@ export default function TransactionTable({
     ) => {
       // Usa el valor editado si existe, si no, el valor de row
       const value =
-        pendingEdits[row.id] && pendingEdits[row.id][field] !== undefined
-          ? pendingEdits[row.id][field]
+        editValues[row.id] && editValues[row.id][field] !== undefined
+          ? editValues[row.id][field]
           : row[field];
       const isMoneyField = [
         'precioNeto',
@@ -811,7 +937,7 @@ export default function TransactionTable({
         </div>
       );
     },
-    [handleInputChange, pendingEdits]
+    [handleInputChange, editValues]
   );
 
   // Usar SWR para obtener siempre la versión más reciente de la BD
