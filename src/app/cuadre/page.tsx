@@ -507,11 +507,17 @@ export default function CuadrePage() {
                             <input
                               type="number"
                               value={
-                                editValues[record.id]?.monto === 0 ||
-                                editValues[record.id]?.monto === undefined
-                                  ? ''
-                                  : (editValues[record.id]?.monto ??
-                                    (record.monto === 0 ? '' : record.monto))
+                                editValues[record.id]?.monto !== undefined
+                                  ? editValues[record.id]?.monto === 0
+                                    ? ''
+                                    : String(
+                                        Number(editValues[record.id]?.monto)
+                                      )
+                                  : record.monto === 0 ||
+                                      record.monto === undefined ||
+                                      record.monto === null
+                                    ? ''
+                                    : String(Number(record.monto))
                               }
                               onChange={(e) =>
                                 handleLocalEdit(
