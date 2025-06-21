@@ -92,7 +92,12 @@ export async function updateCuadreRecord(
         ...(data.monto !== undefined && { monto: data.monto?.toString() }),
         ...(data.pagado !== undefined && { pagado: data.pagado }),
         ...(data.fechaCliente !== undefined && {
-          fechaCliente: data.fechaCliente,
+          fechaCliente:
+            data.fechaCliente == null
+              ? null
+              : data.fechaCliente instanceof Date
+                ? data.fechaCliente
+                : new Date(data.fechaCliente),
         }),
         ...(data.referencia !== undefined && { referencia: data.referencia }),
       })

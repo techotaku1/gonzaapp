@@ -535,7 +535,7 @@ export default function CuadrePage() {
                         />
                       </td>
                       <td
-                        className="cuadre-cell"
+                        className="cuadre-cell font-lexend"
                         style={{
                           width: '3.5rem',
                           minWidth: '3.5rem',
