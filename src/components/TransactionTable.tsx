@@ -224,8 +224,8 @@ export default function TransactionTable({
       onUpdateRecordAction(newData).then((result) => {
         setIsActuallySaving(false);
         if (result.success) {
-          setEditValues({});
           setData(newData);
+          // NO limpiar setEditValues({}) aquí
         }
       });
     },
