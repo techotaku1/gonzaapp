@@ -820,3 +820,18 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   z-index: 20;
   background-color: #f9fafb;
 }
+
+.table-date-field {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+  font-family: var(--font-table-text);
+  font-size: 0.65rem;
+  line-height: 1;
+  padding-left: 0.70rem; /* Aumentar el padding izquierdo */
+  padding-right: 0.2rem;
+}

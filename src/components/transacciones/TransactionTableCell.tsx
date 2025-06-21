@@ -13,17 +13,16 @@ interface TransactionTableCellProps {
     type?: InputType
   ) => React.ReactNode;
   index?: number;
+  className?: string; // Permitir className opcional
 }
 
 const TransactionTableCell: React.FC<TransactionTableCellProps> = React.memo(
-  ({ row, field, type = 'text', renderInput, index }) => {
-    return (
-      <td
-        className={`table-cell whitespace-nowrap${index !== undefined ? `border-r-0` : ''}`}
-      >
-        {renderInput(row, field, type)}
-      </td>
-    );
+  ({ row, field, type = 'text', renderInput}) => {
+    const cellClasses =
+      field === 'fecha'
+        ? 'table-cell whitespace-nowrap pl-3'
+        : 'table-cell whitespace-nowrap';
+    return <td className={cellClasses}>{renderInput(row, field, type)}</td>;
   }
 );
 
