@@ -20,7 +20,7 @@ const TransactionTableCell: React.FC<TransactionTableCellProps> = React.memo(
   ({ row, field, type = 'text', renderInput}) => {
     const cellClasses =
       field === 'fecha'
-        ? 'table-cell whitespace-nowrap pl-3'
+        ? 'table-cell whitespace-nowrap pl-2'
         : 'table-cell whitespace-nowrap';
     return <td className={cellClasses}>{renderInput(row, field, type)}</td>;
   }
