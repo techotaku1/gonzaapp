@@ -11,7 +11,6 @@ import useSWR from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
-import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
@@ -162,25 +161,21 @@ export default function TransactionTable({
 
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
-  // Nuevo: Mantener un estado local para los edits en curso (debounced)
+  // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
   const [pendingEdits, setPendingEdits] = useState<
     Record<string, Partial<TransactionRecord>>
   >({});
-
-  // Usar useDebouncedSave, pero controlar el estado de guardado real
-  const debouncedSave = useDebouncedSave(
-    async (records) => {
-      setIsActuallySaving(true); // Solo aquí se activa el spinner
-      return await onUpdateRecordAction(records);
+  const debouncedSave = useDebouncedCallback(
+    async (records: TransactionRecord[]) => {
+      setIsActuallySaving(true);
+      const result = await onUpdateRecordAction(records);
+      setIsActuallySaving(false);
+      if (result.success) {
+        setPendingEdits({});
+        setData(records);
+      }
     },
-    () => {
-      setIsActuallySaving(false); // Se apaga el spinner solo cuando termina el guardado real
-      // Limpiar pendingEdits SOLO si el guardado fue exitoso
-      setPendingEdits({});
-      // Actualizar data SOLO si el guardado fue exitoso
-      setData(latestDataRef.current);
-    },
-    800 // ms después de dejar de editar
+    800
   );
 
   // Nueva función para aplicar los edits pendientes al dataset principal y disparar el autosave
@@ -197,11 +192,11 @@ export default function TransactionTable({
     });
     // Guardamos pero NO actualizamos el estado data aquí, solo si el guardado fue exitoso
     latestDataRef.current = newData;
-    void debouncedSave.save(newData);
+    debouncedSave(newData);
     // NO limpiar pendingEdits aquí, solo cuando el guardado fue exitoso
   }, [pendingEdits, data, debouncedSave]);
 
-  // useDebouncedCallback para llamar flushPendingEdits después de 800ms sin cambios (más tiempo para escritura rápida)
+  // useDebouncedCallback para llamar flushPendingEdits después de 800ms sin cambios
   const debouncedFlush = useDebouncedCallback(flushPendingEdits, 800);
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
