@@ -817,19 +817,19 @@ export default function TransactionTable({
   // Usar SWR para obtener siempre la versión más reciente de la BD
   const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
     fallbackData: initialData,
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    refreshInterval: 10000, // Refresca cada 10 segundos
+    // Desactivar refresco automático para evitar sobrescribir mientras editas
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    refreshInterval: 0,
   });
 
-  // Sincronizar el estado local con la data de SWR, pero mergeando edits pendientes
+  // Sincronizar el estado local con la data de SWR solo si no hay edits pendientes
   useEffect(() => {
     if (!swrData) return;
-    setData((_prevData) => {
-      // Si hay edits pendientes, NO los sobrescribas, solo actualiza data base
-      return swrData;
-    });
-  }, [swrData]);
+    if (Object.keys(pendingEdits).length === 0) {
+      setData(swrData);
+    }
+  }, [swrData, pendingEdits]);
 
   // Memoize the current date group and related data
   const { currentDateGroup, totalPages } = useMemo(() => {
