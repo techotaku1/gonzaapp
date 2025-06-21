@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
@@ -118,6 +118,15 @@ const formatColombiaDate = (date: Date): string => {
     .toUpperCase();
 };
 
+// Definir la interfaz DateGroup antes de su uso
+interface DateGroup extends Array<string | TransactionRecord[]> {
+  0: string;
+  1: TransactionRecord[];
+  date: string;
+  records: TransactionRecord[];
+  length: 2;
+}
+
 export default function TransactionTable({
   initialData,
   onUpdateRecordAction,
@@ -153,50 +162,17 @@ export default function TransactionTable({
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
 
-  // Add a ref to always keep the latest data for debounced save
-  const latestDataRef = useRef<TransactionRecord[]>(initialData);
-
   // Cambia la lógica para que el indicador "Guardando cambios..." solo se muestre cuando realmente se está guardando (no cuando el usuario está editando).
   // Se logra con un nuevo estado: isActuallySaving
 
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
   // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
-  const [pendingEdits, setPendingEdits] = useState<
-    Record<string, Partial<TransactionRecord>>
-  >({});
-  const debouncedSave = useDebouncedCallback(
-    async (records: TransactionRecord[]) => {
-      setIsActuallySaving(true);
-      const result = await onUpdateRecordAction(records);
-      setIsActuallySaving(false);
-      if (result.success) {
-        setPendingEdits({});
-        setData(records);
-      }
-    },
-    800
+  const [pendingEdits] = useState<Record<string, Partial<TransactionRecord>>>(
+    {}
   );
 
-  // Nueva función para aplicar los edits pendientes al dataset principal y disparar el autosave
-  const flushPendingEdits = useCallback(() => {
-    // Guardar solo si hay edits pendientes
-    if (Object.keys(pendingEdits).length === 0) return;
-    // Creamos una copia de los datos actuales con los edits aplicados
-    const newData = data.map((row) => {
-      const edits = pendingEdits[row.id];
-      if (edits) {
-        return { ...row, ...edits };
-      }
-      return row;
-    });
-    // Guardamos pero NO actualizamos el estado data aquí, solo si el guardado fue exitoso
-    latestDataRef.current = newData;
-    debouncedSave(newData);
-    // NO limpiar pendingEdits aquí, solo cuando el guardado fue exitoso
-  }, [pendingEdits, data, debouncedSave]);
-
-  // Memoize createDateGroup function
+  // Memoize createDateGroup function (dentro del componente)
   const createDateGroup = useCallback(
     (date: string, records: TransactionRecord[]): DateGroup => {
       const group = [date, records] as const;
@@ -469,59 +445,14 @@ export default function TransactionTable({
     }
   }, [data, dateFilter]);
 
-  // Update DateGroup interface to be a proper tuple type
-  interface DateGroup extends Array<string | TransactionRecord[]> {
-    0: string;
-    1: TransactionRecord[];
-    date: string;
-    records: TransactionRecord[];
-    length: 2;
-  }
-
-  // Memoize createDateGroup function
-  const createDateGroup = useCallback(
-    (date: string, records: TransactionRecord[]): DateGroup => {
-      const group = [date, records] as const;
-      return Object.assign(group, {
-        date,
-        records,
-        [Symbol.iterator]: Array.prototype[Symbol.iterator],
-      }) as DateGroup;
-    },
-    []
-  );
-
-  // Agrupación por fecha
-  const groupedByDate = useMemo(() => {
-    const groups = new Map<string, TransactionRecord[]>();
-    const dataToGroup = [...filteredData];
-    dataToGroup.forEach((record) => {
-      if (!(record.fecha instanceof Date)) return;
-      const dateKey = getDateKey(record.fecha);
-      if (!dateKey) return;
-      const existingGroup = groups.get(dateKey) ?? [];
-      groups.set(dateKey, [...existingGroup, record]);
-    });
-    groups.forEach((records, key) => {
-      const sortedRecords = records.sort((a, b) => {
-        const dateA = toColombiaDate(new Date(b.fecha));
-        const dateB = toColombiaDate(new Date(a.fecha));
-        return dateA.getTime() - dateB.getTime();
-      });
-      groups.set(key, sortedRecords);
-    });
-    return Array.from(groups.entries())
-      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-      .map(([date, records]) => createDateGroup(date, records));
-  }, [filteredData, createDateGroup]);
-
-  // Update paginatedData to handle dates correctly
-  const paginatedData = useMemo(() => {
+  // Tipar paginatedData and map de tbody
+  const paginatedData: TransactionRecord[] = useMemo(() => {
     if (dateFilter.startDate && dateFilter.endDate) {
       return filteredData;
     }
-
-    const currentGroup = groupedByDate[currentPage - 1];
+    const currentGroup = groupedByDate[currentPage - 1] as
+      | DateGroup
+      | undefined;
     return currentGroup ? currentGroup.records : [];
   }, [groupedByDate, currentPage, dateFilter, filteredData]);
 
@@ -547,79 +478,6 @@ export default function TransactionTable({
       }
     }
   }, [currentPage, groupedByDate, dateFilter, setCurrentDateDisplay]);
-
-  // Remove unused paginatedDataAll
-  // ...Type-safe input change handler
-  const handleInputChange: HandleInputChange = useCallback(
-    (id, field, value) => {
-      setEditValues((prev) => {
-        const prevEdits = prev[id] ?? {};
-        let newValue = value;
-        // Normaliza tipos para campos numéricos
-        if (
-          [
-            'precioNeto',
-            'tarifaServicio',
-            'impuesto4x1000',
-            'gananciaBruta',
-            'boletasRegistradas',
-            'cilindraje',
-          ].includes(field)
-        ) {
-          newValue =
-            typeof value === 'string' ? Number(value) || 0 : (value as number);
-        }
-        // Si se cambia tipoVehiculo o cilindraje, recalcula precioNeto
-        const extra: Partial<TransactionRecord> = {};
-        if (
-          (field === 'tipoVehiculo' || field === 'cilindraje') &&
-          (field === 'tipoVehiculo'
-            ? newValue
-            : prevEdits.tipoVehiculo ||
-              data.find((r) => r.id === id)?.tipoVehiculo)
-        ) {
-          const tipoVehiculo =
-            field === 'tipoVehiculo'
-              ? newValue
-              : (prevEdits.tipoVehiculo ??
-                data.find((r) => r.id === id)?.tipoVehiculo);
-          const cilindraje =
-            field === 'cilindraje'
-              ? newValue
-              : (prevEdits.cilindraje ??
-                data.find((r) => r.id === id)?.cilindraje);
-          const soatPrice = calculateSoatPrice(
-            tipoVehiculo as string,
-            cilindraje as number | null
-          );
-          if (soatPrice > 0) {
-            extra.precioNeto = soatPrice;
-          }
-        }
-        const updated = {
-          ...prev,
-          [id]: { ...prevEdits, [field]: newValue, ...extra },
-        };
-        debouncedFlush(updated);
-        return updated;
-      });
-      // Cambio de página si cambia la fecha
-      if (field === 'fecha' && value) {
-        const dateStr = (
-          value instanceof Date ? value : new Date(value as string)
-        )
-          .toISOString()
-          .split('T')[0];
-        const pageIndex = groupedByDate.findIndex(
-          ([gDate]) => gDate === dateStr
-        );
-        if (pageIndex !== -1) {
-          setCurrentPage(pageIndex + 1);
-        }
-      }
-    },
-    [data, groupedByDate]
-  );
 
   // Limpia debounce al desmontar
   useEffect(() => {
@@ -1673,7 +1531,7 @@ export default function TransactionTable({
             <table className="w-full text-left text-sm text-gray-600">
               <HeaderTitles isDeleteMode={isDeleteMode} />
               <tbody>
-                {paginatedData.map((row, index) => {
+                {paginatedData.map((row: TransactionRecord, index: number) => {
                   const {
                     precioNetoAjustado,
                     tarifaServicioAjustada,
