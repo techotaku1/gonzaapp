@@ -346,19 +346,10 @@ export default function TransactionTable({
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora real de Bogotá
+      // Obtener la fecha y hora real de Bogotá correctamente
       const now = new Date();
-      const bogotaString = now.toLocaleString('en-US', {
-        timeZone: 'America/Bogota',
-      });
-      const match = bogotaString.match(/\d+/g);
-      let colombiaDate: Date;
-      if (match && match.length >= 6) {
-        const [month, day, year, hour, minute, second] = match.map(Number);
-        colombiaDate = new Date(year, month - 1, day, hour, minute, second);
-      } else {
-        colombiaDate = now; // fallback
-      }
+      // Usar utilidades para obtener la fecha en zona Bogotá
+      const colombiaDate = getColombiaDate(now);
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: colombiaDate,
@@ -390,28 +381,40 @@ export default function TransactionTable({
       if (result.success) {
         const newRowWithId = { ...newRow, id: newRowId };
         setData((prevData) => {
+          // Insertar la nueva fila en la posición correcta según la hora (más reciente arriba)
           const updatedData = [newRowWithId, ...prevData];
-          setTimeout(() => {
-            const dateKey = getDateKey(colombiaDate);
-            const groups = new Map<string, TransactionRecord[]>();
-            updatedData.forEach((record) => {
-              if (!(record.fecha instanceof Date)) return;
-              const key = getDateKey(record.fecha);
-              if (!key) return;
-              const existingGroup = groups.get(key) ?? [];
-              groups.set(key, [...existingGroup, record]);
+          // Reordenar el grupo de la fecha correspondiente
+          const dateKey = getDateKey(colombiaDate);
+          const groups = new Map<string, TransactionRecord[]>();
+          updatedData.forEach((record) => {
+            if (!(record.fecha instanceof Date)) return;
+            const key = getDateKey(record.fecha);
+            if (!key) return;
+            const existingGroup = groups.get(key) ?? [];
+            groups.set(key, [...existingGroup, record]);
+          });
+          // Ordenar cada grupo por hora ascendente (más reciente arriba)
+          groups.forEach((records, key) => {
+            const sortedRecords = records.sort((a, b) => {
+              const dateA = toColombiaDate(new Date(b.fecha));
+              const dateB = toColombiaDate(new Date(a.fecha));
+              return dateA.getTime() - dateB.getTime();
             });
-            const sortedGroups = Array.from(groups.entries()).sort(
-              ([dateA], [dateB]) => dateB.localeCompare(dateA)
-            );
-            const groupIndex = sortedGroups.findIndex(
-              ([gDate]) => gDate === dateKey
-            );
-            if (groupIndex !== -1) {
-              setCurrentPage(groupIndex + 1);
-            }
-          }, 0);
-          return updatedData;
+            groups.set(key, sortedRecords);
+          });
+          // Reconstruir el array plano ordenado por fecha y hora
+          const sortedGroups = Array.from(groups.entries()).sort(
+            ([dateA], [dateB]) => dateB.localeCompare(dateA)
+          );
+          const flatSorted = sortedGroups.flatMap(([_, records]) => records);
+          // Cambiar de página al grupo de la fecha de la nueva fila
+          const groupIndex = sortedGroups.findIndex(
+            ([gDate]) => gDate === dateKey
+          );
+          if (groupIndex !== -1) {
+            setCurrentPage(groupIndex + 1);
+          }
+          return flatSorted;
         });
         // Forzar un guardado inmediato del nuevo registro
         await handleSaveOperation([newRowWithId, ...data]);

@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale';
 const TIMEZONE = 'America/Bogota';
 
 export const getColombiaDate = (date: Date): TZDate => {
+  // Convierte cualquier fecha a la hora de Bogotá usando TZDate
   return new TZDate(date, TIMEZONE);
 };
 
@@ -28,7 +29,7 @@ export const getStartEndDayInColombia = (date: Date) => {
 };
 
 export const toColombiaDate = (date: Date): TZDate => {
-  return new TZDate(date, TIMEZONE);
+  return getColombiaDate(date);
 };
 
 // Convierte un Date a string para input type="datetime-local" en zona America/Bogota
@@ -45,11 +46,6 @@ export const fromDatetimeLocalStringToColombiaDate = (value: string): Date => {
   const [datePart, timePart] = value.split('T');
   const [year, month, day] = datePart.split('-').map(Number);
   const [hour, minute] = timePart.split(':').map(Number);
-  // Obtener el offset de Bogotá en minutos
-  const bogotaOffset = -5 * 60; // UTC-5
-  // Crear la fecha en UTC sumando el offset inverso
-  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute));
-  // Ajustar a Bogotá restando el offset
-  utcDate.setUTCMinutes(utcDate.getUTCMinutes() - bogotaOffset);
-  return utcDate;
+  // Crear la fecha en la zona horaria de Bogotá usando TZDate
+  return new TZDate(year, month - 1, day, hour, minute, 0, 0, TIMEZONE);
 };
