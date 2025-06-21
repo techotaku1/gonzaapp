@@ -43,6 +43,7 @@ export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
         fechaCliente: cuadre.fechaCliente,
         referencia: cuadre.referencia,
         createdAt: cuadre.createdAt,
+        cuadreId: cuadre.id, // <-- Agregado para exponer el id de la tabla cuadre
       })
       .from(transactions)
       .innerJoin(cuadre, eq(cuadre.transactionId, transactions.id));
@@ -70,6 +71,7 @@ export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
         referencia: record.referencia ?? '',
         totalCombinado:
           Number(record.precioNeto) + Number(record.tarifaServicio),
+        cuadreId: record.cuadreId, // <-- Agregado para exponer el id de la tabla cuadre
       };
     });
   } catch (error) {
