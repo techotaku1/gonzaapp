@@ -349,7 +349,9 @@ export default function TransactionTable({
       // Obtener la fecha y hora real de Bogotá correctamente
       const now = new Date();
       // Usar utilidades para obtener la fecha en zona Bogotá
-      const colombiaDate = getColombiaDate(now);
+      const tzColombiaDate = getColombiaDate(now);
+      // Convertir TZDate a Date estándar para guardar y manipular
+      const colombiaDate = new Date(tzColombiaDate.getTime());
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: colombiaDate,
