@@ -837,10 +837,9 @@ export default function TransactionTable({
   // Usar SWR para obtener siempre la versión más reciente de la BD
   const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
     fallbackData: initialData,
-    // Desactivar refresco automático para evitar sobrescribir mientras editas
-    revalidateOnFocus: false,
+    revalidateOnFocus: true, // refresca al volver a la pestaña
+    refreshInterval: 5000, // refresca cada 5 segundos
     revalidateOnReconnect: false,
-    refreshInterval: 0,
   });
 
   // Sincronizar el estado local con la data de SWR solo si no hay edits pendientes
