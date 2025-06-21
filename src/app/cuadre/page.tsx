@@ -8,23 +8,17 @@ import { useDebouncedCallback } from 'use-debounce';
 
 import Header from '~/components/Header';
 import {
-  createCuadreRecord,
   deleteCuadreRecords, // volver a importar
   getCuadreRecords,
   updateCuadreRecord,
 } from '~/server/actions/cuadreActions';
-import { createRecord } from '~/server/actions/tableGeneral';
 import { bancoOptions } from '~/utils/constants';
 import {
   fromDatetimeLocalStringToColombiaDate,
   toColombiaDatetimeLocalString,
 } from '~/utils/dateUtils';
 
-import type {
-  BaseTransactionRecord,
-  CuadreData,
-  ExtendedSummaryRecord,
-} from '~/types';
+import type { CuadreData, ExtendedSummaryRecord } from '~/types';
 
 import '~/styles/deleteButton.css';
 
@@ -69,40 +63,6 @@ export default function CuadrePage() {
     };
 
     void loadCuadreRecords();
-  }, []);
-
-  // Procesar nuevos registros del localStorage y guardarlos en BD
-  useEffect(() => {
-    const savedRecords = localStorage.getItem('cuadreRecords');
-    if (!savedRecords) return;
-
-    const createRecords = async () => {
-      try {
-        const newRecords = JSON.parse(savedRecords) as BaseTransactionRecord[];
-        const _groupId = crypto.randomUUID(); // Prefix with _ to mark as intentionally unused
-
-        // Crear registros en BD
-        for (const record of newRecords) {
-          await createRecord(record);
-          await createCuadreRecord(record.id, {
-            banco: '',
-            monto: 0,
-            pagado: false,
-            fechaCliente: null,
-            referencia: '',
-          });
-        }
-
-        // Recargar registros actualizados
-        const updatedRecords = await getCuadreRecords();
-        setSummaryData(updatedRecords);
-        localStorage.removeItem('cuadreRecords');
-      } catch (error) {
-        console.error('Error processing new records:', error);
-      }
-    };
-
-    void createRecords();
   }, []);
 
   // Adaptar el handler para los nuevos campos y tipos
