@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { desc, eq, inArray } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { cuadre, transactions } from '~/server/db/schema'; // Add cuadre import
+import { transactions } from '~/server/db/schema'; // Eliminado cuadre import
 
 import type { TransactionRecord } from '~/types';
 import type { BroadcastMessage } from '~/types/broadcast';
@@ -46,18 +46,6 @@ export async function createRecord(
       tarifaServicio: record.tarifaServicio.toString(),
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
-    });
-
-    // Luego crear el registro correspondiente en cuadre
-    await db.insert(cuadre).values({
-      id: crypto.randomUUID(),
-      transactionId: record.id,
-      banco: '',
-      monto: '0', // Nuevo campo
-      pagado: false, // Nuevo campo
-      fechaCliente: null,
-      referencia: '',
-      createdAt: new Date(),
     });
 
     revalidatePath('/');
