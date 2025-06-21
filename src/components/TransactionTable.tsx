@@ -14,10 +14,18 @@ import * as XLSX from 'xlsx';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
-import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
+import {
+  formatColombiaDate,
+  getColombiaDate,
+  getDateKey,
+  toColombiaDate,
+} from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 
+import TransactionTableRow, {
+  InputType,
+} from './transacciones/TransactionTableRow';
 import ExportDateRangeModal from './ExportDateRangeModal';
 import HeaderTitles from './HeaderTitles';
 import { Icons } from './icons';
@@ -35,7 +43,6 @@ interface SaveResult {
 }
 
 type InputValue = string | number | boolean | Date | null;
-type InputType = 'text' | 'number' | 'date' | 'checkbox';
 type HandleInputChange = (
   id: string,
   field: keyof TransactionRecord,
@@ -104,19 +111,6 @@ const novedadOptions = [
 // Actualizar la definición de tipoVehiculoOptions para usar los valores del sistema de precios
 const tipoVehiculoOptions = vehicleTypes;
 type _TipoVehiculoOption = (typeof tipoVehiculoOptions)[number];
-
-const formatColombiaDate = (date: Date): string => {
-  const colombiaDate = getColombiaDate(date);
-  return new Intl.DateTimeFormat('es-CO', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'America/Bogota',
-  })
-    .format(colombiaDate)
-    .toUpperCase();
-};
 
 // Definir la interfaz DateGroup antes de su uso
 interface DateGroup extends Array<string | TransactionRecord[]> {
@@ -352,14 +346,20 @@ export default function TransactionTable({
     progress.start(0.3);
     setIsAddingRow(true);
     try {
+      // Obtener la fecha y hora real de Bogotá
       const now = new Date();
-      const colombiaDate = new Date(
-        now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-      );
-      const offset = colombiaDate.getTimezoneOffset();
-      colombiaDate.setMinutes(colombiaDate.getMinutes() - offset);
-
-      const newRowId = crypto.randomUUID(); // Generar ID aquí
+      const bogotaString = now.toLocaleString('en-US', {
+        timeZone: 'America/Bogota',
+      });
+      const match = bogotaString.match(/\d+/g);
+      let colombiaDate: Date;
+      if (match && match.length >= 6) {
+        const [month, day, year, hour, minute, second] = match.map(Number);
+        colombiaDate = new Date(year, month - 1, day, hour, minute, second);
+      } else {
+        colombiaDate = now; // fallback
+      }
+      const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: colombiaDate,
         tramite: 'SOAT',
@@ -389,7 +389,30 @@ export default function TransactionTable({
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
         const newRowWithId = { ...newRow, id: newRowId };
-        setData((prevData) => [newRowWithId, ...prevData]);
+        setData((prevData) => {
+          const updatedData = [newRowWithId, ...prevData];
+          setTimeout(() => {
+            const dateKey = getDateKey(colombiaDate);
+            const groups = new Map<string, TransactionRecord[]>();
+            updatedData.forEach((record) => {
+              if (!(record.fecha instanceof Date)) return;
+              const key = getDateKey(record.fecha);
+              if (!key) return;
+              const existingGroup = groups.get(key) ?? [];
+              groups.set(key, [...existingGroup, record]);
+            });
+            const sortedGroups = Array.from(groups.entries()).sort(
+              ([dateA], [dateB]) => dateB.localeCompare(dateA)
+            );
+            const groupIndex = sortedGroups.findIndex(
+              ([gDate]) => gDate === dateKey
+            );
+            if (groupIndex !== -1) {
+              setCurrentPage(groupIndex + 1);
+            }
+          }, 0);
+          return updatedData;
+        });
         // Forzar un guardado inmediato del nuevo registro
         await handleSaveOperation([newRowWithId, ...data]);
       } else {
@@ -469,11 +492,16 @@ export default function TransactionTable({
       if (currentGroup) {
         const [dateStr] = currentGroup;
         if (dateStr) {
-          const date = new Date(`${dateStr}T12:00:00-05:00`);
-          if (!isNaN(date.getTime())) {
-            const formatted = formatColombiaDate(date);
-            setCurrentDateDisplay(formatted);
-          }
+          // Mostrar la fecha en zona horaria de Bogotá
+          const date = new Date(dateStr + 'T00:00:00');
+          const bogotaString = date.toLocaleString('es-CO', {
+            timeZone: 'America/Bogota',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+          setCurrentDateDisplay(bogotaString.toUpperCase());
         }
       }
     }
@@ -644,6 +672,7 @@ export default function TransactionTable({
         );
       }
 
+      // Corregir renderPlacaInput para evitar errores TS y duplicidad
       const renderPlacaInput = () => (
         <div className="relative flex items-center">
           <input
@@ -816,13 +845,12 @@ export default function TransactionTable({
   }, [swrData, pendingEdits]);
 
   // Memoize the current date group and related data
-  const { currentDateGroup, totalPages } = useMemo(() => {
+  const { currentDateGroup } = useMemo(() => {
     const defaultDate = new Date().toISOString().split('T')[0]!;
     const defaultGroup = createDateGroup(defaultDate, []);
 
     return {
       currentDateGroup: groupedByDate[currentPage - 1] ?? defaultGroup,
-      totalPages: groupedByDate.length,
     };
   }, [groupedByDate, currentPage, createDateGroup]);
 
@@ -845,13 +873,24 @@ export default function TransactionTable({
     setCurrentDateDisplay(formatter.format(date).toUpperCase());
   }, [currentDateGroup]);
 
-  // Add pagination controls component
-  const PaginationControls = useCallback(() => {
+  // Nuevo subcomponente para paginación por fecha
+  function DatePagination({
+    groupedByDate,
+    currentPage,
+    setCurrentPage,
+    dateFilter,
+  }: {
+    groupedByDate: DateGroup[];
+    currentPage: number;
+    setCurrentPage: (page: number) => void;
+    dateFilter: { startDate: Date | null; endDate: Date | null };
+  }) {
     if (dateFilter.startDate || dateFilter.endDate) return null;
+    const totalPages = groupedByDate.length;
     return (
       <div className="mt-4 flex justify-center gap-2">
         <button
-          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
         >
@@ -861,7 +900,7 @@ export default function TransactionTable({
           Página {currentPage} de {totalPages}
         </span>
         <button
-          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
         >
@@ -869,7 +908,7 @@ export default function TransactionTable({
         </button>
       </div>
     );
-  }, [currentPage, totalPages, dateFilter]);
+  }
 
   const handleZoomOut = useCallback(() => {
     setZoom((prev) => {
@@ -1249,6 +1288,7 @@ export default function TransactionTable({
   return (
     <div className="relative">
       <div className="mb-4">
+        {/* Fecha actual de la página, arriba del grupo de botones */}
         <div className="flex w-full items-center gap-4">
           {/* Botón Agregar */}
           <button
@@ -1548,203 +1588,28 @@ export default function TransactionTable({
                   };
 
                   return (
-                    <tr
+                    <TransactionTableRow
                       key={row.id}
-                      className={`border-b hover:bg-gray-50 ${
-                        row.pagado ? getEmitidoPorClass(row.emitidoPor) : ''
-                      }`}
-                    >
-                      {isDeleteMode ? (
-                        <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
-                          <div className="flex h-full items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={rowsToDelete.has(row.id)}
-                              onChange={() => handleDeleteSelect(row.id)}
-                              className="h-4 w-4 rounded border-gray-600"
-                            />
-                          </div>
-                        </td>
-                      ) : null}
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 0 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'fecha', 'date')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 1 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'tramite')}
-                      </td>
-                      <td className="table-checkbox-cell whitespace-nowrap">
-                        <div className="table-checkbox-wrapper">
-                          <label className="check-label">
-                            <input
-                              type="checkbox"
-                              checked={selectedRows.has(row.id)}
-                              onChange={() =>
-                                handleRowSelect(row.id, row.precioNeto)
-                              }
-                              disabled={row.pagado}
-                              className="sr-only"
-                            />
-                            <div className="checkmark" />
-                          </label>
-                        </div>
-                      </td>
-                      <td className="table-checkbox-cell whitespace-nowrap">
-                        <div className="table-checkbox-wrapper">
-                          {renderCheckbox(row.id, 'pagado', row.pagado)}
-                        </div>
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 4 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(
-                          rowWithFormulas,
-                          'boletasRegistradas',
-                          'number'
-                        )}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 5 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'emitidoPor')}
-                      </td>
-                      <td className="table-cell whitespace-nowrap">
-                        {renderInput(rowWithFormulas, 'placa')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 7 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'tipoDocumento')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 8 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'numeroDocumento')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 9 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'nombre')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 10 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'cilindraje', 'number')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 11 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'tipoVehiculo')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 12 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'celular')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 13 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'ciudad')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 14 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {isAsesorSelectionMode
-                          ? renderAsesorSelect(row)
-                          : renderInput(rowWithFormulas, 'asesor')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 15 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'novedad')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 16 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(rowWithFormulas, 'precioNeto', 'number')}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 17 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(
-                          rowWithFormulas,
-                          'tarifaServicio',
-                          'number'
-                        )}
-                      </td>
-                      <td className="table-checkbox-cell whitespace-nowrap">
-                        <div className="table-checkbox-wrapper">
-                          {renderCheckbox(
-                            row.id,
-                            'comisionExtra',
-                            row.comisionExtra
-                          )}
-                        </div>
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 19 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(
-                          rowWithFormulas,
-                          'impuesto4x1000',
-                          'number'
-                        )}
-                      </td>
-                      <td
-                        className={`table-cell whitespace-nowrap ${
-                          index === 20 ? 'border-r-0' : ''
-                        }`}
-                      >
-                        {renderInput(
-                          rowWithFormulas,
-                          'gananciaBruta',
-                          'number'
-                        )}
-                      </td>
-                      <td className="table-checkbox-cell whitespace-nowrap">
-                        <div className="table-checkbox-wrapper">
-                          {renderCheckbox(row.id, 'rappi', row.rappi)}
-                        </div>
-                      </td>
-                      <td className="table-cell whitespace-nowrap">
-                        {renderInput(rowWithFormulas, 'observaciones')}
-                      </td>
-                    </tr>
+                      row={rowWithFormulas}
+                      isDeleteMode={isDeleteMode}
+                      isAsesorSelectionMode={isAsesorSelectionMode}
+                      selectedRows={selectedRows}
+                      rowsToDelete={rowsToDelete}
+                      handleInputChange={handleInputChange}
+                      handleRowSelect={handleRowSelect}
+                      handleDeleteSelect={handleDeleteSelect}
+                      renderCheckbox={renderCheckbox}
+                      renderAsesorSelect={renderAsesorSelect}
+                      renderInput={
+                        renderInput as (
+                          row: TransactionRecord,
+                          field: keyof TransactionRecord,
+                          type?: InputType
+                        ) => React.ReactNode
+                      }
+                      getEmitidoPorClass={getEmitidoPorClass}
+                      _index={index}
+                    />
                   );
                 })}
               </tbody>
@@ -1754,7 +1619,12 @@ export default function TransactionTable({
       )}
 
       {!showTotals && !dateFilter.startDate && !dateFilter.endDate && (
-        <PaginationControls />
+        <DatePagination
+          groupedByDate={groupedByDate}
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          dateFilter={dateFilter}
+        />
       )}
 
       {/* Add the payment UI */}
