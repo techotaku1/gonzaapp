@@ -12,6 +12,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
+import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import {
@@ -1528,11 +1529,23 @@ export default function TransactionTable({
         onFilterAction={handleFilterData}
         onDateFilterChangeAction={handleDateFilterChange}
         onToggleAsesorSelectionAction={handleToggleAsesorMode}
-        onGenerateCuadreAction={(records) => {
+        onGenerateCuadreAction={async (records) => {
           const selectedRecords = records.filter((r) =>
             selectedAsesores.has(r.id)
           );
           if (selectedRecords.length > 0) {
+            // Crear registros en la tabla cuadre para cada seleccionado
+            await Promise.all(
+              selectedRecords.map((record) =>
+                createCuadreRecord(record.id, {
+                  banco: '',
+                  monto: 0,
+                  pagado: false,
+                  fechaCliente: null,
+                  referencia: '',
+                })
+              )
+            );
             localStorage.setItem(
               'cuadreRecords',
               JSON.stringify(selectedRecords)
