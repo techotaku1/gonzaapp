@@ -344,13 +344,13 @@ export default function CuadrePage() {
                       key={header}
                       className={
                         header === 'Pagado'
-                          ? 'cuadre-header font-lexend relative w-16 border-r bg-white'
+                          ? 'cuadre-header font-lexend relative w-16 border-r bg-white font-semibold'
                           : 'cuadre-header font-lexend relative border-r bg-white'
                       }
                     >
                       {header === 'Pagado' ? (
                         <span
-                          className="font-lexend"
+                          className="font-lexend font-semibold"
                           style={{ fontSize: '0.7rem' }}
                         >
                           {header}
