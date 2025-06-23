@@ -28,7 +28,7 @@ interface SearchControlsProps {
   isLoadingAsesorMode: boolean;
 }
 
-export default function CuadreSearch({
+export default function SearchFilters({
   data,
   onFilterAction,
   onDateFilterChangeAction,
