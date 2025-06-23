@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -50,8 +50,11 @@ export default function CuadreSearch({
   const [filteredStartDate, setFilteredStartDate] = useState<Date | null>(null);
   const [filteredEndDate, setFilteredEndDate] = useState<Date | null>(null);
 
-  // Filtrado eficiente combinando búsqueda y fechas (solo cuando se presiona el botón)
-  const filteredData = useMemo(() => {
+  // Nuevo estado para los datos filtrados
+  const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
+
+  // Filtrado reactivo por búsqueda general
+  useEffect(() => {
     let filtered = data;
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -62,6 +65,7 @@ export default function CuadreSearch({
         })
       );
     }
+    // Si hay filtro de fechas, aplicarlo encima del filtro de búsqueda
     if (filteredStartDate && filteredEndDate) {
       const start = filteredStartDate.setHours(0, 0, 0, 0);
       const end = filteredEndDate.setHours(23, 59, 59, 999);
@@ -70,19 +74,14 @@ export default function CuadreSearch({
         return itemDate >= start && itemDate <= end;
       });
     }
-    return filtered;
-  }, [data, searchTerm, filteredStartDate, filteredEndDate]);
+    setFilteredData(filtered);
+    onFilterAction(filtered);
+  }, [data, searchTerm, filteredStartDate, filteredEndDate, onFilterAction]);
 
+  // Notificar cambios de filtro de fechas
   useEffect(() => {
-    onFilterAction(filteredData);
     onDateFilterChangeAction(filteredStartDate, filteredEndDate);
-  }, [
-    filteredData,
-    onFilterAction,
-    filteredStartDate,
-    filteredEndDate,
-    onDateFilterChangeAction,
-  ]);
+  }, [filteredStartDate, filteredEndDate, onDateFilterChangeAction]);
 
   const handleDateRangeFilter = useCallback(() => {
     if (!startDate || !endDate) return;
