@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
@@ -166,10 +166,13 @@ export default function TransactionTable({
 
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
+  // Cambiar pendingEdits a useRef para evitar ciclos infinitos
+  const pendingEdits = useRef<Record<string, Partial<TransactionRecord>>>({});
+
   // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
-  const [pendingEdits] = useState<Record<string, Partial<TransactionRecord>>>(
-    {}
-  );
+  const [pendingEditsState, setPendingEditsState] = useState<
+    Record<string, Partial<TransactionRecord>>
+  >({});
 
   // Memoize createDateGroup function (dentro del componente)
   const createDateGroup = useCallback(
@@ -219,7 +222,7 @@ export default function TransactionTable({
   // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
   useEffect(() => {
     if (!swrData) return;
-    if (Object.keys(pendingEdits).length === 0) {
+    if (Object.keys(pendingEdits.current).length === 0) {
       setData((prevData) => {
         // Solo actualiza filas nuevas, eliminadas o con cambios, pero mantiene la referencia de las filas no cambiadas
         const prevMap = new Map(prevData.map((row) => [row.id, row]));
@@ -278,7 +281,7 @@ export default function TransactionTable({
       await onUpdateRecordAction(rowsToUpdate);
       setIsActuallySaving(false);
       // Limpiar el estado de edición solo de las filas editadas
-      setEditValues((prev) => {
+      setPendingEditsState((prev) => {
         const newEditValues = { ...prev };
         editedIds.forEach((id) => {
           delete newEditValues[id];
@@ -887,7 +890,7 @@ export default function TransactionTable({
   // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
   useEffect(() => {
     if (!swrData) return;
-    if (Object.keys(pendingEdits).length === 0) {
+    if (Object.keys(pendingEdits.current).length === 0) {
       setData((prevData) => {
         // Solo actualiza filas nuevas, eliminadas o con cambios, pero mantiene la referencia de las filas no cambiadas
         const prevMap = new Map(prevData.map((row) => [row.id, row]));
@@ -1763,49 +1766,47 @@ export default function TransactionTable({
               <table className="w-full text-left text-sm text-gray-600">
                 <HeaderTitles isDeleteMode={isDeleteMode} />
                 <tbody>
-                  {paginatedData.map(
-                    (row: TransactionRecord, index: number) => {
-                      const {
-                        precioNetoAjustado,
-                        tarifaServicioAjustada,
-                        impuesto4x1000,
-                        gananciaBruta,
-                      } = calculateFormulas(row);
+                  {paginatedData.map((row: TransactionRecord, index: number) => {
+                    const {
+                      precioNetoAjustado,
+                      tarifaServicioAjustada,
+                      impuesto4x1000,
+                      gananciaBruta,
+                    } = calculateFormulas(row);
 
-                      const rowWithFormulas = {
-                        ...row,
-                        precioNeto: precioNetoAjustado,
-                        tarifaServicio: tarifaServicioAjustada,
-                        impuesto4x1000,
-                        gananciaBruta,
-                      };
+                    const rowWithFormulas = {
+                      ...row,
+                      precioNeto: precioNetoAjustado,
+                      tarifaServicio: tarifaServicioAjustada,
+                      impuesto4x1000,
+                      gananciaBruta,
+                    };
 
-                      return (
-                        <TransactionTableRow
-                          key={row.id}
-                          row={rowWithFormulas}
-                          isDeleteMode={isDeleteMode}
-                          isAsesorSelectionMode={isAsesorSelectionMode}
-                          selectedRows={selectedRows}
-                          rowsToDelete={rowsToDelete}
-                          handleInputChange={handleInputChange}
-                          handleRowSelect={handleRowSelect}
-                          handleDeleteSelect={handleDeleteSelect}
-                          renderCheckbox={renderCheckbox}
-                          renderAsesorSelect={renderAsesorSelect}
-                          renderInput={
-                            renderInput as (
-                              row: TransactionRecord,
-                              field: keyof TransactionRecord,
-                              type?: InputType
-                            ) => React.ReactNode
-                          }
-                          getEmitidoPorClass={getEmitidoPorClass}
-                          _index={index}
-                        />
-                      );
-                    }
-                  )}
+                    return (
+                      <TransactionTableRow
+                        key={row.id}
+                        row={rowWithFormulas}
+                        isDeleteMode={isDeleteMode}
+                        isAsesorSelectionMode={isAsesorSelectionMode}
+                        selectedRows={selectedRows}
+                        rowsToDelete={rowsToDelete}
+                        handleInputChange={handleInputChange}
+                        handleRowSelect={handleRowSelect}
+                        handleDeleteSelect={handleDeleteSelect}
+                        renderCheckbox={renderCheckbox}
+                        renderAsesorSelect={renderAsesorSelect}
+                        renderInput={
+                          renderInput as (
+                            row: TransactionRecord,
+                            field: keyof TransactionRecord,
+                            type?: InputType
+                          ) => React.ReactNode
+                        }
+                        getEmitidoPorClass={getEmitidoPorClass}
+                        _index={index}
+                      />
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

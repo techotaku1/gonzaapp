@@ -55,6 +55,26 @@ export default function TransactionTotals({
     }
   }, []);
 
+  // Declarar formatCurrency antes de los useMemo y envolver en useCallback
+  const formatCurrency = useCallback((amount: number) => {
+    // Redondear al entero más cercano
+    const roundedAmount = Math.round(amount);
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(roundedAmount);
+  }, []);
+
+  // Función para normalizar texto: quita tildes, signos, puntos, comas, espacios y pasa a minúsculas
+  const normalizeText = (text: string) =>
+    text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // quita tildes
+      .replace(/[$.,\-\s]/g, '') // quita $, puntos, comas, guiones, espacios
+      .toLowerCase();
+
   // Filtrar transacciones por búsqueda y rango de fechas
   const filteredTransactions = useMemo(() => {
     let filtered = transactions;
@@ -132,17 +152,109 @@ export default function TransactionTotals({
 
   // Filtrar totales por búsqueda y rango de fechas
   const filteredTotals = useMemo(() => {
+    // Declarar columnKeywords dentro del useMemo para evitar advertencias de dependencias
+    const columnKeywords = [
+      {
+        key: 'fecha',
+        keywords: [
+          'fecha',
+          'día',
+          'dia',
+          'semana',
+          'mes',
+          'año',
+          'ano',
+          'lunes',
+          'martes',
+          'miércoles',
+          'miercoles',
+          'jueves',
+          'viernes',
+          'sábado',
+          'sabado',
+          'domingo',
+          'enero',
+          'febrero',
+          'marzo',
+          'abril',
+          'mayo',
+          'junio',
+          'julio',
+          'agosto',
+          'septiembre',
+          'octubre',
+          'noviembre',
+          'diciembre',
+        ],
+      },
+      {
+        key: 'transactionCount',
+        keywords: ['transacciones', 'cantidad', 'numero', 'número'],
+      },
+      { key: 'precioNetoTotal', keywords: ['precio neto', 'neto', 'precio'] },
+      {
+        key: 'tarifaServicioTotal',
+        keywords: ['tarifa servicio', 'tarifa', 'servicio'],
+      },
+      {
+        key: 'impuesto4x1000Total',
+        keywords: ['4x1000', 'impuesto', 'cuatro', 'mil'],
+      },
+      {
+        key: 'gananciaBrutaTotal',
+        keywords: ['ganancia bruta', 'ganancia', 'bruta'],
+      },
+    ];
     let filtered = totals;
     if (searchTerm) {
-      const search = searchTerm.toLowerCase();
+      const search = normalizeText(searchTerm);
+      // Detectar si el usuario busca por columna específica
+      const column = columnKeywords.find((col) =>
+        col.keywords.some((k) => search.includes(normalizeText(k)))
+      );
       filtered = filtered.filter((t) => {
-        // Buscar solo en las columnas visibles
-        const dateStr = formatDate(t.date).toLowerCase();
-        const transactionCount = String(t.transactionCount);
-        const precioNeto = String(Math.round(t.precioNetoTotal));
-        const tarifaServicio = String(Math.round(t.tarifaServicioTotal));
-        const impuesto4x1000 = String(Math.round(t.impuesto4x1000Total));
-        const gananciaBruta = String(Math.round(t.gananciaBrutaTotal));
+        const dateStr = normalizeText(formatDate(t.date));
+        const transactionCount = normalizeText(String(t.transactionCount));
+        const precioNeto = normalizeText(formatCurrency(t.precioNetoTotal));
+        const tarifaServicio = normalizeText(
+          formatCurrency(t.tarifaServicioTotal)
+        );
+        const impuesto4x1000 = normalizeText(
+          formatCurrency(t.impuesto4x1000Total)
+        );
+        const gananciaBruta = normalizeText(
+          formatCurrency(t.gananciaBrutaTotal)
+        );
+        // Si busca por columna específica
+        if (column) {
+          switch (column.key) {
+            case 'fecha':
+              return dateStr.includes(search);
+            case 'transactionCount':
+              return transactionCount.includes(search);
+            case 'precioNetoTotal':
+              return precioNeto.includes(search);
+            case 'tarifaServicioTotal':
+              return tarifaServicio.includes(search);
+            case 'impuesto4x1000Total':
+              return impuesto4x1000.includes(search);
+            case 'gananciaBrutaTotal':
+              return gananciaBruta.includes(search);
+            default:
+              return false;
+          }
+        }
+        // Si busca un número, buscar en todos los valores numéricos
+        if (/\d/.test(search)) {
+          return (
+            transactionCount.includes(search) ||
+            precioNeto.includes(search) ||
+            tarifaServicio.includes(search) ||
+            impuesto4x1000.includes(search) ||
+            gananciaBruta.includes(search)
+          );
+        }
+        // Si busca una palabra, buscar en todas las columnas visibles
         return (
           dateStr.includes(search) ||
           transactionCount.includes(search) ||
@@ -162,24 +274,13 @@ export default function TransactionTotals({
       });
     }
     return filtered;
-  }, [totals, searchTerm, startDate, endDate, formatDate]);
+  }, [totals, searchTerm, startDate, endDate, formatDate, formatCurrency]);
 
   const totalPages = Math.ceil(filteredTotals.length / itemsPerPage);
   const paginatedTotals = filteredTotals.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-
-  const formatCurrency = (amount: number) => {
-    // Redondear al entero más cercano
-    const roundedAmount = Math.round(amount);
-    return new Intl.NumberFormat('es-CO', {
-      style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(roundedAmount);
-  };
 
   // Calcular totales generales
   const grandTotals = useMemo(() => {
@@ -204,36 +305,36 @@ export default function TransactionTotals({
   return (
     <div className="font-display container mx-auto px-6">
       {/* Texto Totales Generales fuera del rectángulo */}
-      <h3 className="mb-2 text-2xl font-semibold">Totales Generales</h3>
+      <h3 className="mb-2 text-4xl font-semibold">Totales Generales</h3>
       {/* Totales generales con colores e iconos */}
       <div className="mb-6 rounded-lg bg-gray-100 p-6">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 font-bold md:grid-cols-5">
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
-            <div className="text-sm text-gray-600">Total Transacciones</div>
+            <div className="text-sm text-gray-800">Total Transacciones</div>
             <div className="text-xl font-bold text-blue-600">
               {grandTotals.transactionCount}
             </div>
           </div>
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
-            <div className="text-sm text-gray-600">Precio Neto Total</div>
+            <div className="text-sm text-gray-800">Precio Neto Total</div>
             <div className="text-xl font-bold text-green-600">
               {formatCurrency(grandTotals.precioNetoTotal)}
             </div>
           </div>
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
-            <div className="text-sm text-gray-600">Tarifa Servicio Total</div>
+            <div className="text-sm text-gray-800">Tarifa Servicio Total</div>
             <div className="text-xl font-bold text-orange-600">
               {formatCurrency(grandTotals.tarifaServicioTotal)}
             </div>
           </div>
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
-            <div className="text-sm text-gray-600">4x1000 Total</div>
+            <div className="text-sm text-gray-800">4x1000 Total</div>
             <div className="text-xl font-bold text-red-600">
               {formatCurrency(grandTotals.impuesto4x1000Total)}
             </div>
           </div>
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
-            <div className="text-sm text-gray-600">Ganancia Bruta Total</div>
+            <div className="text-sm text-gray-800">Ganancia Bruta Total</div>
             <div className="text-xl font-bold text-purple-600">
               {formatCurrency(grandTotals.gananciaBrutaTotal)}
             </div>
@@ -245,7 +346,7 @@ export default function TransactionTotals({
       <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">
         <input
           type="text"
-          placeholder="Buscar en cualquier campo..."
+          placeholder="Buscar..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-64 rounded-md border border-gray-300 px-3 py-2"
@@ -284,22 +385,22 @@ export default function TransactionTotals({
         <table className="w-full rounded-lg bg-white shadow-lg">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-500 uppercase">
                 Fecha
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-500 uppercase">
                 Transacciones
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Precio Neto
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Tarifa Servicio
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
                 4x1000
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Ganancia Bruta
               </th>
             </tr>
