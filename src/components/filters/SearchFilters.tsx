@@ -76,6 +76,7 @@ export default function CuadreSearch({
     }
     setFilteredData(filtered);
     onFilterAction(filtered);
+    // No limpiar el input de búsqueda ni cambiar el estado de fechas aquí
   }, [data, searchTerm, filteredStartDate, filteredEndDate, onFilterAction]);
 
   // Notificar cambios de filtro de fechas
@@ -98,6 +99,7 @@ export default function CuadreSearch({
     setEndDate(null);
     setFilteredStartDate(null);
     setFilteredEndDate(null);
+    // No limpiar searchTerm aquí
   };
 
   const handleGenerateCuadre = useCallback(() => {

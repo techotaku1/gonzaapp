@@ -136,11 +136,13 @@ export default function TransactionTable({
   onUpdateRecordAction,
   showTotals,
   onToggleTotalsAction,
+  searchTerm = '', // Nueva prop opcional para el término de búsqueda
 }: {
   initialData: TransactionRecord[];
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
   showTotals: boolean;
   onToggleTotalsAction: () => void;
+  searchTerm?: string;
 }) {
   const router = useRouter();
   const progress = useProgress();
@@ -540,14 +542,15 @@ export default function TransactionTable({
 
   // Tipar paginatedData and map de tbody
   const paginatedData: TransactionRecord[] = useMemo(() => {
-    if (dateFilter.startDate && dateFilter.endDate) {
+    // Si hay búsqueda o filtro de fechas, mostrar todos los resultados filtrados sin paginación
+    if (searchTerm || (dateFilter.startDate && dateFilter.endDate)) {
       return filteredData;
     }
     const currentGroup = groupedByDate[currentPage - 1] as
       | DateGroup
       | undefined;
     return currentGroup ? currentGroup.records : [];
-  }, [groupedByDate, currentPage, dateFilter, filteredData]);
+  }, [groupedByDate, currentPage, dateFilter, filteredData, searchTerm]);
 
   // Limpia debounce al desmontar
   useEffect(() => {
@@ -1814,14 +1817,17 @@ export default function TransactionTable({
           </div>
         )}
 
-        {!showTotals && !dateFilter.startDate && !dateFilter.endDate && (
-          <DatePagination
-            groupedByDate={groupedByDate}
-            currentPage={currentPage}
-            setCurrentPage={setCurrentPage}
-            dateFilter={dateFilter}
-          />
-        )}
+        {!showTotals &&
+          !searchTerm &&
+          !dateFilter.startDate &&
+          !dateFilter.endDate && (
+            <DatePagination
+              groupedByDate={groupedByDate}
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              dateFilter={dateFilter}
+            />
+          )}
 
         {/* Add the payment UI */}
         {selectedRows.size > 0 && (
