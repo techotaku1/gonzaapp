@@ -214,10 +214,17 @@ export default function TransactionTable({
       try {
         const response = await fetch(`/api/transactions`);
         const allRows: TransactionRecord[] = await response.json();
-        latestRows = allRows.filter((row) => editedIds.includes(row.id));
+        // Si alguna fila editada no está en la respuesta, usar la versión local
+        latestRows = editedIds.map(
+          (id) =>
+            allRows.find((row) => row.id === id) ??
+            data.find((row) => row.id === id)!
+        );
       } catch (_error) {
         // Si falla el fetch, usar los datos locales
-        latestRows = data.filter((row) => editedIds.includes(row.id));
+        latestRows = editedIds
+          .map((id) => data.find((row) => row.id === id)!)
+          .filter(Boolean);
       }
       // Fusionar los cambios locales solo en los campos editados
       const newData = data.map((row) => {
@@ -234,8 +241,21 @@ export default function TransactionTable({
       onUpdateRecordAction(newData).then((result) => {
         setIsActuallySaving(false);
         if (result.success) {
-          setData(newData);
-          // NO limpiar setEditValues({}) aquí
+          setData((prevData) =>
+            prevData.map((row) => {
+              const update = pendingEdits[row.id];
+              return update ? { ...row, ...update } : row;
+            })
+          );
+          setEditValues((prev) => {
+            const newEditValues = { ...prev };
+            Object.keys(pendingEdits).forEach((id) => {
+              if (newEditValues[id]) {
+                delete newEditValues[id];
+              }
+            });
+            return newEditValues;
+          });
         }
       });
     },
