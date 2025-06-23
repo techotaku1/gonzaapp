@@ -165,9 +165,6 @@ export default function TransactionTable({
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
   // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
-  const [pendingEdits] = useState<Record<string, Partial<TransactionRecord>>>(
-    {}
-  );
 
   // Memoize createDateGroup function (dentro del componente)
   const createDateGroup = useCallback(
@@ -862,10 +859,10 @@ export default function TransactionTable({
   // Sincronizar el estado local con la data de SWR solo si no hay edits pendientes
   useEffect(() => {
     if (!swrData) return;
-    if (Object.keys(pendingEdits).length === 0) {
+    if (Object.keys(editValues).length === 0) {
       setData(swrData);
     }
-  }, [swrData, pendingEdits]);
+  }, [swrData, editValues]);
 
   // Memoize the current date group and related data
   const { currentDateGroup } = useMemo(() => {
@@ -1318,6 +1315,24 @@ export default function TransactionTable({
         return update ? { ...row, ...update } : row;
       });
       const result = await onUpdateRecordAction(updatedData);
+      // Si el guardado fue exitoso, fusionar solo los campos editados en la fila correspondiente
+      if (result.success) {
+        setData((prevData) =>
+          prevData.map((row) => {
+            const update = updates.find((u) => u.id === row.id);
+            return update ? { ...row, ...update } : row;
+          })
+        );
+        setEditValues((prev) => {
+          const newEditValues = { ...prev };
+          updates.forEach((u) => {
+            if (u.id && newEditValues[u.id]) {
+              delete newEditValues[u.id];
+            }
+          });
+          return newEditValues;
+        });
+      }
       return result;
     },
     () => {
