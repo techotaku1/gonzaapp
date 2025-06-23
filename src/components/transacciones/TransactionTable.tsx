@@ -28,7 +28,7 @@ import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 
 import ExportDateRangeModal from '../ExportDateRangeModal';
 import { Icons } from '../icons';
-import CuadreSearch from '../pagecuadre/CuadreSearch';
+import SearchFilters from '../filters/SearchFilters';
 
 import HeaderTitles from './HeaderTitles';
 import TransactionTableRow, { InputType } from './TransactionTableRow';
@@ -1471,7 +1471,7 @@ export default function TransactionTable({
               </>
             )}
             {showTotals ? (
-              <div className="flex gap-4 pl-7 mb-2">
+              <div className="flex gap-4 pl-6">
                 {/* Botón Ver Totales / Ver Registros */}
                 <button
                   onClick={handleToggleTotals}
@@ -1699,7 +1699,7 @@ export default function TransactionTable({
 
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
         {!showTotals && (
-          <CuadreSearch
+          <SearchFilters
             data={data}
             onFilterAction={handleFilterData}
             onDateFilterChangeAction={handleDateFilterChange}

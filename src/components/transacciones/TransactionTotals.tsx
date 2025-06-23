@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { calculateFormulas } from '~/utils/formulas';
 
@@ -27,6 +27,33 @@ export default function TransactionTotals({
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
+
+  // Declarar formatDate antes de los useMemo y envolver en useCallback
+  const formatDate = useCallback((dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      // Create date in Colombia timezone maintaining the day
+      const colombiaDate = new Date(
+        date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      );
+      colombiaDate.setMinutes(
+        colombiaDate.getMinutes() + colombiaDate.getTimezoneOffset()
+      );
+
+      const formatted = new Intl.DateTimeFormat('es-CO', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'America/Bogota',
+      }).format(colombiaDate);
+
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString;
+    }
+  }, []);
 
   // Filtrar transacciones por búsqueda y rango de fechas
   const filteredTransactions = useMemo(() => {
@@ -103,8 +130,42 @@ export default function TransactionTotals({
     );
   }, [filteredTransactions]);
 
-  const totalPages = Math.ceil(totals.length / itemsPerPage);
-  const paginatedTotals = totals.slice(
+  // Filtrar totales por búsqueda y rango de fechas
+  const filteredTotals = useMemo(() => {
+    let filtered = totals;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter((t) => {
+        // Buscar solo en las columnas visibles
+        const dateStr = formatDate(t.date).toLowerCase();
+        const transactionCount = String(t.transactionCount);
+        const precioNeto = String(Math.round(t.precioNetoTotal));
+        const tarifaServicio = String(Math.round(t.tarifaServicioTotal));
+        const impuesto4x1000 = String(Math.round(t.impuesto4x1000Total));
+        const gananciaBruta = String(Math.round(t.gananciaBrutaTotal));
+        return (
+          dateStr.includes(search) ||
+          transactionCount.includes(search) ||
+          precioNeto.includes(search) ||
+          tarifaServicio.includes(search) ||
+          impuesto4x1000.includes(search) ||
+          gananciaBruta.includes(search)
+        );
+      });
+    }
+    if (startDate && endDate) {
+      const start = startDate.setHours(0, 0, 0, 0);
+      const end = endDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((t) => {
+        const tDate = new Date(t.date).getTime();
+        return tDate >= start && tDate <= end;
+      });
+    }
+    return filtered;
+  }, [totals, searchTerm, startDate, endDate, formatDate]);
+
+  const totalPages = Math.ceil(filteredTotals.length / itemsPerPage);
+  const paginatedTotals = filteredTotals.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -118,32 +179,6 @@ export default function TransactionTotals({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(roundedAmount);
-  };
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      // Create date in Colombia timezone maintaining the day
-      const colombiaDate = new Date(
-        date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-      );
-      colombiaDate.setMinutes(
-        colombiaDate.getMinutes() + colombiaDate.getTimezoneOffset()
-      );
-
-      const formatted = new Intl.DateTimeFormat('es-CO', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: 'America/Bogota',
-      }).format(colombiaDate);
-
-      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateString;
-    }
   };
 
   // Calcular totales generales
