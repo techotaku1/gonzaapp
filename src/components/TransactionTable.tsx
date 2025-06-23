@@ -847,19 +847,26 @@ export default function TransactionTable({
             type={
               field === 'cilindraje'
                 ? 'text'
-                : isMoneyField
+                : field === 'numeroDocumento' || field === 'celular'
                   ? 'text'
-                  : type === 'date'
-                    ? 'datetime-local'
-                    : type
+                  : isMoneyField
+                    ? 'text'
+                    : type === 'date'
+                      ? 'datetime-local'
+                      : type
             }
             value={formatValue(value)}
             title={formatValue(value)} // Agregar tooltip a todos los inputs
             onChange={(e) => {
               let newValue: InputValue;
               if (field === 'cilindraje') {
-                // Remove non-numeric characters and parse
-                newValue = parseNumber(e.target.value);
+                // Permitir borrar completamente (null si vacío)
+                newValue =
+                  e.target.value === '' ? null : parseNumber(e.target.value);
+              } else if (field === 'numeroDocumento' || field === 'celular') {
+                // Solo permitir números
+                const onlyNumbers = e.target.value.replace(/[^\d]/g, '');
+                newValue = onlyNumbers === '' ? null : onlyNumbers;
               } else if (isMoneyField) {
                 newValue = parseNumber(e.target.value);
               } else if (type === 'checkbox') {
@@ -871,7 +878,7 @@ export default function TransactionTable({
               }
               handleInputChange(row.id, field, newValue);
             }}
-            className={`${
+            className={`$${
               type === 'checkbox'
                 ? 'h-3 w-3 rounded border-gray-600'
                 : `flex items-center justify-center overflow-hidden rounded border px-0.5 py-0.5 text-center text-[10px] text-ellipsis ${getWidth()} ${
@@ -886,6 +893,16 @@ export default function TransactionTable({
                         : 'table-text-field'
                   } hover:overflow-visible hover:text-clip`
             }`}
+            inputMode={
+              field === 'numeroDocumento' || field === 'celular'
+                ? 'numeric'
+                : undefined
+            }
+            pattern={
+              field === 'numeroDocumento' || field === 'celular'
+                ? '\\d*'
+                : undefined
+            }
           />
         </div>
       );

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { desc, eq, inArray } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { transactions } from '~/server/db/schema'; // Eliminado cuadre import
+import { transactions } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 import type { BroadcastMessage } from '~/types/broadcast';
@@ -15,7 +15,7 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
     const results = await db
       .select()
       .from(transactions)
-      .orderBy(desc(transactions.fecha)); // Ordenar por fecha descendente
+      .orderBy(desc(transactions.fecha));
 
     return results.map((record) => ({
       ...record,
@@ -28,9 +28,9 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
     }));
   } catch (error) {
     console.error('Error fetching transactions:', error);
-    const errorMessage =
-      error instanceof Error ? error.message : 'Failed to fetch transactions';
-    throw new Error(errorMessage);
+    throw new Error(
+      error instanceof Error ? error.message : 'Failed to fetch transactions'
+    );
   }
 }
 
@@ -38,7 +38,6 @@ export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Primero crear el registro en transactions
     await db.insert(transactions).values({
       ...record,
       boletasRegistradas: Number(record.boletasRegistradas).toString(),
@@ -47,7 +46,6 @@ export async function createRecord(
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
     });
-
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -65,7 +63,6 @@ export async function updateRecords(
   try {
     await Promise.all(
       records.map(async (record) => {
-        // Asegurar que los campos not null nunca sean null ni undefined
         const safeRecord = {
           ...record,
           ciudad: record.ciudad || '',
@@ -95,7 +92,6 @@ export async function updateRecords(
           .where(eq(transactions.id, record.id));
       })
     );
-
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -131,16 +127,11 @@ async function broadcastUpdate(
   data: TransactionRecord[] | string[]
 ): Promise<void> {
   try {
-    // Usa solo la variable que tienes en tu .env
     let baseUrl = process.env.NEXT_PUBLIC_URL_BASE ?? 'http://localhost:3000';
-
-    // Ensure baseUrl is absolute and has protocol
     if (!/^https?:\/\//.test(baseUrl)) {
       baseUrl = `http://${baseUrl}`;
     }
-
     const url = `${baseUrl.replace(/\/$/, '')}/api/broadcast`;
-
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
