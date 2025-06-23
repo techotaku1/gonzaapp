@@ -2,9 +2,14 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
+import { es } from 'date-fns/locale';
+import DatePicker from 'react-datepicker';
+
 import { calculateFormulas } from '~/utils/formulas';
 
 import type { TransactionRecord } from '~/types';
+
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface TotalsByDate {
   date: string;
@@ -67,13 +72,34 @@ export default function TransactionTotals({
     }).format(roundedAmount);
   }, []);
 
-  // Función para normalizar texto: quita tildes, signos, puntos, comas, espacios y pasa a minúsculas
-  const normalizeText = (text: string) =>
-    text
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // quita tildes
-      .replace(/[$.,\-\s]/g, '') // quita $, puntos, comas, guiones, espacios
-      .toLowerCase();
+  // Función para normalizar texto: quita tildes, signos, puntos, comas, espacios y pasa a minúsculas (ahora con useCallback)
+  const normalizeText = useCallback(
+    (text: string) =>
+      text
+        .normalize('NFD')
+        .replace(/[$.,\-\s]/g, '') // quita $, puntos, comas, guiones, espacios
+        .replace(/[\u0300-\u036f]/g, '') // quita tildes
+        .toLowerCase(),
+    []
+  );
+
+  // Normaliza y tokeniza texto para búsqueda flexible (ahora con useCallback)
+  const tokenize = useCallback(
+    (text: string) => normalizeText(text).split(/\s+/).filter(Boolean),
+    [normalizeText]
+  );
+
+  // Compara si todos los tokens de search están en el target (usa tokenize de useCallback)
+  const tokensMatch = useCallback(
+    (search: string, target: string) => {
+      const searchTokens = tokenize(search);
+      const targetTokens = tokenize(target);
+      return searchTokens.every((token) =>
+        targetTokens.some((t) => t.includes(token) || token.includes(t))
+      );
+    },
+    [tokenize]
+  );
 
   // Filtrar transacciones por búsqueda y rango de fechas
   const filteredTransactions = useMemo(() => {
@@ -152,9 +178,7 @@ export default function TransactionTotals({
 
   // Filtrar totales por búsqueda y rango de fechas de forma optimizada
   const filteredTotals = useMemo(() => {
-    // Un solo filtro que combina búsqueda y rango de fechas
     let filtered = totals;
-    const search = normalizeText(searchTerm);
     // Filtrado por rango de fechas
     if (startDate && endDate) {
       const start = startDate.setHours(0, 0, 0, 0);
@@ -165,32 +189,37 @@ export default function TransactionTotals({
       });
     }
     // Filtrado global por texto (en todas las columnas relevantes)
-    if (search) {
+    if (searchTerm.trim()) {
       filtered = filtered.filter((t) => {
-        const dateStr = normalizeText(formatDate(t.date));
-        const transactionCount = normalizeText(String(t.transactionCount));
-        const precioNeto = normalizeText(formatCurrency(t.precioNetoTotal));
-        const tarifaServicio = normalizeText(
-          formatCurrency(t.tarifaServicioTotal)
-        );
-        const impuesto4x1000 = normalizeText(
-          formatCurrency(t.impuesto4x1000Total)
-        );
-        const gananciaBruta = normalizeText(
-          formatCurrency(t.gananciaBrutaTotal)
-        );
+        // Fecha: permite buscar por palabras sueltas o combinadas
+        const dateStr = formatDate(t.date);
+        // Números: busca por coincidencia parcial, ignora separadores
+        const transactionCount = String(t.transactionCount);
+        const precioNeto = formatCurrency(t.precioNetoTotal);
+        const tarifaServicio = formatCurrency(t.tarifaServicioTotal);
+        const impuesto4x1000 = formatCurrency(t.impuesto4x1000Total);
+        const gananciaBruta = formatCurrency(t.gananciaBrutaTotal);
+        // Buscar en todas las columnas relevantes
         return (
-          dateStr.includes(search) ||
-          transactionCount.includes(search) ||
-          precioNeto.includes(search) ||
-          tarifaServicio.includes(search) ||
-          impuesto4x1000.includes(search) ||
-          gananciaBruta.includes(search)
+          tokensMatch(searchTerm, dateStr) ||
+          tokensMatch(searchTerm, transactionCount) ||
+          tokensMatch(searchTerm, precioNeto) ||
+          tokensMatch(searchTerm, tarifaServicio) ||
+          tokensMatch(searchTerm, impuesto4x1000) ||
+          tokensMatch(searchTerm, gananciaBruta)
         );
       });
     }
     return filtered;
-  }, [totals, searchTerm, startDate, endDate, formatDate, formatCurrency]);
+  }, [
+    totals,
+    searchTerm,
+    startDate,
+    endDate,
+    formatDate,
+    formatCurrency,
+    tokensMatch,
+  ]);
 
   const totalPages = Math.ceil(filteredTotals.length / itemsPerPage);
   const paginatedTotals = filteredTotals.slice(
@@ -267,22 +296,73 @@ export default function TransactionTotals({
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-64 rounded-md border border-gray-300 px-3 py-2"
         />
-        <input
-          type="date"
-          value={startDate ? startDate.toISOString().slice(0, 10) : ''}
-          onChange={(e) =>
-            setStartDate(e.target.value ? new Date(e.target.value) : null)
-          }
-          className="rounded-md border border-gray-300 px-3 py-2"
-        />
-        <input
-          type="date"
-          value={endDate ? endDate.toISOString().slice(0, 10) : ''}
-          onChange={(e) =>
-            setEndDate(e.target.value ? new Date(e.target.value) : null)
-          }
-          className="rounded-md border border-gray-300 px-3 py-2"
-        />
+        {/* Fecha inicial */}
+        <div className="relative">
+          <DatePicker
+            selected={startDate}
+            onChange={(date: Date | null) => setStartDate(date)}
+            selectsStart
+            startDate={startDate}
+            endDate={endDate}
+            placeholderText="Fecha inicial"
+            className="w-40 rounded-md border border-gray-300 px-3 py-2 pr-10"
+            dateFormat="dd/MM/yyyy"
+            locale={es}
+            popperPlacement="bottom"
+            isClearable
+            autoComplete="off"
+          />
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </span>
+        </div>
+        {/* Fecha final */}
+        <div className="relative">
+          <DatePicker
+            selected={endDate}
+            onChange={(date: Date | null) => setEndDate(date)}
+            selectsEnd
+            startDate={startDate}
+            endDate={endDate}
+            minDate={startDate ?? undefined}
+            placeholderText="Fecha final"
+            className="w-40 rounded-md border border-gray-300 px-3 py-2 pr-10"
+            dateFormat="dd/MM/yyyy"
+            locale={es}
+            popperPlacement="bottom"
+            isClearable
+            autoComplete="off"
+          />
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </span>
+        </div>
         {(startDate ?? endDate) && (
           <button
             onClick={() => {
@@ -301,10 +381,10 @@ export default function TransactionTotals({
         <table className="w-full rounded-lg bg-white shadow-lg">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Fecha
               </th>
-              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-500 uppercase">
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Transacciones
               </th>
               <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
