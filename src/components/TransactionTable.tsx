@@ -865,15 +865,12 @@ export default function TransactionTable({
     revalidateOnReconnect: false,
   });
 
-  // Sincronizar el estado local con la data de SWR solo si no hay edits pendientes
+  // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
   useEffect(() => {
     if (!swrData) return;
     if (Object.keys(pendingEdits).length === 0) {
-      // Solo actualizar filas que han cambiado, no reemplazar todo el arreglo
-      setData((prevData) => {
-        const swrMap = new Map(swrData.map((row) => [row.id, row]));
-        return prevData.map((row) => swrMap.get(row.id) ?? row);
-      });
+      // Sincronizar completamente el estado local con la data de la BD
+      setData(swrData);
     }
   }, [swrData, pendingEdits]);
 
