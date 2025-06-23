@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react';
-
 import { useSWRConfig } from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 import type { TransactionRecord } from '~/types';
@@ -8,31 +7,37 @@ const CACHE_KEY = '/api/transactions';
 
 export function useDebouncedSave(
   onSave: (
-    records: TransactionRecord[]
+    records: Partial<TransactionRecord>[]
   ) => Promise<{ success: boolean; error?: string }>,
   onSuccess: () => void,
   delay = 1000
 ) {
   const { mutate } = useSWRConfig();
-  const recordsRef = useRef<TransactionRecord[]>([]);
+  const recordsRef = useRef<Partial<TransactionRecord>[]>([]);
 
   const debouncedSave = useDebouncedCallback(
-    async (records: TransactionRecord[]) => {
+    async (records: Partial<TransactionRecord>[]) => {
       try {
         await mutate(
           CACHE_KEY,
-          async () => {
+          async (currentData: TransactionRecord[] | undefined) => {
             const result = await onSave(records);
             if (result.success) {
               onSuccess();
-              return records;
+              // Fusionar los cambios con los datos actuales
+              if (currentData) {
+                return currentData.map(record => {
+                  const updates = records.find(r => r.id === record.id);
+                  return updates ? { ...record, ...updates } : record;
+                });
+              }
+              return currentData;
             }
             throw new Error(result.error ?? 'Error saving');
           },
           {
-            optimisticData: records,
-            rollbackOnError: true,
-            revalidate: false,
+            revalidate: true,
+            populateCache: true,
           }
         );
       } catch (error) {
@@ -40,18 +45,17 @@ export function useDebouncedSave(
       }
     },
     delay,
-    // Add options for better control
     {
-      maxWait: 2000, // Maximum time to wait before forcing an update
-      leading: false, // Don't execute on the leading edge
-      trailing: true, // Execute on the trailing edge
+      maxWait: 2000,
+      leading: false,
+      trailing: true,
     }
   );
 
   const save = useCallback(
-    (records: TransactionRecord[]) => {
-      recordsRef.current = records;
-      return debouncedSave(records);
+    (updates: Partial<TransactionRecord>[]) => {
+      recordsRef.current = updates;
+      return debouncedSave(updates);
     },
     [debouncedSave]
   );

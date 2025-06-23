@@ -12,6 +12,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
 import { broadcastTransactionsUpdate } from '~/hooks/broadcastTransactionsUpdate';
+import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
@@ -1292,6 +1293,24 @@ export default function TransactionTable({
     }, 400); // Duración de la animación/spinner
   }, []);
 
+  // Hook para guardar cambios debounced y mergear campos
+  useDebouncedSave(
+    async (updates) => {
+      // Actualiza solo los campos modificados en la BD
+      const updatedData = data.map((row) => {
+        const update = updates.find((u) => u.id === row.id);
+        return update ? { ...row, ...update } : row;
+      });
+      const result = await onUpdateRecordAction(updatedData);
+      return result;
+    },
+    () => {
+      // No-op: required by useDebouncedSave signature
+    },
+    800
+  );
+
+  // handleLocalEdit ya no es necesario, usar handleInputChange
   return (
     <div className="relative">
       <div className="mb-4">
@@ -1485,7 +1504,7 @@ export default function TransactionTable({
                   <path
                     className="opacity-75"
                     fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    d="M4 12a8 8 0 008-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
                 Guardando cambios...
