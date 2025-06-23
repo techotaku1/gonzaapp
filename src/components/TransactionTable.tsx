@@ -252,10 +252,10 @@ export default function TransactionTable({
       setData((prevData) =>
         prevData.map((row) => {
           if (editedIds.includes(row.id)) {
-            const backendRow = latestRows.find((r) => r.id === row.id) ?? row;
+            const backendRow = latestRows.find((r) => r.id === row.id) ?? {};
             const edits = pendingEdits[row.id] ?? {};
-            // Solo actualiza los campos editados, mantiene referencia de los no cambiados
-            const updatedRow = { ...backendRow, ...edits };
+            // Merge: siempre partir de la fila original y solo sobrescribir campos editados o del backend
+            const updatedRow = { ...row, ...backendRow, ...edits };
             // Si no cambió nada, mantener referencia
             if (JSON.stringify(row) === JSON.stringify(updatedRow)) {
               return row;
