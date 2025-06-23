@@ -208,12 +208,28 @@ export default function TransactionTable({
 
   // Debounced flush que toma editValues como argumento
   const debouncedFlush = useDebouncedCallback(
-    (pendingEdits: Record<string, Partial<TransactionRecord>>) => {
+    async (pendingEdits: Record<string, Partial<TransactionRecord>>) => {
       if (Object.keys(pendingEdits).length === 0) return;
+      // Obtener los ids de las filas editadas
+      const editedIds = Object.keys(pendingEdits);
+      // Hacer fetch de las filas más recientes desde la BD
+      let latestRows: TransactionRecord[] = [];
+      try {
+        const response = await fetch(`/api/transactions`);
+        const allRows: TransactionRecord[] = await response.json();
+        latestRows = allRows.filter((row) => editedIds.includes(row.id));
+      } catch (_error) {
+        // Si falla el fetch, usar los datos locales
+        latestRows = data.filter((row) => editedIds.includes(row.id));
+      }
+      // Fusionar los cambios locales solo en los campos editados
       const newData = data.map((row) => {
         const edits = pendingEdits[row.id];
         if (edits) {
-          return { ...row, ...edits };
+          // Buscar la versión más reciente de la fila
+          const latest = latestRows.find((r) => r.id === row.id) ?? row;
+          // Solo sobreescribir los campos editados, mantener el resto actualizado
+          return { ...latest, ...edits };
         }
         return row;
       });
