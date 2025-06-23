@@ -150,68 +150,22 @@ export default function TransactionTotals({
     );
   }, [filteredTransactions]);
 
-  // Filtrar totales por búsqueda y rango de fechas
+  // Filtrar totales por búsqueda y rango de fechas de forma optimizada
   const filteredTotals = useMemo(() => {
-    // Declarar columnKeywords dentro del useMemo para evitar advertencias de dependencias
-    const columnKeywords = [
-      {
-        key: 'fecha',
-        keywords: [
-          'fecha',
-          'día',
-          'dia',
-          'semana',
-          'mes',
-          'año',
-          'ano',
-          'lunes',
-          'martes',
-          'miércoles',
-          'miercoles',
-          'jueves',
-          'viernes',
-          'sábado',
-          'sabado',
-          'domingo',
-          'enero',
-          'febrero',
-          'marzo',
-          'abril',
-          'mayo',
-          'junio',
-          'julio',
-          'agosto',
-          'septiembre',
-          'octubre',
-          'noviembre',
-          'diciembre',
-        ],
-      },
-      {
-        key: 'transactionCount',
-        keywords: ['transacciones', 'cantidad', 'numero', 'número'],
-      },
-      { key: 'precioNetoTotal', keywords: ['precio neto', 'neto', 'precio'] },
-      {
-        key: 'tarifaServicioTotal',
-        keywords: ['tarifa servicio', 'tarifa', 'servicio'],
-      },
-      {
-        key: 'impuesto4x1000Total',
-        keywords: ['4x1000', 'impuesto', 'cuatro', 'mil'],
-      },
-      {
-        key: 'gananciaBrutaTotal',
-        keywords: ['ganancia bruta', 'ganancia', 'bruta'],
-      },
-    ];
+    // Un solo filtro que combina búsqueda y rango de fechas
     let filtered = totals;
-    if (searchTerm) {
-      const search = normalizeText(searchTerm);
-      // Detectar si el usuario busca por columna específica
-      const column = columnKeywords.find((col) =>
-        col.keywords.some((k) => search.includes(normalizeText(k)))
-      );
+    const search = normalizeText(searchTerm);
+    // Filtrado por rango de fechas
+    if (startDate && endDate) {
+      const start = startDate.setHours(0, 0, 0, 0);
+      const end = endDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((t) => {
+        const tDate = new Date(t.date).getTime();
+        return tDate >= start && tDate <= end;
+      });
+    }
+    // Filtrado global por texto (en todas las columnas relevantes)
+    if (search) {
       filtered = filtered.filter((t) => {
         const dateStr = normalizeText(formatDate(t.date));
         const transactionCount = normalizeText(String(t.transactionCount));
@@ -225,36 +179,6 @@ export default function TransactionTotals({
         const gananciaBruta = normalizeText(
           formatCurrency(t.gananciaBrutaTotal)
         );
-        // Si busca por columna específica
-        if (column) {
-          switch (column.key) {
-            case 'fecha':
-              return dateStr.includes(search);
-            case 'transactionCount':
-              return transactionCount.includes(search);
-            case 'precioNetoTotal':
-              return precioNeto.includes(search);
-            case 'tarifaServicioTotal':
-              return tarifaServicio.includes(search);
-            case 'impuesto4x1000Total':
-              return impuesto4x1000.includes(search);
-            case 'gananciaBrutaTotal':
-              return gananciaBruta.includes(search);
-            default:
-              return false;
-          }
-        }
-        // Si busca un número, buscar en todos los valores numéricos
-        if (/\d/.test(search)) {
-          return (
-            transactionCount.includes(search) ||
-            precioNeto.includes(search) ||
-            tarifaServicio.includes(search) ||
-            impuesto4x1000.includes(search) ||
-            gananciaBruta.includes(search)
-          );
-        }
-        // Si busca una palabra, buscar en todas las columnas visibles
         return (
           dateStr.includes(search) ||
           transactionCount.includes(search) ||
@@ -263,14 +187,6 @@ export default function TransactionTotals({
           impuesto4x1000.includes(search) ||
           gananciaBruta.includes(search)
         );
-      });
-    }
-    if (startDate && endDate) {
-      const start = startDate.setHours(0, 0, 0, 0);
-      const end = endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((t) => {
-        const tDate = new Date(t.date).getTime();
-        return tDate >= start && tDate <= end;
       });
     }
     return filtered;

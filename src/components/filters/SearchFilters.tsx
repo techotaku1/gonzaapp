@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
+import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 
 import { Icons } from '../icons';
@@ -75,7 +76,13 @@ export default function CuadreSearch({
   useEffect(() => {
     onFilterAction(filteredData);
     onDateFilterChangeAction(filteredStartDate, filteredEndDate);
-  }, [filteredData, onFilterAction, filteredStartDate, filteredEndDate, onDateFilterChangeAction]);
+  }, [
+    filteredData,
+    onFilterAction,
+    filteredStartDate,
+    filteredEndDate,
+    onDateFilterChangeAction,
+  ]);
 
   const handleDateRangeFilter = useCallback(() => {
     if (!startDate || !endDate) return;
@@ -114,27 +121,69 @@ export default function CuadreSearch({
         />
       </div>
       <div className="flex items-center gap-2">
-        <DatePicker
-          selected={startDate}
-          onChange={(date: Date | null) => setStartDate(date)}
-          selectsStart
-          startDate={startDate}
-          endDate={endDate}
-          placeholderText="Fecha inicial"
-          className="rounded-md border border-gray-300 px-3 py-2"
-          dateFormat="dd/MM/yyyy"
-        />
-        <DatePicker
-          selected={endDate}
-          onChange={(date: Date | null) => setEndDate(date)}
-          selectsEnd
-          startDate={startDate}
-          endDate={endDate}
-          minDate={minDateValue}
-          placeholderText="Fecha final"
-          className="rounded-md border border-gray-300 px-3 py-2"
-          dateFormat="dd/MM/yyyy"
-        />
+        {/* Fecha inicial */}
+        <div className="relative">
+          <DatePicker
+            selected={startDate}
+            onChange={(date: Date | null) => setStartDate(date)}
+            selectsStart
+            startDate={startDate}
+            endDate={endDate}
+            placeholderText="Fecha inicial"
+            className="rounded-md border border-gray-300 px-3 py-2 pr-10" // espacio para el icono
+            dateFormat="dd/MM/yyyy"
+            locale={es}
+            showIcon
+          />
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </span>
+        </div>
+        {/* Fecha final */}
+        <div className="relative">
+          <DatePicker
+            selected={endDate}
+            onChange={(date: Date | null) => setEndDate(date)}
+            selectsEnd
+            startDate={startDate}
+            endDate={endDate}
+            minDate={minDateValue}
+            placeholderText="Fecha final"
+            className="rounded-md border border-gray-300 px-3 py-2 pr-10" // espacio para el icono
+            dateFormat="dd/MM/yyyy"
+            locale={es}
+            showIcon
+          />
+          <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </span>
+        </div>
         <button
           onClick={handleDateRangeFilter}
           disabled={isLoading || !startDate || !endDate}
@@ -166,7 +215,7 @@ export default function CuadreSearch({
         {(filteredStartDate ?? filteredEndDate) && !isLoading ? (
           <button
             onClick={handleClearDateFilter}
-            className="ml-2 -mr-2 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+            className="-mr-2 ml-2 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
           >
             Limpiar Filtro
           </button>

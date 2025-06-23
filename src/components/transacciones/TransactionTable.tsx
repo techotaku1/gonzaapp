@@ -27,8 +27,8 @@ import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice, vehicleTypes } from '~/utils/soatPricing';
 
 import ExportDateRangeModal from '../ExportDateRangeModal';
-import { Icons } from '../icons';
 import SearchFilters from '../filters/SearchFilters';
+import { Icons } from '../icons';
 
 import HeaderTitles from './HeaderTitles';
 import TransactionTableRow, { InputType } from './TransactionTableRow';
@@ -123,6 +123,14 @@ interface DateGroup extends Array<string | TransactionRecord[]> {
   length: 2;
 }
 
+// Definir un tipo indexable seguro para los valores de edición
+// Evita el uso de any y permite acceso dinámico por string
+
+type EditValues = Record<
+  string,
+  Partial<TransactionRecord> & Record<string, unknown>
+>;
+
 export default function TransactionTable({
   initialData,
   onUpdateRecordAction,
@@ -166,13 +174,8 @@ export default function TransactionTable({
 
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
-  // Cambiar pendingEdits a useRef para evitar ciclos infinitos
-  const pendingEdits = useRef<Record<string, Partial<TransactionRecord>>>({});
-
-  // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
-  const [pendingEditsState, setPendingEditsState] = useState<
-    Record<string, Partial<TransactionRecord>>
-  >({});
+  // Cambiar pendingEdits a useRef para evitar ciclos infinitos y sin any
+  const pendingEdits = useRef<EditValues>({});
 
   // Memoize createDateGroup function (dentro del componente)
   const createDateGroup = useCallback(
@@ -242,9 +245,9 @@ export default function TransactionTable({
 
   // Debounced flush que toma editValues como argumento
   const debouncedFlush = useDebouncedCallback(
-    async (pendingEdits: Record<string, Partial<TransactionRecord>>) => {
-      if (Object.keys(pendingEdits).length === 0) return;
-      const editedIds = Object.keys(pendingEdits);
+    async (pendingEditsArg: EditValues) => {
+      if (Object.keys(pendingEditsArg).length === 0) return;
+      const editedIds = Object.keys(pendingEditsArg);
       let latestRows: TransactionRecord[] = [];
       try {
         const response = await fetch(`/api/transactions`);
@@ -258,7 +261,7 @@ export default function TransactionTable({
         prevData.map((row) => {
           if (editedIds.includes(row.id)) {
             const backendRow = latestRows.find((r) => r.id === row.id);
-            const edits = pendingEdits[row.id] ?? {};
+            const edits = pendingEditsArg[row.id] ?? {};
             // Si el backend no retorna la fila, mantener la fila local y solo aplicar los edits
             const updatedRow = backendRow
               ? { ...backendRow, ...row, ...edits }
@@ -276,31 +279,25 @@ export default function TransactionTable({
       // Solo enviar al backend los registros editados
       const rowsToUpdate = latestRows.map((row) => ({
         ...row,
-        ...pendingEdits[row.id],
+        ...pendingEditsArg[row.id],
       }));
       await onUpdateRecordAction(rowsToUpdate);
       setIsActuallySaving(false);
       // Limpiar el estado de edición solo de las filas editadas
-      setPendingEditsState((prev) => {
-        const newEditValues = { ...prev };
-        editedIds.forEach((id) => {
-          delete newEditValues[id];
-        });
-        return newEditValues;
+      editedIds.forEach((id) => {
+        delete pendingEdits.current[id];
       });
     },
     800
   );
 
   // Estado para valores en edición por fila/campo
-  const [editValues, setEditValues] = useState<
-    Record<string, Partial<TransactionRecord>>
-  >({});
+  const [editValues, setEditValues] = useState<EditValues>({});
 
   // ÚNICA definición de handleInputChange
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
-      setEditValues((prev) => {
+      setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
         if (
@@ -332,8 +329,10 @@ export default function TransactionTable({
           const cilindraje =
             field === 'cilindraje'
               ? newValue
-              : (prevEdits.cilindraje ??
-                data.find((r) => r.id === id)?.cilindraje);
+              : typeof prevEdits.cilindraje === 'number' ||
+                  prevEdits.cilindraje === null
+                ? prevEdits.cilindraje
+                : data.find((r) => r.id === id)?.cilindraje;
           const soatPrice = calculateSoatPrice(
             tipoVehiculo as string,
             cilindraje as number | null
@@ -1381,7 +1380,7 @@ export default function TransactionTable({
       )}
       <div className="mb-4">
         {/* Fecha actual de la página, arriba del grupo de botones */}
-        <div className="flex w-full items-center justify-between gap-4 mb-4">
+        <div className="mb-4 flex w-full items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {/* Botón Agregar y Eliminar solo si NO estamos en la vista de totales */}
             {!showTotals && (
@@ -1766,47 +1765,49 @@ export default function TransactionTable({
               <table className="w-full text-left text-sm text-gray-600">
                 <HeaderTitles isDeleteMode={isDeleteMode} />
                 <tbody>
-                  {paginatedData.map((row: TransactionRecord, index: number) => {
-                    const {
-                      precioNetoAjustado,
-                      tarifaServicioAjustada,
-                      impuesto4x1000,
-                      gananciaBruta,
-                    } = calculateFormulas(row);
+                  {paginatedData.map(
+                    (row: TransactionRecord, index: number) => {
+                      const {
+                        precioNetoAjustado,
+                        tarifaServicioAjustada,
+                        impuesto4x1000,
+                        gananciaBruta,
+                      } = calculateFormulas(row);
 
-                    const rowWithFormulas = {
-                      ...row,
-                      precioNeto: precioNetoAjustado,
-                      tarifaServicio: tarifaServicioAjustada,
-                      impuesto4x1000,
-                      gananciaBruta,
-                    };
+                      const rowWithFormulas = {
+                        ...row,
+                        precioNeto: precioNetoAjustado,
+                        tarifaServicio: tarifaServicioAjustada,
+                        impuesto4x1000,
+                        gananciaBruta,
+                      };
 
-                    return (
-                      <TransactionTableRow
-                        key={row.id}
-                        row={rowWithFormulas}
-                        isDeleteMode={isDeleteMode}
-                        isAsesorSelectionMode={isAsesorSelectionMode}
-                        selectedRows={selectedRows}
-                        rowsToDelete={rowsToDelete}
-                        handleInputChange={handleInputChange}
-                        handleRowSelect={handleRowSelect}
-                        handleDeleteSelect={handleDeleteSelect}
-                        renderCheckbox={renderCheckbox}
-                        renderAsesorSelect={renderAsesorSelect}
-                        renderInput={
-                          renderInput as (
-                            row: TransactionRecord,
-                            field: keyof TransactionRecord,
-                            type?: InputType
-                          ) => React.ReactNode
-                        }
-                        getEmitidoPorClass={getEmitidoPorClass}
-                        _index={index}
-                      />
-                    );
-                  })}
+                      return (
+                        <TransactionTableRow
+                          key={row.id}
+                          row={rowWithFormulas}
+                          isDeleteMode={isDeleteMode}
+                          isAsesorSelectionMode={isAsesorSelectionMode}
+                          selectedRows={selectedRows}
+                          rowsToDelete={rowsToDelete}
+                          handleInputChange={handleInputChange}
+                          handleRowSelect={handleRowSelect}
+                          handleDeleteSelect={handleDeleteSelect}
+                          renderCheckbox={renderCheckbox}
+                          renderAsesorSelect={renderAsesorSelect}
+                          renderInput={
+                            renderInput as (
+                              row: TransactionRecord,
+                              field: keyof TransactionRecord,
+                              type?: InputType
+                            ) => React.ReactNode
+                          }
+                          getEmitidoPorClass={getEmitidoPorClass}
+                          _index={index}
+                        />
+                      );
+                    }
+                  )}
                 </tbody>
               </table>
             </div>
