@@ -23,11 +23,39 @@ export default function TransactionTotals({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Estado para filtro de búsqueda y fechas en la vista de totales
+  const [searchTerm, setSearchTerm] = useState('');
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
+  // Filtrar transacciones por búsqueda y rango de fechas
+  const filteredTransactions = useMemo(() => {
+    let filtered = transactions;
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter((t) =>
+        Object.entries(t).some(([key, value]) => {
+          if (key === 'fecha' || value === null) return false;
+          return String(value).toLowerCase().includes(search);
+        })
+      );
+    }
+    if (startDate && endDate) {
+      const start = startDate.setHours(0, 0, 0, 0);
+      const end = endDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((t) => {
+        const tDate = new Date(t.fecha).getTime();
+        return tDate >= start && tDate <= end;
+      });
+    }
+    return filtered;
+  }, [transactions, searchTerm, startDate, endDate]);
+
   const totals = useMemo(() => {
     const totalsByDate = new Map<string, TotalsByDate>();
     const COMISION_EXTRA = 30000;
 
-    transactions.forEach((transaction) => {
+    filteredTransactions.forEach((transaction) => {
       if (!(transaction.fecha instanceof Date)) return;
 
       const dateInColombia = new Date(
@@ -73,7 +101,7 @@ export default function TransactionTotals({
     return Array.from(totalsByDate.values()).sort((a, b) =>
       b.date.localeCompare(a.date)
     );
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   const totalPages = Math.ceil(totals.length / itemsPerPage);
   const paginatedTotals = totals.slice(
@@ -139,12 +167,11 @@ export default function TransactionTotals({
   }, [totals]);
 
   return (
-    <div className="font-display container mx-auto p-6">
-      <h2 className="mb-6 text-2xl font-bold">Totales por Fecha</h2>
-
+    <div className="font-display container mx-auto px-6">
+      {/* Texto Totales Generales fuera del rectángulo */}
+      <h3 className="mb-2 text-2xl font-semibold">Totales Generales</h3>
       {/* Totales generales con colores e iconos */}
-      <div className="mb-8 rounded-lg bg-gray-100 p-6">
-        <h3 className="mb-4 text-xl font-semibold">Totales Generales</h3>
+      <div className="mb-6 rounded-lg bg-gray-100 p-6">
         <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
             <div className="text-sm text-gray-600">Total Transacciones</div>
@@ -177,6 +204,44 @@ export default function TransactionTotals({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Barra de búsqueda y filtro por rango para totales, ahora debajo de Totales Generales */}
+      <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">
+        <input
+          type="text"
+          placeholder="Buscar en cualquier campo..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-64 rounded-md border border-gray-300 px-3 py-2"
+        />
+        <input
+          type="date"
+          value={startDate ? startDate.toISOString().slice(0, 10) : ''}
+          onChange={(e) =>
+            setStartDate(e.target.value ? new Date(e.target.value) : null)
+          }
+          className="rounded-md border border-gray-300 px-3 py-2"
+        />
+        <input
+          type="date"
+          value={endDate ? endDate.toISOString().slice(0, 10) : ''}
+          onChange={(e) =>
+            setEndDate(e.target.value ? new Date(e.target.value) : null)
+          }
+          className="rounded-md border border-gray-300 px-3 py-2"
+        />
+        {(startDate ?? endDate) && (
+          <button
+            onClick={() => {
+              setStartDate(null);
+              setEndDate(null);
+            }}
+            className="rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+          >
+            Limpiar Fechas
+          </button>
+        )}
       </div>
 
       {/* Tabla mejorada con colores para los valores */}

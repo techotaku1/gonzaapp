@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 import DatePicker from 'react-datepicker';
 
-import { Icons } from './icons';
+import { Icons } from '../icons';
 
 import type { TransactionRecord } from '~/types';
 
@@ -27,7 +27,7 @@ interface SearchControlsProps {
   isLoadingAsesorMode: boolean;
 }
 
-export default function SearchControls({
+export default function CuadreSearch({
   data,
   onFilterAction,
   onDateFilterChangeAction,
@@ -75,13 +75,7 @@ export default function SearchControls({
   useEffect(() => {
     onFilterAction(filteredData);
     onDateFilterChangeAction(filteredStartDate, filteredEndDate);
-  }, [
-    filteredData,
-    onFilterAction,
-    filteredStartDate,
-    filteredEndDate,
-    onDateFilterChangeAction,
-  ]);
+  }, [filteredData, onFilterAction, filteredStartDate, filteredEndDate, onDateFilterChangeAction]);
 
   const handleDateRangeFilter = useCallback(() => {
     if (!startDate || !endDate) return;
@@ -172,7 +166,7 @@ export default function SearchControls({
         {(filteredStartDate ?? filteredEndDate) && !isLoading ? (
           <button
             onClick={handleClearDateFilter}
-            className="-mr-2 ml-2 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+            className="ml-2 -mr-2 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
           >
             Limpiar Filtro
           </button>
