@@ -165,6 +165,9 @@ export default function TransactionTable({
   const [isActuallySaving, setIsActuallySaving] = useState(false);
 
   // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
+  const [pendingEdits] = useState<Record<string, Partial<TransactionRecord>>>(
+    {}
+  );
 
   // Memoize createDateGroup function (dentro del componente)
   const createDateGroup = useCallback(
@@ -207,56 +210,42 @@ export default function TransactionTable({
   const debouncedFlush = useDebouncedCallback(
     async (pendingEdits: Record<string, Partial<TransactionRecord>>) => {
       if (Object.keys(pendingEdits).length === 0) return;
-      // Obtener los ids de las filas editadas
       const editedIds = Object.keys(pendingEdits);
-      // Hacer fetch de las filas más recientes desde la BD
       let latestRows: TransactionRecord[] = [];
       try {
         const response = await fetch(`/api/transactions`);
         const allRows: TransactionRecord[] = await response.json();
-        // Si alguna fila editada no está en la respuesta, usar la versión local
-        latestRows = editedIds.map(
-          (id) =>
-            allRows.find((row) => row.id === id) ??
-            data.find((row) => row.id === id)!
-        );
+        latestRows = allRows.filter((row) => editedIds.includes(row.id));
       } catch (_error) {
-        // Si falla el fetch, usar los datos locales
-        latestRows = editedIds
-          .map((id) => data.find((row) => row.id === id)!)
-          .filter(Boolean);
+        latestRows = data.filter((row) => editedIds.includes(row.id));
       }
-      // Fusionar los cambios locales solo en los campos editados
-      const newData = data.map((row) => {
-        const edits = pendingEdits[row.id];
-        if (edits) {
-          // Buscar la versión más reciente de la fila
-          const latest = latestRows.find((r) => r.id === row.id) ?? row;
-          // Solo sobreescribir los campos editados, mantener el resto actualizado
-          return { ...latest, ...edits };
-        }
-        return row;
-      });
+      // Solo actualizar los campos editados de la fila, fusionando cambios locales y de la BD
+      setData((prevData) =>
+        prevData.map((row) => {
+          if (editedIds.includes(row.id)) {
+            const backendRow = latestRows.find((r) => r.id === row.id) ?? row;
+            const edits = pendingEdits[row.id] ?? {};
+            // Fusionar: los campos editados prevalecen sobre los del backend
+            return { ...backendRow, ...edits };
+          }
+          return row;
+        })
+      );
       setIsActuallySaving(true);
-      onUpdateRecordAction(newData).then((result) => {
-        setIsActuallySaving(false);
-        if (result.success) {
-          setData((prevData) =>
-            prevData.map((row) => {
-              const update = pendingEdits[row.id];
-              return update ? { ...row, ...update } : row;
-            })
-          );
-          setEditValues((prev) => {
-            const newEditValues = { ...prev };
-            Object.keys(pendingEdits).forEach((id) => {
-              if (newEditValues[id]) {
-                delete newEditValues[id];
-              }
-            });
-            return newEditValues;
-          });
-        }
+      // Solo enviar al backend los registros editados
+      const rowsToUpdate = latestRows.map((row) => ({
+        ...row,
+        ...pendingEdits[row.id],
+      }));
+      await onUpdateRecordAction(rowsToUpdate);
+      setIsActuallySaving(false);
+      // Limpiar el estado de edición solo de las filas editadas
+      setEditValues((prev) => {
+        const newEditValues = { ...prev };
+        editedIds.forEach((id) => {
+          delete newEditValues[id];
+        });
+        return newEditValues;
       });
     },
     800
@@ -879,10 +868,14 @@ export default function TransactionTable({
   // Sincronizar el estado local con la data de SWR solo si no hay edits pendientes
   useEffect(() => {
     if (!swrData) return;
-    if (Object.keys(editValues).length === 0) {
-      setData(swrData);
+    if (Object.keys(pendingEdits).length === 0) {
+      // Solo actualizar filas que han cambiado, no reemplazar todo el arreglo
+      setData((prevData) => {
+        const swrMap = new Map(swrData.map((row) => [row.id, row]));
+        return prevData.map((row) => swrMap.get(row.id) ?? row);
+      });
     }
-  }, [swrData, editValues]);
+  }, [swrData, pendingEdits]);
 
   // Memoize the current date group and related data
   const { currentDateGroup } = useMemo(() => {
@@ -1335,24 +1328,6 @@ export default function TransactionTable({
         return update ? { ...row, ...update } : row;
       });
       const result = await onUpdateRecordAction(updatedData);
-      // Si el guardado fue exitoso, fusionar solo los campos editados en la fila correspondiente
-      if (result.success) {
-        setData((prevData) =>
-          prevData.map((row) => {
-            const update = updates.find((u) => u.id === row.id);
-            return update ? { ...row, ...update } : row;
-          })
-        );
-        setEditValues((prev) => {
-          const newEditValues = { ...prev };
-          updates.forEach((u) => {
-            if (u.id && newEditValues[u.id]) {
-              delete newEditValues[u.id];
-            }
-          });
-          return newEditValues;
-        });
-      }
       return result;
     },
     () => {
