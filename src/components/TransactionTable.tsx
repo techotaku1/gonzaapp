@@ -206,6 +206,35 @@ export default function TransactionTable({
       .map(([date, records]) => createDateGroup(date, records));
   }, [filteredData, createDateGroup]);
 
+  // Usar SWR para obtener siempre la versión más reciente de la BD
+  const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
+    fallbackData: initialData,
+    revalidateOnFocus: true, // refresca al volver a la pestaña
+    refreshInterval: 5000, // refresca cada 5 segundos
+    revalidateOnReconnect: false,
+  });
+
+  // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
+  useEffect(() => {
+    if (!swrData) return;
+    if (Object.keys(pendingEdits).length === 0) {
+      setData((prevData) => {
+        // Solo actualiza filas nuevas, eliminadas o con cambios, pero mantiene la referencia de las filas no cambiadas
+        const prevMap = new Map(prevData.map((row) => [row.id, row]));
+        // Mantener referencia de filas no cambiadas
+        const merged = swrData.map((row) => {
+          const prev = prevMap.get(row.id);
+          // Si la fila es igual (shallow), mantener referencia
+          if (prev && JSON.stringify(prev) === JSON.stringify(row)) {
+            return prev;
+          }
+          return row;
+        });
+        return merged;
+      });
+    }
+  }, [swrData, pendingEdits]);
+
   // Debounced flush que toma editValues como argumento
   const debouncedFlush = useDebouncedCallback(
     async (pendingEdits: Record<string, Partial<TransactionRecord>>) => {
@@ -225,8 +254,13 @@ export default function TransactionTable({
           if (editedIds.includes(row.id)) {
             const backendRow = latestRows.find((r) => r.id === row.id) ?? row;
             const edits = pendingEdits[row.id] ?? {};
-            // Fusionar: los campos editados prevalecen sobre los del backend
-            return { ...backendRow, ...edits };
+            // Solo actualiza los campos editados, mantiene referencia de los no cambiados
+            const updatedRow = { ...backendRow, ...edits };
+            // Si no cambió nada, mantener referencia
+            if (JSON.stringify(row) === JSON.stringify(updatedRow)) {
+              return row;
+            }
+            return updatedRow;
           }
           return row;
         })
@@ -857,20 +891,24 @@ export default function TransactionTable({
     [handleInputChange, editValues]
   );
 
-  // Usar SWR para obtener siempre la versión más reciente de la BD
-  const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
-    fallbackData: initialData,
-    revalidateOnFocus: true, // refresca al volver a la pestaña
-    refreshInterval: 5000, // refresca cada 5 segundos
-    revalidateOnReconnect: false,
-  });
-
   // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
   useEffect(() => {
     if (!swrData) return;
     if (Object.keys(pendingEdits).length === 0) {
-      // Sincronizar completamente el estado local con la data de la BD
-      setData(swrData);
+      setData((prevData) => {
+        // Solo actualiza filas nuevas, eliminadas o con cambios, pero mantiene la referencia de las filas no cambiadas
+        const prevMap = new Map(prevData.map((row) => [row.id, row]));
+        // Mantener referencia de filas no cambiadas
+        const merged = swrData.map((row) => {
+          const prev = prevMap.get(row.id);
+          // Si la fila es igual (shallow), mantener referencia
+          if (prev && JSON.stringify(prev) === JSON.stringify(row)) {
+            return prev;
+          }
+          return row;
+        });
+        return merged;
+      });
     }
   }, [swrData, pendingEdits]);
 
