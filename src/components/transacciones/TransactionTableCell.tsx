@@ -17,7 +17,7 @@ interface TransactionTableCellProps {
 }
 
 const TransactionTableCell: React.FC<TransactionTableCellProps> = React.memo(
-  ({ row, field, type = 'text', renderInput}) => {
+  ({ row, field, type = 'text', renderInput }) => {
     const cellClasses =
       field === 'fecha'
         ? 'table-cell whitespace-nowrap pl-2'

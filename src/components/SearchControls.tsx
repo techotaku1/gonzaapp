@@ -45,10 +45,13 @@ export default function SearchControls({
   const [isGeneratingCuadre, setIsGeneratingCuadre] = useState(false);
   const [shouldNavigate, setShouldNavigate] = useState(false);
 
-  // Memoize the filtering logic to prevent infinite loops
-  const filteredData = useMemo(() => {
-    let filtered = [...data];
+  // Estado para fechas filtradas
+  const [filteredStartDate, setFilteredStartDate] = useState<Date | null>(null);
+  const [filteredEndDate, setFilteredEndDate] = useState<Date | null>(null);
 
+  // Filtrado eficiente combinando búsqueda y fechas (solo cuando se presiona el botón)
+  const filteredData = useMemo(() => {
+    let filtered = data;
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter((item) =>
@@ -58,43 +61,51 @@ export default function SearchControls({
         })
       );
     }
-
+    if (filteredStartDate && filteredEndDate) {
+      const start = filteredStartDate.setHours(0, 0, 0, 0);
+      const end = filteredEndDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((item) => {
+        const itemDate = new Date(item.fecha).getTime();
+        return itemDate >= start && itemDate <= end;
+      });
+    }
     return filtered;
-  }, [data, searchTerm]);
+  }, [data, searchTerm, filteredStartDate, filteredEndDate]);
 
-  // Split the effects to avoid multiple state updates
   useEffect(() => {
     onFilterAction(filteredData);
-  }, [filteredData, onFilterAction]);
+    onDateFilterChangeAction(filteredStartDate, filteredEndDate);
+  }, [
+    filteredData,
+    onFilterAction,
+    filteredStartDate,
+    filteredEndDate,
+    onDateFilterChangeAction,
+  ]);
 
-  // Modified handleDateRangeFilter to remove async and handle dates properly
   const handleDateRangeFilter = useCallback(() => {
     if (!startDate || !endDate) return;
-
     setIsLoading(true);
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-
-      // Usar setTimeout para permitir que el UI se actualice
-      setTimeout(() => {
-        onDateFilterChangeAction(start, end);
-        setIsLoading(false);
-      }, 100);
-    } catch (error) {
-      console.error('Error filtering dates:', error);
+    setTimeout(() => {
+      setFilteredStartDate(startDate);
+      setFilteredEndDate(endDate);
       setIsLoading(false);
-    }
-  }, [startDate, endDate, onDateFilterChangeAction]);
+    }, 100);
+  }, [startDate, endDate]);
+
+  const handleClearDateFilter = () => {
+    setStartDate(null);
+    setEndDate(null);
+    setFilteredStartDate(null);
+    setFilteredEndDate(null);
+  };
 
   const handleGenerateCuadre = useCallback(() => {
     setIsGeneratingCuadre(true);
-    onGenerateCuadreAction(data);
+    onGenerateCuadreAction(filteredData);
     setShouldNavigate(true);
-  }, [data, onGenerateCuadreAction]);
+  }, [filteredData, onGenerateCuadreAction]);
 
-  // Add minDate handling
   const minDateValue = startDate ?? undefined;
 
   return (
@@ -108,7 +119,6 @@ export default function SearchControls({
           className="w-64 rounded-md border border-gray-300 px-3 py-2"
         />
       </div>
-
       <div className="flex items-center gap-2">
         <DatePicker
           selected={startDate}
@@ -159,20 +169,15 @@ export default function SearchControls({
             </>
           )}
         </button>
-        {(startDate ?? endDate) && !isLoading ? (
+        {(filteredStartDate ?? filteredEndDate) && !isLoading ? (
           <button
-            onClick={() => {
-              setStartDate(null);
-              setEndDate(null);
-              onDateFilterChangeAction(null, null);
-            }}
-            className="rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+            onClick={handleClearDateFilter}
+            className="-mr-2 ml-2 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
           >
             Limpiar Filtro
           </button>
         ) : null}
       </div>
-
       <div className="ml-auto flex items-center gap-2">
         <button
           onClick={onToggleAsesorSelectionAction}
@@ -196,8 +201,6 @@ export default function SearchControls({
             </span>
           )}
         </button>
-
-        {/* Botón Generar Cuadre con Link */}
         {shouldNavigate ? (
           <Link
             href="/cuadre"

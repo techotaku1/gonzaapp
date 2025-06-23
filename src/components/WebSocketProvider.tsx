@@ -61,7 +61,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
                 (current?: TransactionRecord[]) => {
                   if (!current) return current;
                   const deletedIds = message.data as string[];
-                  return current.filter((item) => !deletedIds.includes(item.id));
+                  return current.filter(
+                    (item) => !deletedIds.includes(item.id)
+                  );
                 },
                 false
               );
@@ -91,4 +93,3 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     </WebSocketContext.Provider>
   );
 }
-

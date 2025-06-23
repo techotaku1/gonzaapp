@@ -26,8 +26,8 @@ export function useDebouncedSave(
               onSuccess();
               // Fusionar los cambios con los datos actuales
               if (currentData) {
-                return currentData.map(record => {
-                  const updates = records.find(r => r.id === record.id);
+                return currentData.map((record) => {
+                  const updates = records.find((r) => r.id === record.id);
                   return updates ? { ...record, ...updates } : record;
                 });
               }

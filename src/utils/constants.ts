@@ -2,7 +2,7 @@ export const bancoOptions = [
   'BANCOLOMBIA',
   'NEQUI',
   'DAVIPLATA',
-  'DAVIVIENDA'
+  'DAVIVIENDA',
 ] as const;
 
 export type BancoOption = (typeof bancoOptions)[number];

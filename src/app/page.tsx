@@ -18,7 +18,7 @@ export default async function HomePage() {
         <div className="flex items-center justify-between">
           <time
             id="current-date-display"
-            className="mb-3 font-display text-3xl font-bold tracking-tight text-black"
+            className="font-display mb-3 text-3xl font-bold tracking-tight text-black"
           />
         </div>
         <TransactionTable

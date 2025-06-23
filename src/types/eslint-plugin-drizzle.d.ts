@@ -24,7 +24,7 @@ declare module 'eslint-plugin-drizzle' {
 
   const plugin: DrizzlePlugin;
   export default plugin;
-  
+
   // Named exports (si el plugin también los proporciona)
   export const configs: DrizzleConfigs;
   export const rules: Record<string, ESLint.RuleModule>;

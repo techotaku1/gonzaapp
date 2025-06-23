@@ -110,7 +110,7 @@ export async function deleteRecords(
   try {
     await db.delete(transactions).where(inArray(transactions.id, ids));
     revalidatePath('/');
-    await broadcastUpdate('DELETE', ids);
+    broadcastUpdate('DELETE', ids);
     return { success: true };
   } catch (error) {
     console.error('Error deleting records:', error);
@@ -122,20 +122,23 @@ export async function deleteRecords(
   }
 }
 
-async function broadcastUpdate(
+function broadcastUpdate(
   type: BroadcastMessage['type'],
   data: TransactionRecord[] | string[]
-): Promise<void> {
+): void {
   try {
     let baseUrl = process.env.NEXT_PUBLIC_URL_BASE ?? 'http://localhost:3000';
     if (!/^https?:\/\//.test(baseUrl)) {
       baseUrl = `http://${baseUrl}`;
     }
     const url = `${baseUrl.replace(/\/$/, '')}/api/broadcast`;
-    await fetch(url, {
+    // Fire and forget: no await
+    fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ type, data }),
+    }).catch((error) => {
+      console.error('Error broadcasting update:', error);
     });
   } catch (error) {
     console.error('Error broadcasting update:', error);
