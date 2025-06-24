@@ -1880,25 +1880,10 @@ export default function TransactionTable({
                 <tbody>
                   {paginatedData.map(
                     (row: TransactionRecord, index: number) => {
-                      const {
-                        precioNetoAjustado,
-                        tarifaServicioAjustada,
-                        impuesto4x1000,
-                        gananciaBruta,
-                      } = calculateFormulas(row);
-
-                      const rowWithFormulas = {
-                        ...row,
-                        precioNeto: precioNetoAjustado,
-                        tarifaServicio: tarifaServicioAjustada,
-                        impuesto4x1000,
-                        gananciaBruta,
-                      };
-
                       return (
                         <TransactionTableRow
                           key={row.id}
-                          row={rowWithFormulas}
+                          row={row}
                           isDeleteMode={isDeleteMode}
                           isAsesorSelectionMode={isAsesorSelectionMode}
                           selectedRows={selectedRows}
