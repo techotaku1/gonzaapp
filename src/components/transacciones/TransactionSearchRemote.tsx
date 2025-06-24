@@ -66,19 +66,19 @@ const TransactionSearchRemote: React.FC<Props> = ({
       {error && (
         <div className="mb-2 text-red-600">{(error as Error).message}</div>
       )}
-      {results.length > 0 && (
+      <div
+        className="table-container"
+        style={{ borderRadius: '8px', padding: '1rem' }}
+      >
         <div
-          className="table-container"
-          style={{ borderRadius: '8px', padding: '1rem' }}
+          className="table-scroll-container"
+          style={{ overflowX: 'auto', overflowY: 'auto' }}
         >
-          <div
-            className="table-scroll-container"
-            style={{ overflowX: 'auto', overflowY: 'auto' }}
-          >
-            <table className="w-full text-left text-sm text-gray-600">
-              <HeaderTitles isDeleteMode={isDeleteMode} />
-              <tbody>
-                {(results as TransactionRecord[]).map(
+          <table className="w-full text-left text-sm text-gray-600">
+            <HeaderTitles isDeleteMode={isDeleteMode} />
+            <tbody>
+              {results.length > 0 ? (
+                (results as TransactionRecord[]).map(
                   (row: TransactionRecord, index: number) => (
                     <TransactionTableRow
                       key={row.id}
@@ -99,12 +99,18 @@ const TransactionSearchRemote: React.FC<Props> = ({
                       _index={index}
                     />
                   )
-                )}
-              </tbody>
-            </table>
-          </div>
+                )
+              ) : (
+                <tr>
+                  <td colSpan={24} className="py-8 text-center text-gray-400">
+                    No hay resultados para la búsqueda.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </div>
   );
 };

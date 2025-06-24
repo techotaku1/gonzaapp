@@ -1734,31 +1734,7 @@ export default function TransactionTable({
           </div>
         </div>
 
-        {/* Modal de exportación por rango de fechas */}
-        <ExportDateRangeModal
-          isOpen={isExportModalOpen}
-          setIsOpen={setIsExportModalOpen}
-          onExport={handleExport}
-        />
-
-        {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
-        {!showTotals && searchTerm && (
-          <TransactionSearchRemote
-            onRowSelect={handleRowSelect}
-            renderCheckbox={renderCheckbox}
-            renderAsesorSelect={renderAsesorSelect}
-            renderInput={renderInput}
-            getEmitidoPorClass={getEmitidoPorClass}
-            isDeleteMode={isDeleteMode}
-            isAsesorSelectionMode={isAsesorSelectionMode}
-            selectedRows={selectedRows}
-            rowsToDelete={rowsToDelete}
-            handleDeleteSelect={handleDeleteSelect}
-            searchTerm={searchTerm}
-            searchTrigger={searchTrigger}
-          />
-        )}
-        {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
+        {/* Mover SearchFilters aquí, justo debajo de los botones principales y arriba de la tabla */}
         {!showTotals && (
           <SearchFilters
             data={data}
@@ -1797,9 +1773,31 @@ export default function TransactionTable({
           />
         )}
 
-        {showTotals ? (
-          <TransactionTotals transactions={data} />
-        ) : (
+        {/* Modal de exportación por rango de fechas */}
+        <ExportDateRangeModal
+          isOpen={isExportModalOpen}
+          setIsOpen={setIsExportModalOpen}
+          onExport={handleExport}
+        />
+
+        {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
+        {!showTotals && searchTerm ? (
+          <TransactionSearchRemote
+            onRowSelect={handleRowSelect}
+            renderCheckbox={renderCheckbox}
+            renderAsesorSelect={renderAsesorSelect}
+            renderInput={renderInput}
+            getEmitidoPorClass={getEmitidoPorClass}
+            isDeleteMode={isDeleteMode}
+            isAsesorSelectionMode={isAsesorSelectionMode}
+            selectedRows={selectedRows}
+            rowsToDelete={rowsToDelete}
+            handleDeleteSelect={handleDeleteSelect}
+            searchTerm={searchTerm}
+            searchTrigger={searchTrigger}
+          />
+        ) : null}
+        {!showTotals && !searchTerm ? (
           <div
             className="table-container"
             style={{
@@ -1872,7 +1870,11 @@ export default function TransactionTable({
               </table>
             </div>
           </div>
-        )}
+        ) : null}
+        {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
+        {/* (Eliminado el segundo SearchFilters aquí) */}
+
+        {showTotals ? <TransactionTotals transactions={data} /> : null}
 
         {!showTotals &&
           !searchTerm &&

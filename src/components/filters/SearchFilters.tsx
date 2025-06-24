@@ -37,17 +37,14 @@ interface RemoteSearchInputProps {
   loading?: boolean;
 }
 
-const RemoteSearchInput: React.FC<RemoteSearchInputProps> = ({
-  value,
-  onChange,
-  onSearch,
-  loading,
-}) => (
-  <div className="flex gap-2 relative">
+const RemoteSearchInput: React.FC<
+  RemoteSearchInputProps & { onClear?: () => void }
+> = ({ value, onChange, onSearch, loading, onClear }) => (
+  <div className="relative flex w-64 gap-2">
     <input
       type="text"
-      className="w-64 rounded-md border border-gray-300 px-3 py-2 pr-8"
-      placeholder="Buscar en cualquier campo..."
+      className="w-50 rounded-md border border-gray-300 px-3 py-2 pr-8"
+      placeholder="Buscar..."
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
@@ -58,9 +55,13 @@ const RemoteSearchInput: React.FC<RemoteSearchInputProps> = ({
       <button
         type="button"
         aria-label="Limpiar búsqueda"
-        className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
-        onClick={() => onChange('')}
+        className="absolute top-1/2 right-12 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+        onClick={() => {
+          onChange('');
+          if (onClear) onClear();
+        }}
         tabIndex={-1}
+        style={{ background: 'transparent', border: 'none', padding: 0 }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -80,7 +81,7 @@ const RemoteSearchInput: React.FC<RemoteSearchInputProps> = ({
     )}
     <button
       onClick={onSearch}
-      className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+      className="ml-2 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
       disabled={loading ?? !value.trim()}
       type="button"
     >
@@ -91,7 +92,7 @@ const RemoteSearchInput: React.FC<RemoteSearchInputProps> = ({
 
 export default function SearchFilters({
   data,
-  onFilterAction,
+  onFilterAction: _onFilterAction, // prefijo _ para evitar warning
   onDateFilterChangeAction,
   onToggleAsesorSelectionAction,
   onGenerateCuadreAction,
@@ -99,7 +100,7 @@ export default function SearchFilters({
   isAsesorSelectionMode,
   hasSelectedAsesores,
   isLoadingAsesorMode,
-  searchTerm,
+  searchTerm: _searchTerm, // prefijo _ para evitar warning
   setSearchTermAction,
 }: SearchControlsProps) {
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -113,37 +114,14 @@ export default function SearchFilters({
   const [filteredEndDate, setFilteredEndDate] = useState<Date | null>(null);
 
   // Nuevo estado para los datos filtrados
-  const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
+  const [_filteredData, _setFilteredData] = useState<TransactionRecord[]>(data); // prefijo _ para evitar warning
 
   // Estado para búsqueda remota
   const [remoteSearch, setRemoteSearch] = useState('');
   const [remoteLoading, setRemoteLoading] = useState(false);
 
-  // Filtrado reactivo por búsqueda general
-  useEffect(() => {
-    let filtered = data;
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter((item) =>
-        Object.entries(item).some(([key, value]) => {
-          if (key === 'fecha' || value === null) return false;
-          return String(value).toLowerCase().includes(search);
-        })
-      );
-    }
-    // Si hay filtro de fechas, aplicarlo encima del filtro de búsqueda
-    if (filteredStartDate && filteredEndDate) {
-      const start = filteredStartDate.setHours(0, 0, 0, 0);
-      const end = filteredEndDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((item) => {
-        const itemDate = new Date(item.fecha).getTime();
-        return itemDate >= start && itemDate <= end;
-      });
-    }
-    setFilteredData(filtered);
-    onFilterAction(filtered, searchTerm);
-    // No limpiar el input de búsqueda ni cambiar el estado de fechas aquí
-  }, [data, searchTerm, filteredStartDate, filteredEndDate, onFilterAction]);
+  // Eliminar el useEffect que filtra por searchTerm y llama onFilterAction para evitar ciclos infinitos
+  // El filtrado y el setSearchTermAction solo deben ocurrir cuando el usuario hace clic en Buscar
 
   // Notificar cambios de filtro de fechas
   useEffect(() => {
@@ -170,23 +148,24 @@ export default function SearchFilters({
 
   const handleGenerateCuadre = useCallback(() => {
     setIsGeneratingCuadre(true);
-    onGenerateCuadreAction(filteredData);
+    onGenerateCuadreAction(_filteredData);
     setShouldNavigate(true);
-  }, [filteredData, onGenerateCuadreAction]);
+  }, [_filteredData, onGenerateCuadreAction]);
 
+  // Solo actualizar el searchTerm global cuando el usuario hace clic en Buscar
   const handleRemoteSearch = useCallback(() => {
     setRemoteLoading(true);
     setSearchTermAction(remoteSearch);
     setTimeout(() => setRemoteLoading(false), 400); // Simula loading
   }, [remoteSearch, setSearchTermAction]);
 
-  // Limpiar búsqueda remota y restaurar tabla local
-  const handleClearRemoteSearch = useCallback(() => {
+  const minDateValue = startDate ?? undefined;
+
+  // Nueva función para limpiar búsqueda global y local
+  const handleClearSearch = useCallback(() => {
     setRemoteSearch('');
     setSearchTermAction('');
   }, [setSearchTermAction]);
-
-  const minDateValue = startDate ?? undefined;
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">
@@ -196,30 +175,8 @@ export default function SearchFilters({
           onChange={setRemoteSearch}
           onSearch={handleRemoteSearch}
           loading={remoteLoading}
+          onClear={handleClearSearch}
         />
-        {remoteSearch && (
-          <button
-            type="button"
-            className="ml-2 text-gray-500 hover:text-red-600"
-            onClick={handleClearRemoteSearch}
-            aria-label="Limpiar búsqueda"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        )}
       </div>
       <div className="flex items-center gap-2">
         {/* Fecha inicial */}
@@ -231,7 +188,7 @@ export default function SearchFilters({
             startDate={startDate}
             endDate={endDate}
             placeholderText="Fecha inicial"
-            className="rounded-md border border-gray-300 px-3 py-2 pr-10" // espacio para el icono
+            className="w-36 rounded-md border border-gray-300 px-3 py-2 pr-8" // ancho reducido
             dateFormat="dd/MM/yyyy"
             locale={es}
           />
@@ -262,7 +219,7 @@ export default function SearchFilters({
             endDate={endDate}
             minDate={minDateValue}
             placeholderText="Fecha final"
-            className="rounded-md border border-gray-300 px-3 py-2 pr-10" // espacio para el icono
+            className="w-36 rounded-md border border-gray-300 px-3 py-2 pr-8" // ancho reducido
             dateFormat="dd/MM/yyyy"
             locale={es}
           />
