@@ -83,24 +83,6 @@ export default function TransactionTotals({
     []
   );
 
-  // Normaliza y tokeniza texto para búsqueda flexible (ahora con useCallback)
-  const tokenize = useCallback(
-    (text: string) => normalizeText(text).split(/\s+/).filter(Boolean),
-    [normalizeText]
-  );
-
-  // Compara si todos los tokens de search están en el target (usa tokenize de useCallback)
-  const tokensMatch = useCallback(
-    (search: string, target: string) => {
-      const searchTokens = tokenize(search);
-      const targetTokens = tokenize(target);
-      return searchTokens.every((token) =>
-        targetTokens.some((t) => t.includes(token) || token.includes(t))
-      );
-    },
-    [tokenize]
-  );
-
   // Filtrar transacciones por búsqueda y rango de fechas
   const filteredTransactions = useMemo(() => {
     let filtered = transactions;
@@ -190,23 +172,20 @@ export default function TransactionTotals({
     }
     // Filtrado global por texto (en todas las columnas relevantes)
     if (searchTerm.trim()) {
+      const search = normalizeText(searchTerm.trim());
       filtered = filtered.filter((t) => {
-        // Fecha: permite buscar por palabras sueltas o combinadas
-        const dateStr = formatDate(t.date);
-        // Números: busca por coincidencia parcial, ignora separadores
-        const transactionCount = String(t.transactionCount);
-        const precioNeto = formatCurrency(t.precioNetoTotal);
-        const tarifaServicio = formatCurrency(t.tarifaServicioTotal);
-        const impuesto4x1000 = formatCurrency(t.impuesto4x1000Total);
-        const gananciaBruta = formatCurrency(t.gananciaBrutaTotal);
-        // Buscar en todas las columnas relevantes
-        return (
-          tokensMatch(searchTerm, dateStr) ||
-          tokensMatch(searchTerm, transactionCount) ||
-          tokensMatch(searchTerm, precioNeto) ||
-          tokensMatch(searchTerm, tarifaServicio) ||
-          tokensMatch(searchTerm, impuesto4x1000) ||
-          tokensMatch(searchTerm, gananciaBruta)
+        // Formatear todos los valores como string para búsqueda flexible
+        const valuesToSearch = [
+          formatDate(t.date),
+          String(t.transactionCount),
+          formatCurrency(t.precioNetoTotal),
+          formatCurrency(t.tarifaServicioTotal),
+          formatCurrency(t.impuesto4x1000Total),
+          formatCurrency(t.gananciaBrutaTotal),
+        ].map((v) => normalizeText(String(v)));
+        // Coincidencia exacta o parcial en cualquier columna
+        return valuesToSearch.some(
+          (val) => val.includes(search) || search.includes(val)
         );
       });
     }
@@ -218,7 +197,7 @@ export default function TransactionTotals({
     endDate,
     formatDate,
     formatCurrency,
-    tokensMatch,
+    normalizeText,
   ]);
 
   const totalPages = Math.ceil(filteredTotals.length / itemsPerPage);

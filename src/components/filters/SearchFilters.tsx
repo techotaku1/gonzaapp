@@ -43,21 +43,46 @@ const RemoteSearchInput: React.FC<RemoteSearchInputProps> = ({
   onSearch,
   loading,
 }) => (
-  <div className="flex gap-2">
+  <div className="flex gap-2 relative">
     <input
       type="text"
-      className="w-64 rounded-md border border-gray-300 px-3 py-2"
+      className="w-64 rounded-md border border-gray-300 px-3 py-2 pr-8"
       placeholder="Buscar en cualquier campo..."
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onSearch();
+        if (e.key === 'Enter' && value.trim()) onSearch();
       }}
     />
+    {value && (
+      <button
+        type="button"
+        aria-label="Limpiar búsqueda"
+        className="absolute right-10 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+        onClick={() => onChange('')}
+        tabIndex={-1}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
+    )}
     <button
       onClick={onSearch}
       className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
       disabled={loading ?? !value.trim()}
+      type="button"
     >
       {loading ? 'Buscando...' : 'Buscar'}
     </button>
@@ -155,6 +180,12 @@ export default function SearchFilters({
     setTimeout(() => setRemoteLoading(false), 400); // Simula loading
   }, [remoteSearch, setSearchTermAction]);
 
+  // Limpiar búsqueda remota y restaurar tabla local
+  const handleClearRemoteSearch = useCallback(() => {
+    setRemoteSearch('');
+    setSearchTermAction('');
+  }, [setSearchTermAction]);
+
   const minDateValue = startDate ?? undefined;
 
   return (
@@ -166,6 +197,29 @@ export default function SearchFilters({
           onSearch={handleRemoteSearch}
           loading={remoteLoading}
         />
+        {remoteSearch && (
+          <button
+            type="button"
+            className="ml-2 text-gray-500 hover:text-red-600"
+            onClick={handleClearRemoteSearch}
+            aria-label="Limpiar búsqueda"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="flex items-center gap-2">
         {/* Fecha inicial */}
