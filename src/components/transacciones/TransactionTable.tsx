@@ -313,6 +313,7 @@ export default function TransactionTable({
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
+        // Si es campo numérico, convertir a número
         if (
           [
             'precioNeto',
@@ -323,9 +324,10 @@ export default function TransactionTable({
             'cilindraje',
           ].includes(field as string)
         ) {
-          newValue =
-            typeof value === 'string' ? Number(value) || 0 : (value as number);
+          newValue = typeof value === 'string' ? Number(value) || 0 : value;
         }
+        // No modificar tarifaServicio manualmente por comisionExtra, dejar que calculateFormulas lo ajuste visualmente
+        // Solo guardar el valor editado
         const extra: Partial<TransactionRecord> = {};
         if (
           (field === 'tipoVehiculo' || field === 'cilindraje') &&
