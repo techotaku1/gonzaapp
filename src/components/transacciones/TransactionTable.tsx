@@ -175,6 +175,8 @@ export default function TransactionTable({
   const [searchTerm, setSearchTermAction] = useState<string>('');
   // Estado debounced para el término de búsqueda
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  // Estado para trigger de búsqueda remota
+  const [searchTrigger] = useState(0);
   // Debounce para el término de búsqueda
   const debouncedSetSearchTerm = useDebouncedCallback((value: string) => {
     setDebouncedSearchTerm(value);
@@ -1752,6 +1754,8 @@ export default function TransactionTable({
             selectedRows={selectedRows}
             rowsToDelete={rowsToDelete}
             handleDeleteSelect={handleDeleteSelect}
+            searchTerm={searchTerm}
+            searchTrigger={searchTrigger}
           />
         )}
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}

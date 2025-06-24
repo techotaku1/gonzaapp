@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 
@@ -27,6 +27,8 @@ interface Props {
   selectedRows: Set<string>;
   rowsToDelete: Set<string>;
   handleDeleteSelect: (id: string) => void;
+  searchTerm: string;
+  searchTrigger: number;
 }
 
 const TransactionSearchRemote: React.FC<Props> = ({
@@ -40,20 +42,20 @@ const TransactionSearchRemote: React.FC<Props> = ({
   selectedRows,
   rowsToDelete,
   handleDeleteSelect,
+  searchTerm,
+  searchTrigger,
 }) => {
-  const [search] = useState(''); // Solo search, sin setSearch
-  const [trigger] = useState(0); // Solo trigger, sin setTrigger
-
   const { data: results = [], error } = useQuery<TransactionRecord[]>({
-    queryKey: ['transactions-search', search, trigger],
+    queryKey: ['transactions-search', searchTerm, searchTrigger],
     queryFn: async (): Promise<TransactionRecord[]> => {
+      if (!searchTerm) return [];
       const res = await fetch(
-        `/api/transactions/search?query=${encodeURIComponent(search)}`
+        `/api/transactions/search?query=${encodeURIComponent(searchTerm)}`
       );
       if (!res.ok) throw new Error('Error buscando transacciones');
       return res.json() as Promise<TransactionRecord[]>;
     },
-    enabled: false, // Solo buscar al presionar el botón
+    enabled: !!searchTerm, // Solo buscar si hay término
     retry: 1,
     staleTime: 1000 * 60, // 1 minuto
   });
