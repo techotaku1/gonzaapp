@@ -622,6 +622,24 @@ export default function TransactionTable({
         'boletasRegistradas', // Añadido boletasRegistradas como campo monetario
       ].includes(field as string);
 
+      // Para mostrar valores ajustados en tiempo real
+      let adjustedValue = value;
+      if (
+        field === 'precioNeto' ||
+        field === 'tarifaServicio' ||
+        field === 'impuesto4x1000' ||
+        field === 'gananciaBruta'
+      ) {
+        // Construir un registro actualizado con los edits actuales
+        const editedRow = { ...row, ...(editValues[row.id] || {}) };
+        const formulas = calculateFormulas(editedRow);
+        if (field === 'precioNeto') adjustedValue = formulas.precioNetoAjustado;
+        if (field === 'tarifaServicio')
+          adjustedValue = formulas.tarifaServicioAjustada;
+        if (field === 'impuesto4x1000') adjustedValue = formulas.impuesto4x1000;
+        if (field === 'gananciaBruta') adjustedValue = formulas.gananciaBruta;
+      }
+
       const formatValue = (val: unknown): string => {
         if (val === null || val === undefined) {
           return '';
@@ -847,6 +865,29 @@ export default function TransactionTable({
               </option>
             ))}
           </select>
+        );
+      }
+
+      // Usar adjustedValue en vez de value en los inputs de dinero
+      if (
+        field === 'precioNeto' ||
+        field === 'tarifaServicio' ||
+        field === 'impuesto4x1000' ||
+        field === 'gananciaBruta'
+      ) {
+        return (
+          <div className={`relative flex items-center`}>
+            <input
+              type="text"
+              value={formatValue(adjustedValue)}
+              title={formatValue(adjustedValue)}
+              onChange={(e) => {
+                const newValue: InputValue = parseNumber(e.target.value);
+                handleInputChange(row.id, field, newValue);
+              }}
+              className={`flex items-center justify-center overflow-hidden rounded border px-0.5 py-0.5 text-center text-[10px] text-ellipsis ${getWidth()} table-numeric-field hover:overflow-visible hover:text-clip`}
+            />
+          </div>
         );
       }
 
