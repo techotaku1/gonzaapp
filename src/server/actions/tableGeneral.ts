@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';
@@ -119,6 +119,47 @@ export async function deleteRecords(
       error:
         error instanceof Error ? error.message : 'Failed to delete records',
     };
+  }
+}
+
+// Nueva función para búsqueda remota
+export async function searchTransactions(
+  query: string
+): Promise<TransactionRecord[]> {
+  try {
+    if (!query || query.trim() === '') return [];
+    const q = `%${query}%`;
+    const results = await db
+      .select()
+      .from(transactions)
+      .where(
+        sql`
+        placa ILIKE ${q} OR
+        nombre ILIKE ${q} OR
+        numero_documento ILIKE ${q} OR
+        emitido_por ILIKE ${q} OR
+        tipo_documento ILIKE ${q} OR
+        ciudad ILIKE ${q} OR
+        asesor ILIKE ${q} OR
+        novedad ILIKE ${q} OR
+        tramite ILIKE ${q}
+      `
+      )
+      .orderBy(desc(transactions.fecha));
+    return results.map((record) => ({
+      ...record,
+      fecha: new Date(record.fecha),
+      boletasRegistradas: Number(record.boletasRegistradas),
+      precioNeto: Number(record.precioNeto),
+      tarifaServicio: Number(record.tarifaServicio),
+      impuesto4x1000: Number(record.impuesto4x1000),
+      gananciaBruta: Number(record.gananciaBruta),
+    }));
+  } catch (error) {
+    console.error('Error searching transactions:', error);
+    throw new Error(
+      error instanceof Error ? error.message : 'Failed to search transactions'
+    );
   }
 }
 

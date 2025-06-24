@@ -15,7 +15,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 interface SearchControlsProps {
   data: TransactionRecord[];
-  onFilterAction: (results: TransactionRecord[]) => void;
+  onFilterAction: (results: TransactionRecord[], searchTerm?: string) => void;
   onDateFilterChangeAction: (
     startDate: Date | null,
     endDate: Date | null
@@ -26,7 +26,43 @@ interface SearchControlsProps {
   isAsesorSelectionMode: boolean;
   hasSelectedAsesores: boolean;
   isLoadingAsesorMode: boolean;
+  searchTerm: string;
+  setSearchTermAction: (value: string) => void;
 }
+
+interface RemoteSearchInputProps {
+  value: string;
+  onChange: (v: string) => void;
+  onSearch: () => void;
+  loading?: boolean;
+}
+
+const RemoteSearchInput: React.FC<RemoteSearchInputProps> = ({
+  value,
+  onChange,
+  onSearch,
+  loading,
+}) => (
+  <div className="flex gap-2">
+    <input
+      type="text"
+      className="w-64 rounded-md border border-gray-300 px-3 py-2"
+      placeholder="Buscar en cualquier campo..."
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onSearch();
+      }}
+    />
+    <button
+      onClick={onSearch}
+      className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+      disabled={loading ?? !value.trim()}
+    >
+      {loading ? 'Buscando...' : 'Buscar'}
+    </button>
+  </div>
+);
 
 export default function SearchFilters({
   data,
@@ -38,8 +74,9 @@ export default function SearchFilters({
   isAsesorSelectionMode,
   hasSelectedAsesores,
   isLoadingAsesorMode,
+  searchTerm,
+  setSearchTermAction,
 }: SearchControlsProps) {
-  const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +89,10 @@ export default function SearchFilters({
 
   // Nuevo estado para los datos filtrados
   const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
+
+  // Estado para búsqueda remota
+  const [remoteSearch, setRemoteSearch] = useState('');
+  const [remoteLoading, setRemoteLoading] = useState(false);
 
   // Filtrado reactivo por búsqueda general
   useEffect(() => {
@@ -75,7 +116,7 @@ export default function SearchFilters({
       });
     }
     setFilteredData(filtered);
-    onFilterAction(filtered);
+    onFilterAction(filtered, searchTerm);
     // No limpiar el input de búsqueda ni cambiar el estado de fechas aquí
   }, [data, searchTerm, filteredStartDate, filteredEndDate, onFilterAction]);
 
@@ -108,17 +149,22 @@ export default function SearchFilters({
     setShouldNavigate(true);
   }, [filteredData, onGenerateCuadreAction]);
 
+  const handleRemoteSearch = useCallback(() => {
+    setRemoteLoading(true);
+    setSearchTermAction(remoteSearch);
+    setTimeout(() => setRemoteLoading(false), 400); // Simula loading
+  }, [remoteSearch, setSearchTermAction]);
+
   const minDateValue = startDate ?? undefined;
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">
       <div className="flex flex-1 items-center gap-2">
-        <input
-          type="text"
-          placeholder="Buscar en cualquier campo..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-64 rounded-md border border-gray-300 px-3 py-2"
+        <RemoteSearchInput
+          value={remoteSearch}
+          onChange={setRemoteSearch}
+          onSearch={handleRemoteSearch}
+          loading={remoteLoading}
         />
       </div>
       <div className="flex items-center gap-2">

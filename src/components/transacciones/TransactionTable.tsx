@@ -31,6 +31,7 @@ import SearchFilters from '../filters/SearchFilters';
 import { Icons } from '../icons';
 
 import HeaderTitles from './HeaderTitles';
+import TransactionSearchRemote from './TransactionSearchRemote';
 import TransactionTableRow, { InputType } from './TransactionTableRow';
 import TransactionTotals from './TransactionTotals';
 
@@ -136,7 +137,7 @@ export default function TransactionTable({
   onUpdateRecordAction,
   showTotals,
   onToggleTotalsAction,
-  searchTerm = '', // Nueva prop opcional para el término de búsqueda
+  searchTerm: _searchTermProp = '', // Nueva prop opcional para el término de búsqueda
 }: {
   initialData: TransactionRecord[];
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
@@ -170,6 +171,14 @@ export default function TransactionTable({
 
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
+  // Estado local para el término de búsqueda
+  const [searchTerm, setSearchTermAction] = useState<string>('');
+  // Estado debounced para el término de búsqueda
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  // Debounce para el término de búsqueda
+  const debouncedSetSearchTerm = useDebouncedCallback((value: string) => {
+    setDebouncedSearchTerm(value);
+  }, 350);
 
   // Cambia la lógica para que el indicador "Guardando cambios..." solo se muestre cuando realmente se está guardando (no cuando el usuario está editando).
   // Se logra con un nuevo estado: isActuallySaving
@@ -220,7 +229,7 @@ export default function TransactionTable({
   const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
     fallbackData: initialData,
     revalidateOnFocus: true, // refresca al volver a la pestaña
-    refreshInterval: 5000, // refresca cada 5 segundos
+    refreshInterval: 5000, // refresha cada 5 segundos
     revalidateOnReconnect: false,
   });
 
@@ -518,7 +527,7 @@ export default function TransactionTable({
     [onUpdateRecordAction]
   );
 
-  // Update filtered data when date filter changes
+  // Update filtered data when date filter or debouncedSearchTerm changes
   useEffect(() => {
     if (dateFilter.startDate && dateFilter.endDate) {
       const filtered = data.filter((record) => {
@@ -534,23 +543,40 @@ export default function TransactionTable({
       });
       setFilteredData(filtered);
       setHasSearchResults(filtered.length > 0);
+    } else if (debouncedSearchTerm) {
+      // Si hay búsqueda, filtrar por búsqueda
+      const search = debouncedSearchTerm.toLowerCase();
+      const filtered = data.filter((item) =>
+        Object.entries(item).some(([key, value]) => {
+          if (key === 'fecha' || value === null) return false;
+          return String(value).toLowerCase().includes(search);
+        })
+      );
+      setFilteredData(filtered);
+      setHasSearchResults(filtered.length > 0);
     } else {
       setFilteredData(data);
       setHasSearchResults(data.length > 0);
     }
-  }, [data, dateFilter]);
+  }, [data, dateFilter, debouncedSearchTerm]);
 
   // Tipar paginatedData and map de tbody
   const paginatedData: TransactionRecord[] = useMemo(() => {
     // Si hay búsqueda o filtro de fechas, mostrar todos los resultados filtrados sin paginación
-    if (searchTerm || (dateFilter.startDate && dateFilter.endDate)) {
+    if (debouncedSearchTerm || (dateFilter.startDate && dateFilter.endDate)) {
       return filteredData;
     }
     const currentGroup = groupedByDate[currentPage - 1] as
       | DateGroup
       | undefined;
     return currentGroup ? currentGroup.records : [];
-  }, [groupedByDate, currentPage, dateFilter, filteredData, searchTerm]);
+  }, [
+    groupedByDate,
+    currentPage,
+    dateFilter,
+    filteredData,
+    debouncedSearchTerm,
+  ]);
 
   // Limpia debounce al desmontar
   useEffect(() => {
@@ -1184,10 +1210,16 @@ export default function TransactionTable({
   );
 
   // Memoize the filter callback
-  const handleFilterData = useCallback((results: TransactionRecord[]) => {
-    setFilteredData(results);
-    setHasSearchResults(results.length > 0);
-  }, []);
+  const handleFilterData = useCallback(
+    (results: TransactionRecord[], searchValue?: string) => {
+      setFilteredData(results);
+      setHasSearchResults(results.length > 0);
+      if (typeof searchValue === 'string') {
+        setSearchTermAction(searchValue);
+      }
+    },
+    []
+  );
 
   // Actualizar la función que maneja las fechas
   const updateDateDisplay = useCallback(
@@ -1368,6 +1400,11 @@ export default function TransactionTable({
     },
     800
   );
+
+  // Actualizar el debouncedSearchTerm cuando searchTerm cambie
+  useEffect(() => {
+    debouncedSetSearchTerm(searchTerm);
+  }, [searchTerm, debouncedSetSearchTerm]);
 
   // handleLocalEdit ya no es necesario, usar handleInputChange
   return (
@@ -1702,6 +1739,21 @@ export default function TransactionTable({
           onExport={handleExport}
         />
 
+        {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
+        {!showTotals && searchTerm && (
+          <TransactionSearchRemote
+            onRowSelect={handleRowSelect}
+            renderCheckbox={renderCheckbox}
+            renderAsesorSelect={renderAsesorSelect}
+            renderInput={renderInput}
+            getEmitidoPorClass={getEmitidoPorClass}
+            isDeleteMode={isDeleteMode}
+            isAsesorSelectionMode={isAsesorSelectionMode}
+            selectedRows={selectedRows}
+            rowsToDelete={rowsToDelete}
+            handleDeleteSelect={handleDeleteSelect}
+          />
+        )}
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
         {!showTotals && (
           <SearchFilters
@@ -1714,7 +1766,6 @@ export default function TransactionTable({
                 selectedAsesores.has(r.id)
               );
               if (selectedRecords.length > 0) {
-                // Crear registros en la tabla cuadre para cada seleccionado
                 await Promise.all(
                   selectedRecords.map((record) =>
                     createCuadreRecord(record.id, {
@@ -1737,6 +1788,8 @@ export default function TransactionTable({
             isAsesorSelectionMode={isAsesorSelectionMode}
             hasSelectedAsesores={selectedAsesores.size > 0}
             isLoadingAsesorMode={isLoadingAsesorMode}
+            searchTerm={searchTerm}
+            setSearchTermAction={setSearchTermAction}
           />
         )}
 
