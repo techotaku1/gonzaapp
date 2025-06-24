@@ -1782,20 +1782,32 @@ export default function TransactionTable({
 
         {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
         {!showTotals && searchTerm ? (
-          <TransactionSearchRemote
-            onRowSelect={handleRowSelect}
-            renderCheckbox={renderCheckbox}
-            renderAsesorSelect={renderAsesorSelect}
-            renderInput={renderInput}
-            getEmitidoPorClass={getEmitidoPorClass}
-            isDeleteMode={isDeleteMode}
-            isAsesorSelectionMode={isAsesorSelectionMode}
-            selectedRows={selectedRows}
-            rowsToDelete={rowsToDelete}
-            handleDeleteSelect={handleDeleteSelect}
-            searchTerm={searchTerm}
-            searchTrigger={searchTrigger}
-          />
+          <div
+            className="table-container"
+            style={{
+              backgroundImage: 'url("/background-table.jpg")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              borderRadius: '8px',
+              padding: '1rem',
+            }}
+          >
+            <TransactionSearchRemote
+              onRowSelect={handleRowSelect}
+              renderCheckbox={renderCheckbox}
+              renderAsesorSelect={renderAsesorSelect}
+              renderInput={renderInput}
+              getEmitidoPorClass={getEmitidoPorClass}
+              isDeleteMode={isDeleteMode}
+              isAsesorSelectionMode={isAsesorSelectionMode}
+              selectedRows={selectedRows}
+              rowsToDelete={rowsToDelete}
+              handleDeleteSelect={handleDeleteSelect}
+              searchTerm={searchTerm}
+              searchTrigger={searchTrigger}
+            />
+          </div>
         ) : null}
         {!showTotals && !searchTerm ? (
           <div

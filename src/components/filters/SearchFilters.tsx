@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -55,7 +55,7 @@ const RemoteSearchInput: React.FC<
       <button
         type="button"
         aria-label="Limpiar búsqueda"
-        className="absolute top-1/2 right-12 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+        className="absolute top-1/2 right-18 -translate-y-1/2 text-gray-400 hover:text-gray-700"
         onClick={() => {
           onChange('');
           if (onClear) onClear();
@@ -120,13 +120,8 @@ export default function SearchFilters({
   const [remoteSearch, setRemoteSearch] = useState('');
   const [remoteLoading, setRemoteLoading] = useState(false);
 
-  // Eliminar el useEffect que filtra por searchTerm y llama onFilterAction para evitar ciclos infinitos
-  // El filtrado y el setSearchTermAction solo deben ocurrir cuando el usuario hace clic en Buscar
-
-  // Notificar cambios de filtro de fechas
-  useEffect(() => {
-    onDateFilterChangeAction(filteredStartDate, filteredEndDate);
-  }, [filteredStartDate, filteredEndDate, onDateFilterChangeAction]);
+  // Eliminar el useEffect que llama a onDateFilterChangeAction automáticamente
+  // y solo llamar a onDateFilterChangeAction cuando el usuario hace clic en "Filtrar por Fechas"
 
   const handleDateRangeFilter = useCallback(() => {
     if (!startDate || !endDate) return;
@@ -135,8 +130,10 @@ export default function SearchFilters({
       setFilteredStartDate(startDate);
       setFilteredEndDate(endDate);
       setIsLoading(false);
+      // Llamar a la acción de filtro de fechas aquí
+      onDateFilterChangeAction(startDate, endDate);
     }, 100);
-  }, [startDate, endDate]);
+  }, [startDate, endDate, onDateFilterChangeAction]);
 
   const handleClearDateFilter = () => {
     setStartDate(null);

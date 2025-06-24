@@ -74,39 +74,71 @@ const TransactionSearchRemote: React.FC<Props> = ({
           className="table-scroll-container"
           style={{ overflowX: 'auto', overflowY: 'auto' }}
         >
-          <table className="w-full text-left text-sm text-gray-600">
+          <table className="w-full text-left text-sm text-white">
             <HeaderTitles isDeleteMode={isDeleteMode} />
             <tbody>
-              {results.length > 0 ? (
-                (results as TransactionRecord[]).map(
-                  (row: TransactionRecord, index: number) => (
-                    <TransactionTableRow
-                      key={row.id}
-                      row={row}
-                      isDeleteMode={isDeleteMode}
-                      isAsesorSelectionMode={isAsesorSelectionMode}
-                      selectedRows={selectedRows}
-                      rowsToDelete={rowsToDelete}
-                      handleInputChange={() => {
-                        /* Solo lectura en búsqueda remota */
-                      }}
-                      handleRowSelect={onRowSelect}
-                      handleDeleteSelect={handleDeleteSelect}
-                      renderCheckbox={renderCheckbox}
-                      renderAsesorSelect={renderAsesorSelect}
-                      renderInput={renderInput}
-                      getEmitidoPorClass={getEmitidoPorClass}
-                      _index={index}
-                    />
-                  )
-                )
-              ) : (
+              {/* Mostrar spinner mientras loading y searchTerm no está vacío */}
+              {searchTerm && !error && results.length === 0 && (
                 <tr>
-                  <td colSpan={24} className="py-8 text-center text-gray-400">
-                    No hay resultados para la búsqueda.
+                  <td colSpan={24} className="py-8 text-center text-white">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <svg
+                        className="animate-spin size-10 text-blue-500 mx-auto"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="white"
+                          strokeWidth="4"
+                        />
+                        <path
+                          fill="white"
+                          d="M4 12a8 8 0 018-8v8z"
+                        />
+                      </svg>
+                      <span>Buscando...</span>
+                    </div>
                   </td>
                 </tr>
               )}
+              {/* Mostrar resultados si existen */}
+              {results.length > 0
+                ? (results as TransactionRecord[]).map(
+                    (row: TransactionRecord, index: number) => (
+                      <TransactionTableRow
+                        key={row.id}
+                        row={row}
+                        isDeleteMode={isDeleteMode}
+                        isAsesorSelectionMode={isAsesorSelectionMode}
+                        selectedRows={selectedRows}
+                        rowsToDelete={rowsToDelete}
+                        handleInputChange={() => {
+                          /* Solo lectura en búsqueda remota */
+                        }}
+                        handleRowSelect={onRowSelect}
+                        handleDeleteSelect={handleDeleteSelect}
+                        renderCheckbox={renderCheckbox}
+                        renderAsesorSelect={renderAsesorSelect}
+                        renderInput={renderInput}
+                        getEmitidoPorClass={getEmitidoPorClass}
+                        _index={index}
+                      />
+                    )
+                  )
+                : !searchTerm && (
+                    <tr>
+                      <td
+                        colSpan={24}
+                        className="py-8 text-center text-gray-400"
+                      >
+                        No hay resultados para la búsqueda.
+                      </td>
+                    </tr>
+                  )}
             </tbody>
           </table>
         </div>
