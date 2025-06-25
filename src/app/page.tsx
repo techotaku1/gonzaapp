@@ -1,6 +1,7 @@
 import Header from '~/components/Header';
 import TransactionTableClient from '~/components/transacciones/TransactionTableClient';
 import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
+import { SWRProvider } from '~/components/SWRProvider';
 
 // Añadir configuración de no caché
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,7 @@ export const revalidate = 0;
 export default async function HomePage() {
   const initialData = await getTransactions();
   return (
-    <>
+    <SWRProvider>
       <div className="fixed top-0 left-0 z-50 w-full">
         <Header />
       </div>
@@ -17,6 +18,6 @@ export default async function HomePage() {
         initialData={initialData}
         onUpdateRecordAction={updateRecords}
       />
-    </>
+    </SWRProvider>
   );
 }
