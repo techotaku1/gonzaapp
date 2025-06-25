@@ -30,6 +30,7 @@ import ExportDateRangeModal from '../ExportDateRangeModal';
 import SearchFilters from '../filters/SearchFilters';
 import { Icons } from '../icons';
 
+import AsesorSelect from './AsesorSelect';
 import HeaderTitles from './HeaderTitles';
 import TransactionSearchRemote from './TransactionSearchRemote';
 import TransactionTableRow, { InputType } from './TransactionTableRow';
@@ -888,6 +889,18 @@ export default function TransactionTable({
               className={`flex items-center justify-center overflow-hidden rounded border px-0.5 py-0.5 text-center text-[10px] text-ellipsis ${getWidth()} table-numeric-field hover:overflow-visible hover:text-clip`}
             />
           </div>
+        );
+      }
+
+      // Usa AsesorSelect como input para el campo asesor
+      if (field === 'asesor') {
+        return (
+          <AsesorSelect
+            value={String(value ?? '')}
+            onChange={(newValue) =>
+              handleInputChange(row.id, 'asesor', newValue)
+            }
+          />
         );
       }
 

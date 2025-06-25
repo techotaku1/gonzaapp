@@ -52,3 +52,9 @@ export interface ExtendedSummaryRecord extends BaseTransactionRecord {
   createdAt?: Date;
   cuadreId: string; // <-- Agregado para exponer el id de la tabla cuadre
 }
+
+export interface AsesorRecord {
+  id: string;
+  nombre: string;
+  createdAt: Date;
+}

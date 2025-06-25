@@ -3,9 +3,10 @@
 import { revalidatePath } from 'next/cache';
 
 import { desc, eq, inArray, sql } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 
 import { db } from '~/server/db';
-import { transactions } from '~/server/db/schema';
+import { transactions, asesores } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 import type { BroadcastMessage } from '~/types/broadcast';
@@ -160,6 +161,57 @@ export async function searchTransactions(
     throw new Error(
       error instanceof Error ? error.message : 'Failed to search transactions'
     );
+  }
+}
+
+// Nueva función para obtener asesores únicos
+export async function getUniqueAsesores(): Promise<string[]> {
+  try {
+    const results = await db
+      .select({ asesor: transactions.asesor })
+      .from(transactions)
+      .groupBy(transactions.asesor);
+    // Filtrar vacíos y devolver solo los nombres únicos
+    return results
+      .map((row) => row.asesor.trim())
+      .filter((a) => a.length > 0)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  } catch (error) {
+    console.error('Error fetching unique asesores:', error);
+    return [];
+  }
+}
+
+// Obtener asesores únicos desde la tabla asesores
+export async function getAllAsesores(): Promise<string[]> {
+  try {
+    const results = await db.select().from(asesores);
+    return results
+      .map((row) => row.nombre.trim())
+      .filter((a) => a.length > 0)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  } catch (error) {
+    console.error('Error fetching asesores:', error);
+    return [];
+  }
+}
+
+export async function addAsesor(
+  nombre: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(asesores).values({
+      id: randomUUID(),
+      nombre: nombre.trim(),
+    });
+    revalidatePath('/');
+    return { success: true };
+  } catch (error) {
+    console.error('Error adding asesor:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add asesor',
+    };
   }
 }
 

@@ -61,3 +61,9 @@ export const cuadre = pgTable('cuadre', {
   referencia: varchar('referencia').notNull().default(''),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+export const asesores = pgTable('asesores', {
+  id: varchar('id').primaryKey(),
+  nombre: varchar('nombre').notNull().unique(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
