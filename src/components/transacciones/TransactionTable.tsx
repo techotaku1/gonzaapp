@@ -6,13 +6,10 @@ import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
-// Hook para escuchar cambios globales en los datos (por ejemplo, SWR)
-import { useSWRConfig } from 'swr';
-import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
-import { broadcastTransactionsUpdate } from '~/hooks/hook-swr/broadcastTransactionsUpdate';
 import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
+import { useDebouncedCallback } from '~/hooks/useDebouncedCallback';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
@@ -127,9 +124,7 @@ interface DateGroup extends Array<string | TransactionRecord[]> {
   length: 2;
 }
 
-// Definir un tipo indexable seguro para los valores de edición
-// Evita el uso de any y permite acceso dinámico por string
-
+// Replace the empty interface with a type using Record
 type EditValues = Record<
   string,
   Partial<TransactionRecord> & Record<string, unknown>
@@ -150,7 +145,6 @@ export default function TransactionTable({
 }) {
   const router = useRouter();
   const progress = useProgress();
-  const { mutate } = useSWRConfig();
   // Eliminar useState para data y filteredData, usar initialData directamente
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
@@ -181,8 +175,11 @@ export default function TransactionTable({
   // Estado para trigger de búsqueda remota
   const [searchTrigger] = useState(0);
   // Debounce para el término de búsqueda
-  const debouncedSetSearchTerm = useDebouncedCallback((value: string) => {
-    setDebouncedSearchTerm(value);
+  const debouncedSetSearchTerm = useDebouncedCallback((...args: unknown[]) => {
+    const value = args[0];
+    if (typeof value === 'string') {
+      setDebouncedSearchTerm(value);
+    }
   }, 350);
 
   // Cambia la lógica para que el indicador "Guardando cambios..." solo se muestre cuando realmente se está guardando (no cuando el usuario está editando).
@@ -251,69 +248,36 @@ export default function TransactionTable({
     }
   }, [initialData, pendingEdits]);
 
-  // Debounced flush que toma editValues como argumento
-  const debouncedFlush = useDebouncedCallback(
-    async (pendingEditsArg: EditValues) => {
-      if (Object.keys(pendingEditsArg).length === 0) return;
-      const editedIds = Object.keys(pendingEditsArg);
-      let latestRows: TransactionRecord[] = [];
+  // Callback de éxito para el guardado debounced
+  const handleSaveSuccess = useCallback(() => {
+    setIsActuallySaving(false);
+  }, [setIsActuallySaving]);
+
+  // Hook de auto-guardado debounced con SWR
+  const debouncedSave = useDebouncedSave(
+    async (records: TransactionRecord[]) => {
       try {
-        const response = await fetch(`/api/transactions`);
-        const allRows: TransactionRecord[] = await response.json();
-        latestRows = allRows.filter((row) => editedIds.includes(row.id));
-      } catch (_error) {
-        latestRows = initialData.filter((row) => editedIds.includes(row.id));
+        const result = await onUpdateRecordAction(records);
+        return result;
+      } catch (error) {
+        console.error('Error saving:', error);
+        return { success: false, error: 'Failed to save changes' };
       }
-      // Solo actualizar los campos editados de la fila, fusionando cambios locales y de la BD
-      setSelectedRows((prevSelected) =>
-        Array.from(prevSelected).reduce<Set<string>>((acc, id) => {
-          if (editedIds.includes(id)) {
-            const backendRow = latestRows.find((r) => r.id === id);
-            const edits = pendingEditsArg[id] ?? {};
-            // Si el backend no retorna la fila, mantener la fila local y solo aplicar los edits
-            const updatedRow = backendRow
-              ? { ...backendRow, ...edits }
-              : { ...edits };
-            // Si no cambió nada, mantener referencia
-            if (
-              JSON.stringify(initialData.find((r) => r.id === id)) ===
-              JSON.stringify(updatedRow)
-            ) {
-              acc.add(id);
-            } else {
-              // Si la fila ha cambiado, agregar a la selección
-              acc.add(id);
-            }
-          }
-          return acc;
-        }, new Set())
-      );
-      setIsActuallySaving(true);
-      // Solo enviar al backend los registros editados
-      const rowsToUpdate = latestRows.map((row) => ({
-        ...row,
-        ...pendingEditsArg[row.id],
-      }));
-      await onUpdateRecordAction(rowsToUpdate);
-      setIsActuallySaving(false);
-      // Limpiar el estado de edición solo de las filas editadas
-      editedIds.forEach((id) => {
-        delete pendingEdits.current[id];
-      });
     },
+    handleSaveSuccess,
     800
   );
 
   // Estado para valores en edición por fila/campo
   const [editValues, setEditValues] = useState<EditValues>({});
+  // Only declare isActuallySaving/setIsActuallySaving ONCE
 
-  // ÚNICA definición de handleInputChange
+  // handleInputChange adaptado para usar debouncedSave
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
-        // Si es campo numérico, convertir a número
         if (
           [
             'precioNeto',
@@ -326,8 +290,6 @@ export default function TransactionTable({
         ) {
           newValue = typeof value === 'string' ? Number(value) || 0 : value;
         }
-        // No modificar tarifaServicio manualmente por comisionExtra, dejar que calculateFormulas lo ajuste visualmente
-        // Solo guardar el valor editado
         const extra: Partial<TransactionRecord> = {};
         if (
           (field === 'tipoVehiculo' || field === 'cilindraje') &&
@@ -360,7 +322,19 @@ export default function TransactionTable({
           ...prev,
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
-        debouncedFlush(updated);
+
+        // Convert EditValues to TransactionRecord[] for saving
+        const recordsToUpdate = Object.entries(updated).map(
+          ([recordId, edits]) => {
+            const baseRecord =
+              initialData.find((r) => r.id === recordId) ??
+              ({} as TransactionRecord);
+            return { ...baseRecord, ...edits } as TransactionRecord;
+          }
+        );
+
+        setIsActuallySaving(true);
+        debouncedSave(recordsToUpdate);
         return updated;
       });
       // Cambio de página si cambia la fecha
@@ -378,7 +352,7 @@ export default function TransactionTable({
         }
       }
     },
-    [initialData, groupedByDate, debouncedFlush]
+    [initialData, groupedByDate, debouncedSave, setIsActuallySaving]
   );
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
@@ -478,8 +452,8 @@ export default function TransactionTable({
         setCurrentPage(1); // Volver a la primera página
         // Forzar un guardado inmediato del nuevo registro
         await handleSaveOperation([newRowWithId, ...initialData]);
-        mutate('/api/transactions'); // Refresca los datos SWR
-        broadcastTransactionsUpdate(); // Notificar a otros tabs
+        // Eliminado: mutate('/api/transactions');
+        // Eliminado: broadcastTransactionsUpdate();
       } else {
         console.error('Error creating new record:', result.error);
       }
@@ -507,7 +481,7 @@ export default function TransactionTable({
             });
             return newSelected;
           });
-          mutate('/api/transactions'); // Refresca los datos SWR
+          // Eliminado: mutate('/api/transactions');
         }
         return result;
       } catch (error: unknown) {
@@ -521,7 +495,7 @@ export default function TransactionTable({
         return { success: false, error: errorMsg };
       }
     },
-    [onUpdateRecordAction, mutate, initialData]
+    [onUpdateRecordAction, initialData]
   );
 
   // Filtros y paginación
@@ -571,13 +545,6 @@ export default function TransactionTable({
     filteredData,
     debouncedSearchTerm,
   ]);
-
-  // Limpia debounce al desmontar
-  useEffect(() => {
-    return () => {
-      debouncedFlush.cancel();
-    };
-  }, [debouncedFlush]);
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('es-CO', {
@@ -1089,8 +1056,8 @@ export default function TransactionTable({
         });
         setRowsToDelete(new Set());
         setIsDeleteMode(false);
-        mutate('/api/transactions'); // Refresca los datos SWR
-        broadcastTransactionsUpdate(); // Notificar a otros tabs
+        // Eliminado: mutate('/api/transactions');
+        // Eliminado: broadcastTransactionsUpdate();
       } else {
         alert('Error al eliminar registros');
       }
@@ -1432,23 +1399,6 @@ export default function TransactionTable({
       setIsTotalsButtonLoading(false);
     }, 400); // Duración de la animación/spinner
   }, [onToggleTotalsAction]);
-
-  // Hook para guardar cambios debounced y mergear campos
-  useDebouncedSave(
-    async (updates) => {
-      // Actualiza solo los campos modificados en la BD
-      const updatedData = initialData.map((row) => {
-        const update = updates.find((u) => u.id === row.id);
-        return update ? { ...row, ...update } : row;
-      });
-      const result = await onUpdateRecordAction(updatedData);
-      return result;
-    },
-    () => {
-      // No-op: required by useDebouncedSave signature
-    },
-    800
-  );
 
   // Actualizar el debouncedSearchTerm cuando searchTerm cambie
   useEffect(() => {

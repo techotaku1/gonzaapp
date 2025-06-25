@@ -1,71 +1,72 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { useSWRConfig } from 'swr';
-import { useDebouncedCallback } from 'use-debounce';
 
 import type { TransactionRecord } from '~/types';
 
 const CACHE_KEY = '/api/transactions';
+const DEBOUNCE_DELAY = 1000;
 
 export function useDebouncedSave(
-  onSave: (
-    records: Partial<TransactionRecord>[]
+  saveFunction: (
+    data: TransactionRecord[]
   ) => Promise<{ success: boolean; error?: string }>,
   onSuccess: () => void,
-  delay = 1000
+  delay = DEBOUNCE_DELAY
 ) {
   const { mutate } = useSWRConfig();
-  const recordsRef = useRef<Partial<TransactionRecord>[]>([]);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingDataRef = useRef<TransactionRecord[] | null>(null);
+  const isSavingRef = useRef<boolean>(false);
 
-  const debouncedSave = useDebouncedCallback(
-    async (records: Partial<TransactionRecord>[]) => {
-      try {
-        await mutate(
-          CACHE_KEY,
-          async (currentData: TransactionRecord[] | undefined) => {
-            const result = await onSave(records);
-            if (result.success) {
-              onSuccess();
-              // Fusionar los cambios con los datos actuales
-              if (currentData) {
-                return currentData.map((record) => {
-                  const updates = records.find((r) => r.id === record.id);
-                  return updates ? { ...record, ...updates } : record;
-                });
-              }
-              return currentData;
-            }
-            throw new Error(result.error ?? 'Error saving');
-          },
-          {
-            revalidate: true,
-            populateCache: true,
-          }
-        );
-      } catch (error) {
-        console.error('Error in debouncedSave:', error);
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
+    };
+  }, []);
+
+  const debouncedSave = useCallback(
+    (data: TransactionRecord[]) => {
+      pendingDataRef.current = data;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (isSavingRef.current) {
+        return;
+      }
+      timeoutRef.current = setTimeout(async () => {
+        if (!pendingDataRef.current) return;
+        isSavingRef.current = true;
+        try {
+          await mutate(
+            CACHE_KEY,
+            async () => {
+              const result = await saveFunction(pendingDataRef.current!);
+              if (result.success) {
+                onSuccess();
+                return pendingDataRef.current;
+              }
+              throw new Error(result.error ?? 'Error al guardar');
+            },
+            {
+              optimisticData: pendingDataRef.current,
+              rollbackOnError: true,
+              populateCache: true,
+              revalidate: true, // revalida para que otros clientes vean los cambios
+            }
+          );
+        } catch (error) {
+          console.error('Error saving data:', error);
+        } finally {
+          isSavingRef.current = false;
+          pendingDataRef.current = null;
+        }
+      }, delay);
     },
-    delay,
-    {
-      maxWait: 2000,
-      leading: false,
-      trailing: true,
-    }
+    [saveFunction, onSuccess, delay, mutate]
   );
 
-  const save = useCallback(
-    (updates: Partial<TransactionRecord>[]) => {
-      recordsRef.current = updates;
-      return debouncedSave(updates);
-    },
-    [debouncedSave]
-  );
-
-  return {
-    save,
-    isPending: debouncedSave.isPending,
-    flush: debouncedSave.flush,
-    cancel: debouncedSave.cancel,
-  };
+  return debouncedSave;
 }

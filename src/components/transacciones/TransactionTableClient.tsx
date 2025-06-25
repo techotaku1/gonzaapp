@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-import useSWR from 'swr';
-
 import TransactionTable from '~/components/transacciones/TransactionTable';
 
 import type { TransactionRecord } from '~/types';
@@ -17,26 +15,12 @@ export default function TransactionTableClient({
     records: TransactionRecord[]
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
-  // Usar SWR para obtener datos en tiempo real
-  const { data: transactions = initialData, mutate } = useSWR(
-    '/api/transactions',
-    async (url): Promise<TransactionRecord[]> => {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Error al obtener transacciones');
-      return (await res.json()) as TransactionRecord[];
-    },
-    { fallbackData: initialData }
-  );
   const [showTotals, setShowTotals] = useState(false);
   return (
     <main className="container mx-auto min-h-screen px-4 pt-32">
       <TransactionTable
-        initialData={transactions}
-        onUpdateRecordAction={async (records) => {
-          const result = await onUpdateRecordAction(records);
-          mutate(); // Refresca los datos después de actualizar
-          return result;
-        }}
+        initialData={initialData}
+        onUpdateRecordAction={onUpdateRecordAction}
         onToggleTotalsAction={() => setShowTotals((prev) => !prev)}
         showTotals={showTotals}
       />
