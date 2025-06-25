@@ -7,7 +7,7 @@ import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
 // Hook para escuchar cambios globales en los datos (por ejemplo, SWR)
-import useSWR, { useSWRConfig } from 'swr';
+import { useSWRConfig } from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
@@ -230,21 +230,14 @@ export default function TransactionTable({
       .map(([date, records]) => createDateGroup(date, records));
   }, [initialData, createDateGroup]);
 
-  // Usar SWR para obtener siempre la versión más reciente de la BD
-  const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
-    fallbackData: initialData,
-    revalidateOnFocus: true, // refresca al volver a la pestaña
-    refreshInterval: 5000, // refresha cada 5 segundos
-    revalidateOnReconnect: false,
-  });
+  // Eliminar el uso de SWR dentro de TransactionTable
 
   // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
   useEffect(() => {
-    if (!swrData) return;
     if (Object.keys(pendingEdits.current).length === 0) {
       setSelectedRows((prevSelected) => {
         const newSelected = new Set(prevSelected);
-        swrData.forEach((row) => {
+        initialData.forEach((row) => {
           if (newSelected.has(row.id)) {
             const existingRow = initialData.find((r) => r.id === row.id);
             // Si la fila existe en la BD pero no en initialData, agregarla a selectedRows
@@ -256,7 +249,7 @@ export default function TransactionTable({
         return newSelected;
       });
     }
-  }, [swrData, pendingEdits, initialData]);
+  }, [initialData, pendingEdits]);
 
   // Debounced flush que toma editValues como argumento
   const debouncedFlush = useDebouncedCallback(
@@ -971,11 +964,10 @@ export default function TransactionTable({
 
   // Sincronizar el estado local con la data de SWR solo si no hay ediciones pendientes
   useEffect(() => {
-    if (!swrData) return;
     if (Object.keys(pendingEdits.current).length === 0) {
       setSelectedRows((prevSelected) => {
         const newSelected = new Set(prevSelected);
-        swrData.forEach((row) => {
+        initialData.forEach((row) => {
           if (newSelected.has(row.id)) {
             const existingRow = initialData.find((r) => r.id === row.id);
             // Si la fila existe en la BD pero no en initialData, agregarla a selectedRows
@@ -987,7 +979,7 @@ export default function TransactionTable({
         return newSelected;
       });
     }
-  }, [swrData, pendingEdits, initialData]);
+  }, [initialData, pendingEdits]);
 
   // Memoize the current date group and related data
   const { currentDateGroup } = useMemo(() => {
