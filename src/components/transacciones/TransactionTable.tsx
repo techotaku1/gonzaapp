@@ -7,7 +7,7 @@ import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
 // Hook para escuchar cambios globales en los datos (por ejemplo, SWR)
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 import * as XLSX from 'xlsx';
 
@@ -150,6 +150,7 @@ export default function TransactionTable({
 }) {
   const router = useRouter();
   const progress = useProgress();
+  const { mutate } = useSWRConfig();
   const [data, setData] = useState<TransactionRecord[]>(initialData);
   const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -501,6 +502,7 @@ export default function TransactionTable({
         });
         // Forzar un guardado inmediato del nuevo registro
         await handleSaveOperation([newRowWithId, ...data]);
+        mutate('/api/transactions'); // Refresca los datos SWR
         broadcastTransactionsUpdate(); // Notificar a otros tabs
       } else {
         console.error('Error creating new record:', result.error);
@@ -517,7 +519,7 @@ export default function TransactionTable({
         const result = await onUpdateRecordAction(records);
         if (result.success) {
           setData(records);
-          broadcastTransactionsUpdate(); // Notificar a otros tabs
+          mutate('/api/transactions'); // Refresca los datos SWR
         }
         return result;
       } catch (error: unknown) {
@@ -531,7 +533,7 @@ export default function TransactionTable({
         return { success: false, error: errorMsg };
       }
     },
-    [onUpdateRecordAction]
+    [onUpdateRecordAction, mutate]
   );
 
   // Update filtered data when date filter or debouncedSearchTerm changes
@@ -1100,6 +1102,7 @@ export default function TransactionTable({
         setData(data.filter((row) => !rowsToDelete.has(row.id)));
         setRowsToDelete(new Set());
         setIsDeleteMode(false);
+        mutate('/api/transactions'); // Refresca los datos SWR
         broadcastTransactionsUpdate(); // Notificar a otros tabs
       } else {
         alert('Error al eliminar registros');
