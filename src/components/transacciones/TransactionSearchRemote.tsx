@@ -45,7 +45,11 @@ const TransactionSearchRemote: React.FC<Props> = ({
   searchTerm,
   searchTrigger,
 }) => {
-  const { data: results = [], error } = useQuery<TransactionRecord[]>({
+  const {
+    data: results = [],
+    error,
+    isFetching,
+  } = useQuery<TransactionRecord[]>({
     queryKey: ['transactions-search', searchTerm, searchTrigger],
     queryFn: async (): Promise<TransactionRecord[]> => {
       if (!searchTerm) return [];
@@ -78,9 +82,9 @@ const TransactionSearchRemote: React.FC<Props> = ({
             <HeaderTitles isDeleteMode={isDeleteMode} />
             <tbody>
               {/* Mostrar spinner mientras loading y searchTerm no está vacío */}
-              {searchTerm && !error && results.length === 0 && (
+              {searchTerm && !error && isFetching && (
                 <tr>
-                  <td colSpan={24} className="py-8 text-center text-white">
+                  <td colSpan={24} className="py-8 text-center">
                     <div className="flex flex-col items-start justify-center gap-2">
                       <svg
                         className="size-10 animate-spin text-blue-500"
@@ -99,6 +103,17 @@ const TransactionSearchRemote: React.FC<Props> = ({
                       </svg>
                       <span className="text-purple-600">Buscando...</span>
                     </div>
+                  </td>
+                </tr>
+              )}
+              {/* Mostrar mensaje si no hay resultados después de buscar */}
+              {searchTerm && !error && !isFetching && results.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={24}
+                    className="py-8 pl-4 text-left text-purple-600"
+                  >
+                    No se encontró nada.
                   </td>
                 </tr>
               )}
