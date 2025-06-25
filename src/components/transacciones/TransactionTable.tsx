@@ -151,8 +151,7 @@ export default function TransactionTable({
   const router = useRouter();
   const progress = useProgress();
   const { mutate } = useSWRConfig();
-  const [data, setData] = useState<TransactionRecord[]>(initialData);
-  const [filteredData, setFilteredData] = useState<TransactionRecord[]>(data);
+  // Eliminar useState para data y filteredData, usar initialData directamente
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [totalSelected, setTotalSelected] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -210,7 +209,7 @@ export default function TransactionTable({
   // Agrupación por fecha
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
-    const dataToGroup = [...filteredData];
+    const dataToGroup = [...initialData];
     dataToGroup.forEach((record) => {
       if (!(record.fecha instanceof Date)) return;
       const dateKey = getDateKey(record.fecha);
@@ -229,7 +228,7 @@ export default function TransactionTable({
     return Array.from(groups.entries())
       .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
       .map(([date, records]) => createDateGroup(date, records));
-  }, [filteredData, createDateGroup]);
+  }, [initialData, createDateGroup]);
 
   // Usar SWR para obtener siempre la versión más reciente de la BD
   const { data: swrData } = useSWR<TransactionRecord[]>('/api/transactions', {
@@ -243,22 +242,21 @@ export default function TransactionTable({
   useEffect(() => {
     if (!swrData) return;
     if (Object.keys(pendingEdits.current).length === 0) {
-      setData((prevData) => {
-        // Solo actualiza filas nuevas, eliminadas o con cambios, pero mantiene la referencia de las filas no cambiadas
-        const prevMap = new Map(prevData.map((row) => [row.id, row]));
-        // Mantener referencia de filas no cambiadas
-        const merged = swrData.map((row) => {
-          const prev = prevMap.get(row.id);
-          // Si la fila es igual (shallow), mantener referencia
-          if (prev && JSON.stringify(prev) === JSON.stringify(row)) {
-            return prev;
+      setSelectedRows((prevSelected) => {
+        const newSelected = new Set(prevSelected);
+        swrData.forEach((row) => {
+          if (newSelected.has(row.id)) {
+            const existingRow = initialData.find((r) => r.id === row.id);
+            // Si la fila existe en la BD pero no en initialData, agregarla a selectedRows
+            if (!existingRow) {
+              newSelected.add(row.id);
+            }
           }
-          return row;
         });
-        return merged;
+        return newSelected;
       });
     }
-  }, [swrData, pendingEdits]);
+  }, [swrData, pendingEdits, initialData]);
 
   // Debounced flush que toma editValues como argumento
   const debouncedFlush = useDebouncedCallback(
@@ -271,26 +269,31 @@ export default function TransactionTable({
         const allRows: TransactionRecord[] = await response.json();
         latestRows = allRows.filter((row) => editedIds.includes(row.id));
       } catch (_error) {
-        latestRows = data.filter((row) => editedIds.includes(row.id));
+        latestRows = initialData.filter((row) => editedIds.includes(row.id));
       }
       // Solo actualizar los campos editados de la fila, fusionando cambios locales y de la BD
-      setData((prevData) =>
-        prevData.map((row) => {
-          if (editedIds.includes(row.id)) {
-            const backendRow = latestRows.find((r) => r.id === row.id);
-            const edits = pendingEditsArg[row.id] ?? {};
+      setSelectedRows((prevSelected) =>
+        Array.from(prevSelected).reduce<Set<string>>((acc, id) => {
+          if (editedIds.includes(id)) {
+            const backendRow = latestRows.find((r) => r.id === id);
+            const edits = pendingEditsArg[id] ?? {};
             // Si el backend no retorna la fila, mantener la fila local y solo aplicar los edits
             const updatedRow = backendRow
-              ? { ...backendRow, ...row, ...edits }
-              : { ...row, ...edits };
+              ? { ...backendRow, ...edits }
+              : { ...edits };
             // Si no cambió nada, mantener referencia
-            if (JSON.stringify(row) === JSON.stringify(updatedRow)) {
-              return row;
+            if (
+              JSON.stringify(initialData.find((r) => r.id === id)) ===
+              JSON.stringify(updatedRow)
+            ) {
+              acc.add(id);
+            } else {
+              // Si la fila ha cambiado, agregar a la selección
+              acc.add(id);
             }
-            return updatedRow;
           }
-          return row;
-        })
+          return acc;
+        }, new Set())
       );
       setIsActuallySaving(true);
       // Solo enviar al backend los registros editados
@@ -338,20 +341,20 @@ export default function TransactionTable({
           (field === 'tipoVehiculo'
             ? newValue
             : prevEdits.tipoVehiculo ||
-              data.find((r) => r.id === id)?.tipoVehiculo)
+              initialData.find((r) => r.id === id)?.tipoVehiculo)
         ) {
           const tipoVehiculo =
             field === 'tipoVehiculo'
               ? newValue
               : (prevEdits.tipoVehiculo ??
-                data.find((r) => r.id === id)?.tipoVehiculo);
+                initialData.find((r) => r.id === id)?.tipoVehiculo);
           const cilindraje =
             field === 'cilindraje'
               ? newValue
               : typeof prevEdits.cilindraje === 'number' ||
                   prevEdits.cilindraje === null
                 ? prevEdits.cilindraje
-                : data.find((r) => r.id === id)?.cilindraje;
+                : initialData.find((r) => r.id === id)?.cilindraje;
           const soatPrice = calculateSoatPrice(
             tipoVehiculo as string,
             cilindraje as number | null
@@ -382,12 +385,12 @@ export default function TransactionTable({
         }
       }
     },
-    [data, groupedByDate, debouncedFlush]
+    [initialData, groupedByDate, debouncedFlush]
   );
 
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
-    const record = data.find((r) => r.id === id);
+    const record = initialData.find((r) => r.id === id);
 
     if (newSelected.has(id)) {
       newSelected.delete(id);
@@ -401,16 +404,17 @@ export default function TransactionTable({
     setSelectedRows(newSelected);
   };
 
+  // Actualizar el total seleccionado cuando cambian los datos o la selección
   useEffect(() => {
     const total = Array.from(selectedRows).reduce((sum, id) => {
-      const record = data.find((r) => r.id === id);
+      const record = initialData.find((r) => r.id === id);
       return sum + (record?.precioNeto ?? 0);
     }, 0);
     setTotalSelected(total);
-  }, [selectedRows, data]);
+  }, [selectedRows, initialData]);
 
   const handlePay = async () => {
-    const updatedData = data.map((record) => {
+    const updatedData = initialData.map((record) => {
       if (selectedRows.has(record.id)) {
         return {
           ...record,
@@ -422,7 +426,6 @@ export default function TransactionTable({
     });
 
     await onUpdateRecordAction(updatedData);
-    setData(updatedData);
     setSelectedRows(new Set());
   };
 
@@ -464,44 +467,24 @@ export default function TransactionTable({
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
         const newRowWithId = { ...newRow, id: newRowId };
-        setData((prevData) => {
-          // Insertar la nueva fila en la posición correcta según la hora (más reciente arriba)
-          const updatedData = [newRowWithId, ...prevData];
-          // Reordenar el grupo de la fecha correspondiente
-          const dateKey = getDateKey(colombiaDate);
-          const groups = new Map<string, TransactionRecord[]>();
-          updatedData.forEach((record) => {
-            if (!(record.fecha instanceof Date)) return;
-            const key = getDateKey(record.fecha);
-            if (!key) return;
-            const existingGroup = groups.get(key) ?? [];
-            groups.set(key, [...existingGroup, record]);
-          });
-          // Ordenar cada grupo por hora ascendente (más reciente arriba)
-          groups.forEach((records, key) => {
-            const sortedRecords = records.sort((a, b) => {
-              const dateA = toColombiaDate(new Date(b.fecha));
-              const dateB = toColombiaDate(new Date(a.fecha));
-              return dateA.getTime() - dateB.getTime();
-            });
-            groups.set(key, sortedRecords);
-          });
-          // Reconstruir el array plano ordenado por fecha y hora
-          const sortedGroups = Array.from(groups.entries()).sort(
-            ([dateA], [dateB]) => dateB.localeCompare(dateA)
-          );
-          const flatSorted = sortedGroups.flatMap(([_, records]) => records);
-          // Cambiar de página al grupo de la fecha de la nueva fila
-          const groupIndex = sortedGroups.findIndex(
-            ([gDate]) => gDate === dateKey
-          );
-          if (groupIndex !== -1) {
-            setCurrentPage(groupIndex + 1);
+        // Insertar la nueva fila en initialData y mantener la paginación
+        const dateKey = getDateKey(colombiaDate);
+        const newGroupedData = groupedByDate.map((group) => {
+          if (group[0] === dateKey) {
+            return [group[0], [newRowWithId, ...group[1]]];
           }
-          return flatSorted;
+          return group;
         });
+
+        // Si no existe el grupo, agregarlo
+        if (!newGroupedData.find((group) => group[0] === dateKey)) {
+          newGroupedData.unshift(createDateGroup(dateKey, [newRowWithId]));
+        }
+
+        // Actualizar el estado de la tabla
+        setCurrentPage(1); // Volver a la primera página
         // Forzar un guardado inmediato del nuevo registro
-        await handleSaveOperation([newRowWithId, ...data]);
+        await handleSaveOperation([newRowWithId, ...initialData]);
         mutate('/api/transactions'); // Refresca los datos SWR
         broadcastTransactionsUpdate(); // Notificar a otros tabs
       } else {
@@ -518,7 +501,19 @@ export default function TransactionTable({
       try {
         const result = await onUpdateRecordAction(records);
         if (result.success) {
-          setData(records);
+          setSelectedRows((prevSelected) => {
+            const newSelected = new Set(prevSelected);
+            records.forEach((record) => {
+              if (newSelected.has(record.id)) {
+                const existingRow = initialData.find((r) => r.id === record.id);
+                // Si la fila existe en la BD pero no en initialData, agregarla a selectedRows
+                if (!existingRow) {
+                  newSelected.add(record.id);
+                }
+              }
+            });
+            return newSelected;
+          });
           mutate('/api/transactions'); // Refresca los datos SWR
         }
         return result;
@@ -533,13 +528,13 @@ export default function TransactionTable({
         return { success: false, error: errorMsg };
       }
     },
-    [onUpdateRecordAction, mutate]
+    [onUpdateRecordAction, mutate, initialData]
   );
 
-  // Update filtered data when date filter or debouncedSearchTerm changes
-  useEffect(() => {
+  // Filtros y paginación
+  const filteredData = useMemo(() => {
     if (dateFilter.startDate && dateFilter.endDate) {
-      const filtered = data.filter((record) => {
+      const filtered = initialData.filter((record) => {
         const recordDate = getColombiaDate(new Date(record.fecha));
         if (dateFilter.startDate && dateFilter.endDate) {
           const startDate = getColombiaDate(dateFilter.startDate);
@@ -550,28 +545,25 @@ export default function TransactionTable({
         }
         return true;
       });
-      setFilteredData(filtered);
       setHasSearchResults(filtered.length > 0);
+      return filtered;
     } else if (debouncedSearchTerm) {
-      // Si hay búsqueda, filtrar por búsqueda
       const search = debouncedSearchTerm.toLowerCase();
-      const filtered = data.filter((item) =>
+      const filtered = initialData.filter((item) =>
         Object.entries(item).some(([key, value]) => {
           if (key === 'fecha' || value === null) return false;
           return String(value).toLowerCase().includes(search);
         })
       );
-      setFilteredData(filtered);
       setHasSearchResults(filtered.length > 0);
+      return filtered;
     } else {
-      setFilteredData(data);
-      setHasSearchResults(data.length > 0);
+      setHasSearchResults(initialData.length > 0);
+      return initialData;
     }
-  }, [data, dateFilter, debouncedSearchTerm]);
+  }, [initialData, dateFilter, debouncedSearchTerm]);
 
-  // Tipar paginatedData and map de tbody
   const paginatedData: TransactionRecord[] = useMemo(() => {
-    // Si hay búsqueda o filtro de fechas, mostrar todos los resultados filtrados sin paginación
     if (debouncedSearchTerm || (dateFilter.startDate && dateFilter.endDate)) {
       return filteredData;
     }
@@ -981,22 +973,21 @@ export default function TransactionTable({
   useEffect(() => {
     if (!swrData) return;
     if (Object.keys(pendingEdits.current).length === 0) {
-      setData((prevData) => {
-        // Solo actualiza filas nuevas, eliminadas o con cambios, pero mantiene la referencia de las filas no cambiadas
-        const prevMap = new Map(prevData.map((row) => [row.id, row]));
-        // Mantener referencia de filas no cambiadas
-        const merged = swrData.map((row) => {
-          const prev = prevMap.get(row.id);
-          // Si la fila es igual (shallow), mantener referencia
-          if (prev && JSON.stringify(prev) === JSON.stringify(row)) {
-            return prev;
+      setSelectedRows((prevSelected) => {
+        const newSelected = new Set(prevSelected);
+        swrData.forEach((row) => {
+          if (newSelected.has(row.id)) {
+            const existingRow = initialData.find((r) => r.id === row.id);
+            // Si la fila existe en la BD pero no en initialData, agregarla a selectedRows
+            if (!existingRow) {
+              newSelected.add(row.id);
+            }
           }
-          return row;
         });
-        return merged;
+        return newSelected;
       });
     }
-  }, [swrData, pendingEdits]);
+  }, [swrData, pendingEdits, initialData]);
 
   // Memoize the current date group and related data
   const { currentDateGroup } = useMemo(() => {
@@ -1099,7 +1090,11 @@ export default function TransactionTable({
     if (confirm(`¿Está seguro de eliminar ${rowsToDelete.size} registros?`)) {
       const result = await deleteRecords(Array.from(rowsToDelete));
       if (result.success) {
-        setData(data.filter((row) => !rowsToDelete.has(row.id)));
+        setSelectedRows((prevSelected) => {
+          const newSelected = new Set(prevSelected);
+          rowsToDelete.forEach((id) => newSelected.delete(id));
+          return newSelected;
+        });
         setRowsToDelete(new Set());
         setIsDeleteMode(false);
         mutate('/api/transactions'); // Refresca los datos SWR
@@ -1143,7 +1138,7 @@ export default function TransactionTable({
         end.setHours(23, 59, 59, 999);
 
         // Filtrar los datos usando las fechas en la zona horaria de Colombia
-        const filteredData = data.filter((record) => {
+        const filteredData = initialData.filter((record) => {
           // Convertir la fecha del registro a fecha Colombia
           const recordDate = new Date(record.fecha);
           const colombiaDate = new Date(
@@ -1269,13 +1264,12 @@ export default function TransactionTable({
         }
       }
     },
-    [data]
+    [initialData]
   );
 
   // Memoize the filter callback
   const handleFilterData = useCallback(
     (results: TransactionRecord[], searchValue?: string) => {
-      setFilteredData(results);
       setHasSearchResults(results.length > 0);
       if (typeof searchValue === 'string') {
         setSearchTermAction(searchValue);
@@ -1427,7 +1421,7 @@ export default function TransactionTable({
     }
   }, []);
 
-  const handleNavigateToCuadre = useCallback(() => {
+  const handleNavigate to=Cuadre = useCallback(() => {
     setIsNavigatingToCuadre(true);
     setZoom(0.5); // Hace zoom out
     setTimeout(() => {
@@ -1451,7 +1445,7 @@ export default function TransactionTable({
   useDebouncedSave(
     async (updates) => {
       // Actualiza solo los campos modificados en la BD
-      const updatedData = data.map((row) => {
+      const updatedData = initialData.map((row) => {
         const update = updates.find((u) => u.id === row.id);
         return update ? { ...row, ...update } : row;
       });
@@ -1798,7 +1792,7 @@ export default function TransactionTable({
         {/* Mover SearchFilters aquí, justo debajo de los botones principales y arriba de la tabla */}
         {!showTotals && (
           <SearchFilters
-            data={data}
+            data={initialData}
             onFilterAction={handleFilterData}
             onDateFilterChangeAction={handleDateFilterChange}
             onToggleAsesorSelectionAction={handleToggleAsesorMode}
@@ -1932,7 +1926,7 @@ export default function TransactionTable({
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
         {/* (Eliminado el segundo SearchFilters aquí) */}
 
-        {showTotals ? <TransactionTotals transactions={data} /> : null}
+        {showTotals ? <TransactionTotals transactions={initialData} /> : null}
 
         {!showTotals &&
           !searchTerm &&
