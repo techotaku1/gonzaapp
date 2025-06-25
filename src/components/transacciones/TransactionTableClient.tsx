@@ -28,7 +28,7 @@ export default function TransactionTableClient({
   );
   const [showTotals, setShowTotals] = useState(false);
   return (
-    <main className="container mx-auto min-h-screen pt-32 px-4">
+    <main className="container mx-auto min-h-screen px-4 pt-32">
       <TransactionTable
         initialData={transactions}
         onUpdateRecordAction={async (records) => {
