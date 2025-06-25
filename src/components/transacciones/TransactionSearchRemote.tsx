@@ -81,9 +81,9 @@ const TransactionSearchRemote: React.FC<Props> = ({
               {searchTerm && !error && results.length === 0 && (
                 <tr>
                   <td colSpan={24} className="py-8 text-center text-white">
-                    <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="flex flex-col items-start justify-center gap-2">
                       <svg
-                        className="animate-spin size-10 text-blue-500 mx-auto"
+                        className="size-10 animate-spin text-blue-500"
                         viewBox="0 0 24 24"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
@@ -92,15 +92,12 @@ const TransactionSearchRemote: React.FC<Props> = ({
                           cx="12"
                           cy="12"
                           r="10"
-                          stroke="white"
+                          stroke="purple"
                           strokeWidth="4"
                         />
-                        <path
-                          fill="white"
-                          d="M4 12a8 8 0 018-8v8z"
-                        />
+                        <path fill="blue" d="M4 12a8 8 0 018-8v8z" />
                       </svg>
-                      <span>Buscando...</span>
+                      <span className="text-purple-600">Buscando...</span>
                     </div>
                   </td>
                 </tr>
