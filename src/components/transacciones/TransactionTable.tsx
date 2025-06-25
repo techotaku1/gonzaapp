@@ -1421,7 +1421,7 @@ export default function TransactionTable({
     }
   }, []);
 
-  const handleNavigate to=Cuadre = useCallback(() => {
+  const handleNavigateToCuadre = useCallback(() => {
     setIsNavigatingToCuadre(true);
     setZoom(0.5); // Hace zoom out
     setTimeout(() => {

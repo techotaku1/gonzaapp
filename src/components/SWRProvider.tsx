@@ -2,7 +2,10 @@
 
 import { SWRConfig } from 'swr';
 
-import { swrConfig } from '~/config/swr';
+const swrConfig = {
+  revalidateOnFocus: true,
+  revalidateOnReconnect: true,
+};
 
 export function SWRProvider({ children }: { children: React.ReactNode }) {
   return <SWRConfig value={swrConfig}>{children}</SWRConfig>;
