@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+
 import useSWR from 'swr';
 
 import TransactionTable from '~/components/transacciones/TransactionTable';
@@ -19,10 +20,10 @@ export default function TransactionTableClient({
   // Usar SWR para obtener datos en tiempo real
   const { data: transactions = initialData, mutate } = useSWR(
     '/api/transactions',
-    async (url) => {
+    async (url): Promise<TransactionRecord[]> => {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Error al obtener transacciones');
-      return res.json();
+      return (await res.json()) as TransactionRecord[];
     },
     { fallbackData: initialData }
   );

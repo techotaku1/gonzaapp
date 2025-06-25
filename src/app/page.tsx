@@ -1,7 +1,7 @@
 import Header from '~/components/Header';
+import { SWRProvider } from '~/components/SWRProvider';
 import TransactionTableClient from '~/components/transacciones/TransactionTableClient';
 import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
-import { SWRProvider } from '~/components/SWRProvider';
 
 // Añadir configuración de no caché
 export const dynamic = 'force-dynamic';

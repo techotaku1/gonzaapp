@@ -2,11 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { desc, eq, inArray, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
+import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { transactions, asesores } from '~/server/db/schema';
+import { asesores, transactions } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 import type { BroadcastMessage } from '~/types/broadcast';

@@ -1,6 +1,8 @@
 import { useCallback, useRef } from 'react';
+
 import { useSWRConfig } from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
+
 import type { TransactionRecord } from '~/types';
 
 const CACHE_KEY = '/api/transactions';
