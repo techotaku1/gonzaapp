@@ -71,6 +71,7 @@ const getEmitidoPorClass = (value: string): string => {
   if (value.includes('Mundial nave')) return 'emitido-por-mundial-nave';
   if (value.includes('Mundial fel')) return 'emitido-por-mundial-fel';
   if (value.includes('No Emitir')) return 'emitido-por-no-emitir';
+  if (value.includes('HH')) return 'emitido-por-hh'; // Nueva clase para HH
   return '';
 };
 
@@ -92,6 +93,7 @@ const emitidoPorOptions = [
   'Mundial nave',
   'Mundial fel',
   'No Emitir',
+  'HH', // Nueva opción
 ] as const;
 
 type EmitidoPorOption = (typeof emitidoPorOptions)[number];

@@ -297,7 +297,7 @@ select.table-select-base option {
     var(--color-blue-400) 100%,
     transparent
   );
-  color: var(--color-blue-900);
+  color: var(--color-blue-800);
 }
 
 @utility emitido-por-panel-william {
@@ -311,7 +311,7 @@ select.table-select-base option {
     var(--color-purple-300) 100%,
     transparent
   );
-  color: var(--color-purple-900);
+  color: var(--color-purple-800);
 }
 
 @utility emitido-por-panel-sebas {
@@ -338,7 +338,7 @@ select.table-select-base option {
     var(--color-fuchsia-300) 100%,
     transparent
   );
-  color: var(--color-fuchsia-900);
+  color: var(--color-fuchsia-800);
 }
 
 @utility emitido-por-previ-publica {
@@ -383,7 +383,7 @@ select.table-select-base option {
     var(--color-orange-300) 100%,
     transparent
   );
-  color: var(--color-orange-900);
+  color: var(--color-orange-800);
 }
 
 @utility emitido-por-axa-gloria {
@@ -418,13 +418,22 @@ select.table-select-base option {
   color: var(--color-violet-800);
 }
 
+@utility emitido-por-hh {
+  background-color: color-mix(
+    in oklch,
+    var(--color-brown-300) 100%,
+    transparent
+  );
+  color: var(--color-brown-800);
+}
+
 @utility emitido-por-no-emitir {
   background-color: color-mix(
     in oklch,
-    var(--color-gray-600) 100%,
+    var(--color-gray-300) 100%,
     transparent
   );
-  color: var(--color-gray-900);
+  color: var(--color-gray-800);
 }
 
 @layer components {
@@ -832,5 +841,5 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   font-family: var(--font-table-text);
   font-size: 0.65rem;
   line-height: 1;
-  padding-left: 0.50rem;
+  padding-left: 0.5rem;
 }
