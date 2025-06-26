@@ -333,7 +333,10 @@ export function useTransactionTableLogic(props: {
         } else {
           setCurrentPage(1);
         }
-        await handleSaveOperation([{ ...newRow, id: newRowId }, ...props.initialData]);
+        await handleSaveOperation([
+          { ...newRow, id: newRowId },
+          ...props.initialData,
+        ]);
       } else {
         console.error('Error creating new record:', result.error);
       }
@@ -376,7 +379,9 @@ export function useTransactionTableLogic(props: {
     },
     [initialData, onUpdateRecordAction]
   );
+  // Cambia filteredData para que NO dependa de editValues ni de ningún estado de edición
   const filteredData = useMemo(() => {
+    // Solo filtra por fecha o búsqueda, nunca por edición
     if (dateFilter.startDate && dateFilter.endDate) {
       const filtered = props.initialData.filter((record) => {
         const recordDate = getColombiaDate(new Date(record.fecha));
@@ -406,20 +411,32 @@ export function useTransactionTableLogic(props: {
       return props.initialData;
     }
   }, [props.initialData, dateFilter, debouncedSearchTerm]);
+  // paginatedData: nunca debe depender de editValues ni de ningún estado de edición
   const paginatedData: TransactionRecord[] = useMemo(() => {
+    // Aplica los edits locales SOLO para mostrar, pero nunca filtra el array
+    const edits = editValues;
+    let baseData: TransactionRecord[] = [];
+
     if (debouncedSearchTerm || (dateFilter.startDate && dateFilter.endDate)) {
-      return filteredData;
+      baseData = filteredData;
+    } else {
+      const currentGroup = groupedByDate[currentPage - 1] as
+        | DateGroup
+        | undefined;
+      baseData = currentGroup ? currentGroup.records : [];
     }
-    const currentGroup = groupedByDate[currentPage - 1] as
-      | DateGroup
-      | undefined;
-    return currentGroup ? currentGroup.records : [];
+
+    // Aplica los edits locales a cada registro, pero nunca filtra
+    return baseData.map((row) =>
+      edits[row.id] ? { ...row, ...edits[row.id] } : row
+    );
   }, [
     groupedByDate,
     currentPage,
     dateFilter,
     filteredData,
     debouncedSearchTerm,
+    editValues,
   ]);
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('es-CO', {
