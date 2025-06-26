@@ -4,9 +4,24 @@ import { es } from 'date-fns/locale';
 
 const TIMEZONE = 'America/Bogota';
 
+// Obtiene la fecha y hora exacta de Colombia como TZDate
 export const getColombiaDate = (date: Date): TZDate => {
-  // Convierte cualquier fecha a la hora de Bogotá usando TZDate
-  return new TZDate(date, TIMEZONE);
+  // Usa TZDate.tz para obtener la fecha en la zona horaria de Colombia
+  return TZDate.tz(TIMEZONE, date);
+};
+
+// Obtiene la fecha y hora exacta de Colombia como Date estándar (útil para guardar en DB)
+export const getColombiaDateAsDate = (date: Date): Date => {
+  const tzDate = getColombiaDate(date);
+  return new Date(
+    tzDate.getFullYear(),
+    tzDate.getMonth(),
+    tzDate.getDate(),
+    tzDate.getHours(),
+    tzDate.getMinutes(),
+    tzDate.getSeconds(),
+    tzDate.getMilliseconds()
+  );
 };
 
 export const formatColombiaDate = (date: Date): string => {

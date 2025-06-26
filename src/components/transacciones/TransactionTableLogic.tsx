@@ -8,7 +8,7 @@ import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
-import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
+import { getColombiaDate, getColombiaDateAsDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateSoatPrice } from '~/utils/soatPricing';
 
 import AsesorSelect from './AsesorSelect';
@@ -289,22 +289,8 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual en zona Colombia
-      // Siempre crea el registro con la fecha de HOY en Colombia (no la de ayer)
-      const now = new Date();
-      // Obtener la fecha actual en Colombia (YYYY-MM-DD)
-      const colombiaNow = new Date(
-        now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-      );
-      // Forzar la fecha a hoy en Colombia, pero mantener la hora actual de Colombia
-      const year = colombiaNow.getFullYear();
-      const month = colombiaNow.getMonth();
-      const day = colombiaNow.getDate();
-      const hour = colombiaNow.getHours();
-      const minute = colombiaNow.getMinutes();
-      const second = colombiaNow.getSeconds();
-      // Crea la fecha/hora de Colombia, pero siempre con el día de hoy en Colombia
-      const fechaColombia = new Date(year, month, day, hour, minute, second, 0);
+      // Obtener la fecha y hora actual en zona Colombia usando utilitario
+      const fechaColombia = getColombiaDateAsDate(new Date());
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
