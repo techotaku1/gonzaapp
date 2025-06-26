@@ -1,5 +1,5 @@
 import Header from '~/components/Header';
-import { SWRProvider } from '~/components/SWRProvider';
+import { SWRProvider } from '~/components/swr/SWRProvider';
 import TransactionTableClient from '~/components/transacciones/TransactionTableClient';
 import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
 
