@@ -289,21 +289,35 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Opción 1: Restar 5 horas manualmente para obtener la hora real de Colombia
+      // Obtener la fecha y hora actual en zona Colombia en formato 12 horas
       const now = new Date();
-      const colombiaNow = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-
-      // Opción 2 (alternativa): Si quieres usar date-fns-tz, asegúrate que getColombiaDate(date) devuelva la hora real de Colombia
-      // const colombiaNow = getColombiaDate(new Date());
-
-      // El resto igual, para que la paginación funcione por día Colombia
-      const year = colombiaNow.getFullYear();
-      const month = colombiaNow.getMonth();
-      const day = colombiaNow.getDate();
-      const hour = colombiaNow.getHours();
-      const minute = colombiaNow.getMinutes();
-      const second = colombiaNow.getSeconds();
-      const fechaColombia = new Date(year, month, day, hour, minute, second, 0);
+      const colombiaString = now.toLocaleString('en-CA', {
+        timeZone: 'America/Bogota',
+        hour12: true,
+      });
+      // Ejemplo: '2025-06-26, 04:11:00 a.m.'
+      const [datePart, timePartRaw] = colombiaString.split(',').map(s => s.trim());
+      let fechaColombia: Date;
+      if (datePart && timePartRaw) {
+        // Separar hora, minutos, segundos y AM/PM
+        const timeMatch = /^(\d{2}):(\d{2}):(\d{2})\s*([ap]\.m\.)$/i.exec(timePartRaw);
+        if (timeMatch) {
+          let hour = parseInt(timeMatch[1], 10);
+          const minute = parseInt(timeMatch[2], 10);
+          const second = parseInt(timeMatch[3], 10);
+          const ampm = timeMatch[4].toLowerCase();
+          if (ampm.includes('p') && hour !== 12) hour += 12;
+          if (ampm.includes('a') && hour === 12) hour = 0;
+          // Construir fecha en formato local
+          const [year, month, day] = datePart.split('-').map(Number);
+          fechaColombia = new Date(year, month - 1, day, hour, minute, second, 0);
+        } else {
+          // Fallback: usar la opción anterior (menos precisa)
+          fechaColombia = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+        }
+      } else {
+        fechaColombia = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+      }
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
