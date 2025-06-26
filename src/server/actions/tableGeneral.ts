@@ -6,18 +6,39 @@ import { randomUUID } from 'crypto';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { asesores, transactions } from '~/server/db/schema';
+import { asesores,transactions } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
-import type { BroadcastMessage } from '~/types/broadcast';
+
+// Utilidad para reintentos (igual que en tu otro proyecto)
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  retries = 5,
+  initialDelay = 1000
+): Promise<T> {
+  let lastError;
+  for (let i = 0; i < retries; i++) {
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Operation timed out')), 30000);
+      });
+      return (await Promise.race([operation(), timeoutPromise])) as T;
+    } catch (error) {
+      lastError = error;
+      if (i < retries - 1) {
+        const delay = initialDelay * Math.pow(2, i);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }
+  throw lastError;
+}
 
 export async function getTransactions(): Promise<TransactionRecord[]> {
   try {
-    const results = await db
-      .select()
-      .from(transactions)
-      .orderBy(desc(transactions.fecha));
-
+    const results = await withRetry(() =>
+      db.select().from(transactions).orderBy(desc(transactions.fecha))
+    );
     return results.map((record) => ({
       ...record,
       fecha: new Date(record.fecha),
@@ -111,7 +132,6 @@ export async function deleteRecords(
   try {
     await db.delete(transactions).where(inArray(transactions.id, ids));
     revalidatePath('/');
-    broadcastUpdate('DELETE', ids);
     return { success: true };
   } catch (error) {
     console.error('Error deleting records:', error);
@@ -123,7 +143,7 @@ export async function deleteRecords(
   }
 }
 
-// Nueva función para búsqueda remota
+// Búsqueda remota (opcional, igual que en tu otro proyecto)
 export async function searchTransactions(
   query: string
 ): Promise<TransactionRecord[]> {
@@ -163,31 +183,11 @@ export async function searchTransactions(
     );
   }
 }
-
-// Nueva función para obtener asesores únicos
-export async function getUniqueAsesores(): Promise<string[]> {
-  try {
-    const results = await db
-      .select({ asesor: transactions.asesor })
-      .from(transactions)
-      .groupBy(transactions.asesor);
-    // Filtrar vacíos y devolver solo los nombres únicos
-    return results
-      .map((row) => row.asesor.trim())
-      .filter((a) => a.length > 0)
-      .sort((a, b) => a.localeCompare(b, 'es'));
-  } catch (error) {
-    console.error('Error fetching unique asesores:', error);
-    return [];
-  }
-}
-
-// Obtener asesores únicos desde la tabla asesores
 export async function getAllAsesores(): Promise<string[]> {
   try {
     const results = await db.select().from(asesores);
     return results
-      .map((row) => row.nombre.trim())
+      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
       .filter((a) => a.length > 0)
       .sort((a, b) => a.localeCompare(b, 'es'));
   } catch (error) {
@@ -212,28 +212,5 @@ export async function addAsesor(
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add asesor',
     };
-  }
-}
-
-function broadcastUpdate(
-  type: BroadcastMessage['type'],
-  data: TransactionRecord[] | string[]
-): void {
-  try {
-    let baseUrl = process.env.NEXT_PUBLIC_URL_BASE ?? 'http://localhost:3000';
-    if (!/^https?:\/\//.test(baseUrl)) {
-      baseUrl = `http://${baseUrl}`;
-    }
-    const url = `${baseUrl.replace(/\/$/, '')}/api/broadcast`;
-    // Fire and forget: no await
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, data }),
-    }).catch((error) => {
-      console.error('Error broadcasting update:', error);
-    });
-  } catch (error) {
-    console.error('Error broadcasting update:', error);
   }
 }
