@@ -39,12 +39,12 @@ export default function TransactionTableClient({
     }
   );
 
-  // Cuando guardes, actualiza el caché SWR para todos los dispositivos
+  // Cuando guardes, actualiza el caché SWR global y revalida para todos los dispositivos
   const handleUpdateRecords = async (records: TransactionRecord[]) => {
     const result = await onUpdateRecordAction(records);
     if (result.success) {
-      // Actualiza el caché local y de otros dispositivos
-      await mutate();
+      // Forzar revalidación global y actualización en todos los dispositivos
+      await mutate(undefined, { revalidate: true });
     }
     return result;
   };

@@ -46,15 +46,16 @@ export function useDebouncedSave(
               const result = await saveFunction(pendingDataRef.current!);
               if (result.success) {
                 onSuccess();
-                return pendingDataRef.current;
+                // No retornes datos aquí, deja que SWR revalide desde el backend
+                return undefined;
               }
               throw new Error(result.error ?? 'Error al guardar');
             },
             {
-              optimisticData: pendingDataRef.current,
+              // No uses optimisticData ni populateCache para evitar inconsistencias
               rollbackOnError: true,
-              populateCache: true,
               revalidate: true, // revalida para que otros clientes vean los cambios
+              populateCache: false,
             }
           );
         } catch (error) {
