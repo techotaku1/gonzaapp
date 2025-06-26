@@ -2,21 +2,10 @@
 
 import { useState } from 'react';
 
-import useSWR from 'swr';
-
 import TransactionTable from '~/components/transacciones/TransactionTable';
+import { useAppData } from '~/hooks/useAppData';
 
 import type { TransactionRecord } from '~/types';
-
-const CACHE_KEY = '/api/transactions';
-
-const fetcher = async (): Promise<TransactionRecord[]> => {
-  const res = await fetch(CACHE_KEY);
-  if (!res.ok) throw new Error('Error fetching transactions');
-  // For type safety, ensure the result is TransactionRecord[]
-  const data = await res.json();
-  return data as TransactionRecord[];
-};
 
 export default function TransactionTableClient({
   initialData,
@@ -29,22 +18,14 @@ export default function TransactionTableClient({
 }) {
   const [showTotals, setShowTotals] = useState(false);
 
-  // SWR para datos en tiempo real
-  const { data, mutate, isLoading } = useSWR<TransactionRecord[]>(
-    CACHE_KEY,
-    fetcher,
-    {
-      fallbackData: initialData,
-      refreshInterval: 2000, // refresca cada 2 segundos
-    }
-  );
+  // Usa el hook global de datos SWR
+  const { data, mutate, isLoading } = useAppData(initialData);
 
   // Cuando guardes, actualiza el caché SWR global y revalida para todos los dispositivos
   const handleUpdateRecords = async (records: TransactionRecord[]) => {
     const result = await onUpdateRecordAction(records);
     if (result.success) {
-      // Forzar revalidación global y actualización en todos los dispositivos
-      await mutate(undefined, { revalidate: true });
+      await mutate(); // <-- Reparado: solo un argumento
     }
     return result;
   };
