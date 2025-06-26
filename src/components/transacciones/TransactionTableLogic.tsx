@@ -287,15 +287,31 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual en zona Colombia
+      // Obtener la fecha y hora actual en zona Colombia de forma correcta
+      // Usar Intl.DateTimeFormat para obtener la hora real de Colombia
       const now = new Date();
+      const colombiaParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      })
+        .formatToParts(now)
+        .reduce((acc, part) => {
+          if (part.type !== 'literal') acc[part.type] = part.value;
+          return acc;
+        }, {} as Record<string, string>);
+      // Construir la fecha en formato ISO con la hora real de Colombia
       const colombiaNow = new Date(
-        now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+        `${colombiaParts.year}-${colombiaParts.month}-${colombiaParts.day}T${colombiaParts.hour}:${colombiaParts.minute}:${colombiaParts.second}`
       );
-      // NO hagas setHours(0,0,0,0), así mantienes la hora actual
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
-        fecha: colombiaNow, // Incluye la hora actual de Colombia
+        fecha: colombiaNow,
         tramite: 'SOAT',
         pagado: false,
         boleta: false,
