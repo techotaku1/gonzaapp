@@ -23,6 +23,11 @@ import { SaveResult, useTransactionTableLogic } from './TransactionTableLogic';
 import TransactionTableRow, { InputType } from './TransactionTableRow';
 import TransactionTotals from './TransactionTotals';
 
+import '~/styles/buttonLoader.css';
+import '~/styles/deleteButton.css';
+import '~/styles/exportButton.css';
+import '~/styles/buttonSpinner.css';
+
 interface TransactionTableProps {
   initialData: TransactionRecord[];
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
