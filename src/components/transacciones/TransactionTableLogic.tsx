@@ -289,22 +289,10 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual en zona Colombia usando UTC y offset -5
-      // Esto asegura que la fecha SIEMPRE sea la de hoy en Colombia, nunca la de ayer
+      // Usa getColombiaDate para obtener la fecha/hora real de Colombia (con @date-fns/tz)
+      // Esto asegura que la fecha y la agrupación por día sean correctas en Colombia
       const now = new Date();
-      // Obtener la hora UTC y ajustar a Bogotá (UTC-5)
-      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-      const colombiaOffset = -5; // UTC-5
-      const colombiaDate = new Date(utc + colombiaOffset * 3600000);
-
-      // Extraer componentes para crear la fecha exacta de Colombia
-      const year = colombiaDate.getFullYear();
-      const month = colombiaDate.getMonth();
-      const day = colombiaDate.getDate();
-      const hour = colombiaDate.getHours();
-      const minute = colombiaDate.getMinutes();
-      const second = colombiaDate.getSeconds();
-      const fechaColombia = new Date(year, month, day, hour, minute, second, 0);
+      const fechaColombia = getColombiaDate(now);
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
