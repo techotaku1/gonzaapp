@@ -289,13 +289,26 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la hora actual y restar 5 horas manualmente para Colombia
+      // Obtener la fecha y hora actual en zona Colombia
+      // Siempre crea el registro con la fecha de HOY en Colombia (no la de ayer)
       const now = new Date();
-      now.setHours(now.getHours() - 5);
-      const colombiaNow = new Date(now); // ya con la hora ajustada
+      // Obtener la fecha actual en Colombia (YYYY-MM-DD)
+      const colombiaNow = new Date(
+        now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      );
+      // Forzar la fecha a hoy en Colombia, pero mantener la hora actual de Colombia
+      const year = colombiaNow.getFullYear();
+      const month = colombiaNow.getMonth();
+      const day = colombiaNow.getDate();
+      const hour = colombiaNow.getHours();
+      const minute = colombiaNow.getMinutes();
+      const second = colombiaNow.getSeconds();
+      // Crea la fecha/hora de Colombia, pero siempre con el día de hoy en Colombia
+      const fechaColombia = new Date(year, month, day, hour, minute, second, 0);
+
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
-        fecha: colombiaNow,
+        fecha: fechaColombia,
         tramite: 'SOAT',
         pagado: false,
         boleta: false,
@@ -322,7 +335,7 @@ export function useTransactionTableLogic(props: {
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
         // Después de guardar, busca el grupo de la fecha de hoy y navega a esa página
-        const dateKey = getDateKey(colombiaNow);
+        const dateKey = getDateKey(fechaColombia);
         const groupIndex = groupedByDate.findIndex(
           (group) => group[0] === dateKey
         );
