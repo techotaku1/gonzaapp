@@ -289,35 +289,22 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual en zona Colombia en formato 12 horas
+      // Obtener la fecha y hora actual en zona Colombia usando UTC y offset -5
+      // Esto asegura que la fecha SIEMPRE sea la de hoy en Colombia, nunca la de ayer
       const now = new Date();
-      const colombiaString = now.toLocaleString('en-CA', {
-        timeZone: 'America/Bogota',
-        hour12: true,
-      });
-      // Ejemplo: '2025-06-26, 04:11:00 a.m.'
-      const [datePart, timePartRaw] = colombiaString.split(',').map(s => s.trim());
-      let fechaColombia: Date;
-      if (datePart && timePartRaw) {
-        // Separar hora, minutos, segundos y AM/PM
-        const timeMatch = /^(\d{2}):(\d{2}):(\d{2})\s*([ap]\.m\.)$/i.exec(timePartRaw);
-        if (timeMatch) {
-          let hour = parseInt(timeMatch[1], 10);
-          const minute = parseInt(timeMatch[2], 10);
-          const second = parseInt(timeMatch[3], 10);
-          const ampm = timeMatch[4].toLowerCase();
-          if (ampm.includes('p') && hour !== 12) hour += 12;
-          if (ampm.includes('a') && hour === 12) hour = 0;
-          // Construir fecha en formato local
-          const [year, month, day] = datePart.split('-').map(Number);
-          fechaColombia = new Date(year, month - 1, day, hour, minute, second, 0);
-        } else {
-          // Fallback: usar la opción anterior (menos precisa)
-          fechaColombia = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-        }
-      } else {
-        fechaColombia = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-      }
+      // Obtener la hora UTC y ajustar a Bogotá (UTC-5)
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const colombiaOffset = -5; // UTC-5
+      const colombiaDate = new Date(utc + colombiaOffset * 3600000);
+
+      // Extraer componentes para crear la fecha exacta de Colombia
+      const year = colombiaDate.getFullYear();
+      const month = colombiaDate.getMonth();
+      const day = colombiaDate.getDate();
+      const hour = colombiaDate.getHours();
+      const minute = colombiaDate.getMinutes();
+      const second = colombiaDate.getSeconds();
+      const fechaColombia = new Date(year, month, day, hour, minute, second, 0);
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
@@ -347,6 +334,7 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
+        // La clave de agrupación debe ser la fecha de Colombia
         const dateKey = getDateKey(fechaColombia);
         const groupIndex = groupedByDate.findIndex(
           (group) => group[0] === dateKey
