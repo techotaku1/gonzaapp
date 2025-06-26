@@ -8,12 +8,7 @@ import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
-import {
-  getColombiaDate,
-  getColombiaDateAsDate,
-  getDateKey,
-  toColombiaDate,
-} from '~/utils/dateUtils';
+import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateSoatPrice } from '~/utils/soatPricing';
 
 import AsesorSelect from './AsesorSelect';
@@ -294,10 +289,18 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual exacta de Colombia usando TZDate.tz y .toDate()
+      // Obtener la fecha y hora actual exacta de Colombia como Date estándar
+      // Evita usar .toDate() (no existe en TZDate), usa getColombiaDate y crea un Date manualmente
       const tzNow = getColombiaDate(new Date());
-      // Usar el método .toDate() para obtener la fecha real en Colombia (no la local del sistema)
-      const fechaColombia = tzNow.toDate();
+      const fechaColombia = new Date(
+        tzNow.getFullYear(),
+        tzNow.getMonth(),
+        tzNow.getDate(),
+        tzNow.getHours(),
+        tzNow.getMinutes(),
+        tzNow.getSeconds(),
+        tzNow.getMilliseconds()
+      );
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
