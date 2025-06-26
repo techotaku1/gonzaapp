@@ -365,7 +365,7 @@ export function useTransactionTableLogic(props: {
         return { success: false, error: errorMsg };
       }
     },
-    [onUpdateRecordAction]
+    [initialData, onUpdateRecordAction]
   );
   const filteredData = useMemo(() => {
     if (dateFilter.startDate && dateFilter.endDate) {
@@ -489,7 +489,7 @@ export function useTransactionTableLogic(props: {
     (_startDate: Date, _endDate: Date) => {
       // ...existing code for export (igual que antes, sin cambios)...
     },
-    [initialData]
+    [] // Removed initialData from dependencies
   );
   // handleToggleAsesorMode: sin dependencias externas
   const handleToggleAsesorMode = useCallback(async () => {
