@@ -8,7 +8,12 @@ import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
-import { getColombiaDate, getColombiaDateAsDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
+import {
+  getColombiaDate,
+  getColombiaDateAsDate,
+  getDateKey,
+  toColombiaDate,
+} from '~/utils/dateUtils';
 import { calculateSoatPrice } from '~/utils/soatPricing';
 
 import AsesorSelect from './AsesorSelect';
@@ -289,8 +294,10 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual en zona Colombia usando utilitario
-      const fechaColombia = getColombiaDateAsDate(new Date());
+      // Obtener la fecha y hora actual exacta de Colombia usando TZDate.tz y .toDate()
+      const tzNow = getColombiaDate(new Date());
+      // Usar el método .toDate() para obtener la fecha real en Colombia (no la local del sistema)
+      const fechaColombia = tzNow.toDate();
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
@@ -320,7 +327,6 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
-        // Después de guardar, busca el grupo de la fecha de hoy y navega a esa página
         const dateKey = getDateKey(fechaColombia);
         const groupIndex = groupedByDate.findIndex(
           (group) => group[0] === dateKey
