@@ -140,7 +140,8 @@ export default function SearchFilters({
     setEndDate(null);
     setFilteredStartDate(null);
     setFilteredEndDate(null);
-    // No limpiar searchTerm aquí
+    // Llama a la acción para limpiar el filtro global
+    onDateFilterChangeAction(null, null);
   };
 
   const handleGenerateCuadre = useCallback(() => {
