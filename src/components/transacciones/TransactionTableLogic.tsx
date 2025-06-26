@@ -572,14 +572,35 @@ export function useTransactionTableLogic(props: {
       } else if (startStr) {
         setCurrentDateDisplay(`${startStr} - Actual`);
       } else {
-        setCurrentDateDisplay('Todas las fechas');
+        // Mostrar la fecha actual del grupo si no hay filtro
+        const currentGroup = groupedByDate[currentPage - 1];
+        if (currentGroup) {
+          const [dateStr] = currentGroup;
+          if (dateStr) {
+            const date = new Date(`${dateStr}T12:00:00-05:00`);
+            setCurrentDateDisplay(
+              date
+                .toLocaleDateString('es-CO', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  timeZone: 'America/Bogota',
+                })
+                .toUpperCase()
+            );
+          }
+        } else {
+          setCurrentDateDisplay('Todas las fechas');
+        }
       }
     },
-    [setCurrentDateDisplay]
+    [setCurrentDateDisplay, groupedByDate, currentPage]
   );
+
   useEffect(() => {
     updateDateDisplay(dateFilter.startDate, dateFilter.endDate);
-  }, [dateFilter, updateDateDisplay]);
+  }, [dateFilter, currentPage, updateDateDisplay]);
   // handleDateFilterChange: tipa los parámetros correctamente
   const handleDateFilterChange = useCallback(
     (_start: Date | null, _end: Date | null) => {

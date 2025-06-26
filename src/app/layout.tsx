@@ -1,6 +1,9 @@
 import { type Metadata } from 'next';
 import { Delius, Lexend } from 'next/font/google';
 
+import { esMX } from '@clerk/localizations';
+import { ClerkProvider } from '@clerk/nextjs';
+
 import ClientLayout from '~/components/ClientLayout';
 
 import Providers from './providers';
@@ -31,12 +34,14 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
-      <body>
-        <Providers>
-          <ClientLayout>{children}</ClientLayout>
-        </Providers>
-      </body>
-    </html>
+    <ClerkProvider localization={esMX}>
+      <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
+        <body>
+          <Providers>
+            <ClientLayout>{children}</ClientLayout>
+          </Providers>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

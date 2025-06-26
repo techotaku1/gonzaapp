@@ -92,7 +92,9 @@ export default function TransactionTable(props: TransactionTableProps) {
           <time
             id="current-date-display"
             className="font-display text-3xl font-bold tracking-tight text-black"
-          />
+          >
+            {logic._currentDateDisplay}
+          </time>
         </div>
       )}
       <div className="mb-4">
