@@ -11,6 +11,8 @@ import { type TransactionRecord } from '~/types';
 import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateSoatPrice } from '~/utils/soatPricing';
 
+import AsesorSelect from './AsesorSelect';
+
 export const tramiteOptions = ['SOAT'] as const;
 export const tipoDocumentoOptions = ['CC', 'NIT', 'TI', 'CE', 'PAS'] as const;
 export const novedadOptions = [
@@ -287,28 +289,10 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual en zona Colombia de forma correcta
-      // Usar Intl.DateTimeFormat para obtener la hora real de Colombia
+      // Obtener la hora actual y restar 5 horas manualmente para Colombia
       const now = new Date();
-      const colombiaParts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Bogota',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      })
-        .formatToParts(now)
-        .reduce((acc, part) => {
-          if (part.type !== 'literal') acc[part.type] = part.value;
-          return acc;
-        }, {} as Record<string, string>);
-      // Construir la fecha en formato ISO con la hora real de Colombia
-      const colombiaNow = new Date(
-        `${colombiaParts.year}-${colombiaParts.month}-${colombiaParts.day}T${colombiaParts.hour}:${colombiaParts.minute}:${colombiaParts.second}`
-      );
+      now.setHours(now.getHours() - 5);
+      const colombiaNow = new Date(now); // ya con la hora ajustada
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: colombiaNow,
@@ -574,11 +558,24 @@ export function useTransactionTableLogic(props: {
               <div className="checkmark" />
             </label>
           </div>
-          {/* El renderInput real se pasa desde el archivo de inputs */}
+          {/* Mostrar el select de asesor junto al checkbox */}
+          <div className="min-w-[120px] flex-1">
+            <AsesorSelect
+              value={row.asesor ?? ''}
+              onChange={(newValue: string) =>
+                handleInputChange(row.id, 'asesor', newValue)
+              }
+            />
+          </div>
         </div>
       );
     },
-    [isAsesorSelectionMode, selectedAsesores, handleAsesorSelection]
+    [
+      isAsesorSelectionMode,
+      selectedAsesores,
+      handleAsesorSelection,
+      handleInputChange,
+    ]
   );
   // handleFilterData: sin dependencias externas
   const handleFilterData = useCallback(
