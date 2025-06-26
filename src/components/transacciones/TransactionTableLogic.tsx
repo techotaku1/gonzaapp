@@ -3,8 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
 
-import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
 import { useDebouncedCallback } from '~/hooks/hook-swr/useDebouncedCallback';
+import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
@@ -287,16 +287,15 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Fecha de Colombia (hoy)
+      // Obtener la fecha y hora actual en zona Colombia
       const now = new Date();
-      // Ajusta a la zona horaria de Colombia (UTC-5)
       const colombiaNow = new Date(
         now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
       );
-      colombiaNow.setHours(0, 0, 0, 0); // Solo la fecha, sin hora
+      // NO hagas setHours(0,0,0,0), así mantienes la hora actual
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
-        fecha: colombiaNow,
+        fecha: colombiaNow, // Incluye la hora actual de Colombia
         tramite: 'SOAT',
         pagado: false,
         boleta: false,
@@ -324,7 +323,6 @@ export function useTransactionTableLogic(props: {
       if (result.success) {
         // Después de guardar, busca el grupo de la fecha de hoy y navega a esa página
         const dateKey = getDateKey(colombiaNow);
-        // Busca el índice del grupo de la fecha de hoy
         const groupIndex = groupedByDate.findIndex(
           (group) => group[0] === dateKey
         );
