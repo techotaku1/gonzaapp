@@ -110,14 +110,18 @@ export function useTransactionTableLogic(props: {
   );
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
-    const dataToGroup = [...props.initialData];
-    dataToGroup.forEach((record) => {
-      if (!(record.fecha instanceof Date)) return;
-      const dateKey = getDateKey(record.fecha);
+    // Agrupa por fecha (YYYY-MM-DD) usando la fecha en zona Colombia
+    props.initialData.forEach((record) => {
+      // Convierte a Date si es string
+      const fecha =
+        record.fecha instanceof Date ? record.fecha : new Date(record.fecha);
+      // Usa getDateKey para obtener la fecha en formato YYYY-MM-DD (Colombia)
+      const dateKey = getDateKey(fecha);
       if (!dateKey) return;
       const existingGroup = groups.get(dateKey) ?? [];
       groups.set(dateKey, [...existingGroup, record]);
     });
+    // Ordena los registros dentro de cada grupo por fecha descendente
     groups.forEach((records, key) => {
       const sortedRecords = records.sort((a, b) => {
         const dateA = toColombiaDate(new Date(b.fecha));
@@ -126,6 +130,7 @@ export function useTransactionTableLogic(props: {
       });
       groups.set(key, sortedRecords);
     });
+    // Ordena los grupos por fecha descendente
     return Array.from(groups.entries())
       .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
       .map(([date, records]) => createDateGroup(date, records));
@@ -281,6 +286,7 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
+      // Ajustar la hora restando 5 horas para Colombia
       const now = new Date();
       now.setHours(now.getHours() - 5);
       const colombiaDate = now;
@@ -313,17 +319,21 @@ export function useTransactionTableLogic(props: {
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
         const newRowWithId = { ...newRow, id: newRowId };
+        // Agrupa de nuevo usando la fecha del nuevo registro
         const dateKey = getDateKey(colombiaDate);
-        const newGroupedData = groupedByDate.map((group) => {
-          if (group[0] === dateKey) {
-            return [group[0], [newRowWithId, ...group[1]]];
-          }
-          return group;
-        });
-        if (!newGroupedData.find((group) => group[0] === dateKey)) {
-          newGroupedData.unshift(createDateGroup(dateKey, [newRowWithId]));
+        // Busca si ya existe el grupo para esa fecha
+        const groupIndex = groupedByDate.findIndex(
+          (group) => group[0] === dateKey
+        );
+        if (groupIndex !== -1) {
+          // Si existe, inserta el registro al inicio del grupo
+          groupedByDate[groupIndex][1].unshift(newRowWithId);
+          setCurrentPage(groupIndex + 1);
+        } else {
+          // Si no existe, crea un nuevo grupo y lo pone al inicio
+          groupedByDate.unshift(createDateGroup(dateKey, [newRowWithId]));
+          setCurrentPage(1);
         }
-        setCurrentPage(1);
         await handleSaveOperation([newRowWithId, ...props.initialData]);
       } else {
         console.error('Error creating new record:', result.error);
