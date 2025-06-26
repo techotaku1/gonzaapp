@@ -1,12 +1,12 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 import { randomUUID } from 'crypto';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { asesores,transactions } from '~/server/db/schema';
+import { asesores, transactions } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 
@@ -34,7 +34,8 @@ async function withRetry<T>(
   throw lastError;
 }
 
-export async function getTransactions(): Promise<TransactionRecord[]> {
+// Función original de lectura
+async function _getTransactions(): Promise<TransactionRecord[]> {
   try {
     const results = await withRetry(() =>
       db.select().from(transactions).orderBy(desc(transactions.fecha))
@@ -56,6 +57,71 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
   }
 }
 
+// Versión cacheada usando unstable_cache y tag
+export const getTransactions = unstable_cache(
+  _getTransactions,
+  ['transactions-list'],
+  {
+    tags: ['transactions'],
+    // revalidate: 60, // opcional: segundos para revalidar automáticamente
+  }
+);
+
+// Cache para búsqueda remota de transacciones
+async function _searchTransactions(
+  query: string
+): Promise<TransactionRecord[]> {
+  if (!query || query.trim() === '') return [];
+  const q = `%${query}%`;
+  const results = await db
+    .select()
+    .from(transactions)
+    .where(
+      sql`
+        placa ILIKE ${q} OR
+        nombre ILIKE ${q} OR
+        numero_documento ILIKE ${q} OR
+        emitido_por ILIKE ${q} OR
+        tipo_documento ILIKE ${q} OR
+        ciudad ILIKE ${q} OR
+        asesor ILIKE ${q} OR
+        novedad ILIKE ${q} OR
+        tramite ILIKE ${q}
+      `
+    )
+    .orderBy(desc(transactions.fecha));
+  return results.map((record) => ({
+    ...record,
+    fecha: new Date(record.fecha),
+    boletasRegistradas: Number(record.boletasRegistradas),
+    precioNeto: Number(record.precioNeto),
+    tarifaServicio: Number(record.tarifaServicio),
+    impuesto4x1000: Number(record.impuesto4x1000),
+    gananciaBruta: Number(record.gananciaBruta),
+  }));
+}
+
+export const searchTransactions = unstable_cache(
+  _searchTransactions,
+  ['transactions-search'],
+  { tags: ['transactions'] }
+);
+
+// Cache para asesores
+async function _getAllAsesores(): Promise<string[]> {
+  const results = await db.select().from(asesores);
+  return results
+    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+    .filter((a) => a.length > 0)
+    .sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+export const getAllAsesores = unstable_cache(
+  _getAllAsesores,
+  ['asesores-list'],
+  { tags: ['asesores'] }
+);
+
 export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
@@ -68,7 +134,7 @@ export async function createRecord(
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
     });
-    revalidatePath('/');
+    revalidateTag('transactions'); // Solo revalida el tag de datos
     return { success: true };
   } catch (error) {
     console.error('Error creating record:', error);
@@ -114,7 +180,7 @@ export async function updateRecords(
           .where(eq(transactions.id, record.id));
       })
     );
-    revalidatePath('/');
+    revalidateTag('transactions'); // Revalida solo el tag de datos
     return { success: true };
   } catch (error) {
     console.error('Error updating records:', error);
@@ -131,7 +197,7 @@ export async function deleteRecords(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(transactions).where(inArray(transactions.id, ids));
-    revalidatePath('/');
+    revalidateTag('transactions'); // Solo revalida el tag de datos
     return { success: true };
   } catch (error) {
     console.error('Error deleting records:', error);
@@ -143,59 +209,6 @@ export async function deleteRecords(
   }
 }
 
-// Búsqueda remota (opcional, igual que en tu otro proyecto)
-export async function searchTransactions(
-  query: string
-): Promise<TransactionRecord[]> {
-  try {
-    if (!query || query.trim() === '') return [];
-    const q = `%${query}%`;
-    const results = await db
-      .select()
-      .from(transactions)
-      .where(
-        sql`
-        placa ILIKE ${q} OR
-        nombre ILIKE ${q} OR
-        numero_documento ILIKE ${q} OR
-        emitido_por ILIKE ${q} OR
-        tipo_documento ILIKE ${q} OR
-        ciudad ILIKE ${q} OR
-        asesor ILIKE ${q} OR
-        novedad ILIKE ${q} OR
-        tramite ILIKE ${q}
-      `
-      )
-      .orderBy(desc(transactions.fecha));
-    return results.map((record) => ({
-      ...record,
-      fecha: new Date(record.fecha),
-      boletasRegistradas: Number(record.boletasRegistradas),
-      precioNeto: Number(record.precioNeto),
-      tarifaServicio: Number(record.tarifaServicio),
-      impuesto4x1000: Number(record.impuesto4x1000),
-      gananciaBruta: Number(record.gananciaBruta),
-    }));
-  } catch (error) {
-    console.error('Error searching transactions:', error);
-    throw new Error(
-      error instanceof Error ? error.message : 'Failed to search transactions'
-    );
-  }
-}
-export async function getAllAsesores(): Promise<string[]> {
-  try {
-    const results = await db.select().from(asesores);
-    return results
-      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-      .filter((a) => a.length > 0)
-      .sort((a, b) => a.localeCompare(b, 'es'));
-  } catch (error) {
-    console.error('Error fetching asesores:', error);
-    return [];
-  }
-}
-
 export async function addAsesor(
   nombre: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -204,7 +217,7 @@ export async function addAsesor(
       id: randomUUID(),
       nombre: nombre.trim(),
     });
-    revalidatePath('/');
+    revalidateTag('asesores'); // Invalida solo el cache de asesores
     return { success: true };
   } catch (error) {
     console.error('Error adding asesor:', error);

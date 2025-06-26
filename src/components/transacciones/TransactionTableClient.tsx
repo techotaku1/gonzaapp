@@ -19,14 +19,11 @@ export default function TransactionTableClient({
   const [showTotals, setShowTotals] = useState(false);
 
   // Usa el hook global de datos SWR
-  const { data, mutate, isLoading } = useAppData(initialData);
+  const { data, isLoading } = useAppData(initialData); // mutate eliminado
 
   // Cuando guardes, actualiza el caché SWR global y revalida para todos los dispositivos
   const handleUpdateRecords = async (records: TransactionRecord[]) => {
     const result = await onUpdateRecordAction(records);
-    if (result.success) {
-      await mutate(); // <-- Reparado: solo un argumento
-    }
     return result;
   };
 

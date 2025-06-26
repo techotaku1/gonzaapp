@@ -3,8 +3,8 @@
 import { SWRConfig } from 'swr';
 
 const swrConfig = {
-  revalidateOnFocus: true,
-  revalidateOnReconnect: true,
+  revalidateOnFocus: false, // Cambiado a false
+  revalidateOnReconnect: false, // Cambiado a false
 };
 
 export function SWRProvider({ children }: { children: React.ReactNode }) {

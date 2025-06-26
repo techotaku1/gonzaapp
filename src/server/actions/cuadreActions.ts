@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 import { eq, inArray } from 'drizzle-orm';
 
@@ -9,7 +9,8 @@ import { cuadre, transactions } from '~/server/db/schema';
 
 import type { CuadreData, ExtendedSummaryRecord } from '~/types';
 
-export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
+// Función original de lectura
+async function _getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
   try {
     const results = await db
       .select({
@@ -80,6 +81,13 @@ export async function getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
   }
 }
 
+// Versión cacheada usando unstable_cache y tag
+export const getCuadreRecords = unstable_cache(
+  _getCuadreRecords,
+  ['cuadre-list'],
+  { tags: ['cuadre'] }
+);
+
 export async function updateCuadreRecord(
   transactionId: string,
   data: CuadreData
@@ -103,7 +111,7 @@ export async function updateCuadreRecord(
       })
       .where(eq(cuadre.transactionId, transactionId));
 
-    revalidatePath('/cuadre');
+    revalidateTag('cuadre'); // Solo revalida el tag de cuadre
     return { success: true };
   } catch (error) {
     console.error('Error updating cuadre record:', error);
@@ -136,7 +144,7 @@ export async function createCuadreRecord(
       createdAt: new Date(),
     });
 
-    revalidatePath('/cuadre');
+    revalidateTag('cuadre'); // Solo revalida el tag de cuadre
     return { success: true };
   } catch (error) {
     console.error('Error creating cuadre record:', error);
@@ -155,7 +163,7 @@ export async function deleteCuadreRecords(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(cuadre).where(inArray(cuadre.id, ids));
-    revalidatePath('/cuadre');
+    revalidateTag('cuadre'); // Solo revalida el tag de cuadre
     return { success: true };
   } catch (error) {
     console.error('Error deleting cuadre records:', error);
