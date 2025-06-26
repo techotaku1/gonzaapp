@@ -108,9 +108,9 @@ export function useTransactionTableLogic(props: {
     },
     []
   );
+  // Agrupación por fecha: solo agrupa por la fecha (YYYY-MM-DD) de cada registro, sin mezclar días distintos en la misma página
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, TransactionRecord[]>();
-    // Agrupa por fecha (YYYY-MM-DD) usando la fecha en zona Colombia
     props.initialData.forEach((record) => {
       // Convierte a Date si es string
       const fecha =
@@ -218,18 +218,19 @@ export function useTransactionTableLogic(props: {
           ...prev,
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
-        const recordsToUpdate = Object.entries(updated).map(
-          ([recordId, edits]) => {
+        // No filtrar ni modificar el array de registros aquí, solo actualiza los edits
+        setIsActuallySaving(true);
+        debouncedSave(
+          Object.entries(updated).map(([recordId, edits]) => {
             const baseRecord =
               initialData.find((r) => r.id === recordId) ??
               ({} as TransactionRecord);
             return { ...baseRecord, ...edits } as TransactionRecord;
-          }
+          })
         );
-        setIsActuallySaving(true);
-        debouncedSave(recordsToUpdate);
         return updated;
       });
+      // Cambio de página si cambia la fecha
       if (field === 'fecha' && value) {
         const dateStr = (
           value instanceof Date ? value : new Date(value as string)
@@ -244,7 +245,6 @@ export function useTransactionTableLogic(props: {
         }
       }
     },
-    // Agrega initialData a las dependencias para cumplir con ESLint
     [initialData, groupedByDate, debouncedSave, setIsActuallySaving]
   );
   const handleRowSelect = (id: string, _precioNeto: number) => {
@@ -282,17 +282,21 @@ export function useTransactionTableLogic(props: {
     await props.onUpdateRecordAction(updatedData);
     setSelectedRows(new Set());
   };
+  // Cuando agregas un nuevo registro, asegúrate de que la fecha sea la de hoy (Colombia) y que la paginación lo lleve a la página correcta
   const addNewRow = async () => {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Ajustar la hora restando 5 horas para Colombia
+      // Fecha de Colombia (hoy)
       const now = new Date();
-      now.setHours(now.getHours() - 5);
-      const colombiaDate = now;
+      // Ajusta a la zona horaria de Colombia (UTC-5)
+      const colombiaNow = new Date(
+        now.toLocaleString('en-US', { timeZone: 'America/Bogota' })
+      );
+      colombiaNow.setHours(0, 0, 0, 0); // Solo la fecha, sin hora
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
-        fecha: colombiaDate,
+        fecha: colombiaNow,
         tramite: 'SOAT',
         pagado: false,
         boleta: false,
@@ -318,23 +322,18 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
-        const newRowWithId = { ...newRow, id: newRowId };
-        // Agrupa de nuevo usando la fecha del nuevo registro
-        const dateKey = getDateKey(colombiaDate);
-        // Busca si ya existe el grupo para esa fecha
+        // Después de guardar, busca el grupo de la fecha de hoy y navega a esa página
+        const dateKey = getDateKey(colombiaNow);
+        // Busca el índice del grupo de la fecha de hoy
         const groupIndex = groupedByDate.findIndex(
           (group) => group[0] === dateKey
         );
         if (groupIndex !== -1) {
-          // Si existe, inserta el registro al inicio del grupo
-          groupedByDate[groupIndex][1].unshift(newRowWithId);
           setCurrentPage(groupIndex + 1);
         } else {
-          // Si no existe, crea un nuevo grupo y lo pone al inicio
-          groupedByDate.unshift(createDateGroup(dateKey, [newRowWithId]));
           setCurrentPage(1);
         }
-        await handleSaveOperation([newRowWithId, ...props.initialData]);
+        await handleSaveOperation([{ ...newRow, id: newRowId }, ...props.initialData]);
       } else {
         console.error('Error creating new record:', result.error);
       }
