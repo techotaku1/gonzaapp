@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { SignedIn } from '@clerk/nextjs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import ActivityMonitor from './ActivityMonitor';
+// import ActivityMonitor from './ActivityMonitor';
 
 import '~/styles/background.css';
 
@@ -18,7 +18,7 @@ export default function ClientLayout({
   return (
     <QueryClientProvider client={queryClient}>
       <SignedIn>
-        <ActivityMonitor />
+        {/* <ActivityMonitor /> */}
       </SignedIn>
       <div className="animated-background" />
       {children}

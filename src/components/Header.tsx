@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
 
-import { SignedIn, UserButton, useUser } from '@clerk/nextjs';
+// import { SignedIn, UserButton, useUser } from '@clerk/nextjs';
 
 export default function Header() {
-  const { user } = useUser();
+  // const { user } = useUser();
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -39,11 +39,12 @@ export default function Header() {
       <div className="relative z-[101] flex w-full items-center justify-between px-8">
         {/* Left section */}
         <div className="flex items-center gap-6">
-          <SignedIn>
+          {/* <SignedIn>
             <UserButton />
-          </SignedIn>
+          </SignedIn> */}
           <h1 className="font-display text-xl font-bold tracking-tight text-white">
-            ¡Bienvenido, {user?.firstName ?? 'Usuario'}!
+            {/* ¡Bienvenido, {user?.firstName ?? 'Usuario'}! */}
+            ¡Bienvenido, Usuario!
           </h1>
           <Image
             src="/logo2.png"
