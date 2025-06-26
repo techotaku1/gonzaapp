@@ -289,17 +289,17 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual exacta de Colombia como Date estándar
-      // Evita usar .toDate() (no existe en TZDate), usa getColombiaDate y crea un Date manualmente
-      const tzNow = getColombiaDate(new Date());
+      // Obtener la fecha y hora actual y restar 5 horas manualmente para Colombia
+      const now = new Date();
+      now.setHours(now.getHours() - 5);
       const fechaColombia = new Date(
-        tzNow.getFullYear(),
-        tzNow.getMonth(),
-        tzNow.getDate(),
-        tzNow.getHours(),
-        tzNow.getMinutes(),
-        tzNow.getSeconds(),
-        tzNow.getMilliseconds()
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        now.getHours(),
+        now.getMinutes(),
+        now.getSeconds(),
+        now.getMilliseconds()
       );
 
       const newRowId = crypto.randomUUID();
