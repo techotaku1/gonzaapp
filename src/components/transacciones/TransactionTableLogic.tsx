@@ -310,15 +310,17 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
-        // --- CORRECCIÓN: Forzar recarga SWR global y local para que la nueva fila aparezca ---
+        // --- CORRECCIÓN: Forzar recarga SWR local y también de la tabla principal (SWR global) ---
         if (typeof window !== 'undefined') {
           const { mutate } = await import('swr');
-          // Refresca la lista global (todas las fechas, para la vista general)
-          mutate('/api/transactions');
           // Refresca la lista paginada del día actual
-          mutate(
-            `/api/transactions?date=${getDateKey(fechaColombia)}&limit=50&offset=0`
+          await mutate(
+            `/api/transactions?date=${getDateKey(fechaColombia)}&limit=50&offset=0`,
+            undefined,
+            { revalidate: true }
           );
+          // Refresca la lista global (usada por useAppData en la página principal)
+          await mutate('/api/transactions', undefined, { revalidate: true });
         }
         setCurrentPage(1);
       } else {
