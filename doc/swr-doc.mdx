@@ -1,0 +1,776 @@
+Global Configuration
+The context SWRConfig can provide global configurations (options) for all SWR hooks.
+
+<SWRConfig value={options}>
+  <Component/>
+</SWRConfig>
+
+In this example, all SWR hooks will use the same fetcher provided to load JSON data, and refresh every 3 seconds by default:
+
+import useSWR, { SWRConfig } from 'swr'
+ 
+function Dashboard () {
+  const { data: events } = useSWR('/api/events')
+  const { data: projects } = useSWR('/api/projects')
+  const { data: user } = useSWR('/api/user', { refreshInterval: 0 }) // override
+ 
+  // ...
+}
+ 
+function App () {
+  return (
+    <SWRConfig 
+      value={{
+        refreshInterval: 3000,
+        fetcher: (resource, init) => fetch(resource, init).then(res => res.json())
+      }}
+    >
+      <Dashboard />
+    </SWRConfig>
+  )
+}
+
+Nesting Configurations
+SWRConfig merges the configuration from the parent context. It can receive either an object or a functional configuration. The functional one receives the parent configuration as argument and returns a new configuration that you can customize yourself.
+
+Object Configuration Example
+import { SWRConfig, useSWRConfig } from 'swr'
+ 
+function App() {
+  return (
+    <SWRConfig
+      value={{
+        dedupingInterval: 100,
+        refreshInterval: 100,
+        fallback: { a: 1, b: 1 },
+      }}
+    >
+      <SWRConfig
+        value={{
+          dedupingInterval: 200, // will override the parent value since the value is primitive
+          fallback: { a: 2, c: 2 }, // will merge with the parent value since the value is a mergeable object
+        }}
+      >
+        <Page />
+      </SWRConfig>
+    </SWRConfig>
+  )
+}
+ 
+function Page() {
+  const config = useSWRConfig()
+  // {
+  //   dedupingInterval: 200,
+  //   refreshInterval: 100,
+  //   fallback: { a: 2,  b: 1, c: 2 },
+  // }
+}
+
+Functional Configuration Example
+import { SWRConfig, useSWRConfig } from 'swr'
+ 
+function App() {
+  return (
+    <SWRConfig
+      value={{
+        dedupingInterval: 100,
+        refreshInterval: 100,
+        fallback: { a: 1, b: 1 },
+      }}
+    >
+      <SWRConfig
+        value={parent => ({
+          dedupingInterval: parent.dedupingInterval * 5,
+          fallback: { a: 2, c: 2 },
+        })}
+      >
+        <Page />
+      </SWRConfig>
+    </SWRConfig>
+  )
+}
+ 
+function Page() {
+  const config = useSWRConfig()
+  // {
+  //   dedupingInterval: 500,
+  //   fallback: { a: 2, c: 2 },
+  // }
+}
+
+Extra APIs
+Cache Provider
+Besides all the options listed, SWRConfig also accepts an optional provider function. Please refer to the Cache section for more details.
+
+<SWRConfig value={{ provider: () => new Map() }}>
+  <Dashboard />
+</SWRConfig>
+
+Access To Global Configurations
+You can use the useSWRConfig hook to get the global configurations, as well as mutate and cache:
+
+import { useSWRConfig } from 'swr'
+ 
+function Component () {
+  const { refreshInterval, mutate, cache, ...restConfig } = useSWRConfig()
+ 
+  // ...
+}
+
+Nested configurations will be extended. If no <SWRConfig> is used, it will return the default ones.
+Data Fetching
+const { data, error } = useSWR(key, fetcher)
+
+This is the very fundamental API of SWR. The fetcher here is an async function that accepts the key of SWR, and returns the data.
+
+The returned value will be passed as data, and if it throws, it will be caught as error.
+
+Note that fetcher can be omitted from the parameters if it's provided globally.
+
+Fetch
+You can use any library to handle data fetching, for example a fetch polyfill developit/unfetch(opens in a new tab):
+
+import fetch from 'unfetch'
+ 
+const fetcher = url => fetch(url).then(r => r.json())
+ 
+function App () {
+  const { data, error } = useSWR('/api/data', fetcher)
+  // ...
+}
+
+If you are using Next.js, you don't need to import this polyfill:
+New Built-In Polyfills: fetch(), URL, and Object.assign
+
+Axios
+import axios from 'axios'
+ 
+const fetcher = url => axios.get(url).then(res => res.data)
+ 
+function App () {
+  const { data, error } = useSWR('/api/data', fetcher)
+  // ...
+}
+
+GraphQL
+Or using GraphQL with libs like graphql-request(opens in a new tab):
+
+import { request } from 'graphql-request'
+ 
+const fetcher = query => request('/api/graphql', query)
+ 
+function App () {
+  const { data, error } = useSWR(
+    `{
+      Movie(title: "Inception") {
+        releaseDate
+        actors {
+          name
+        }
+      }
+    }`,
+    fetcher
+  )
+  // ...
+}
+
+If you want to pass variables to a GraphQL query, check out Multiple Arguments
+Automatic Revalidation
+If you want to manually revalidate the data, check mutation.
+
+Revalidate on Focus
+When you re-focus a page or switch between tabs, SWR automatically revalidates data.
+
+This can be useful to immediately synchronize to the latest state. This is helpful for refreshing data in scenarios like stale mobile tabs, or laptops that went to sleep.
+
+Video: using focus revalidation to automatically sync login state between pages.
+This feature is enabled by default. You can disable it via the revalidateOnFocus option.
+
+Revalidate on Interval
+In many cases, data changes because of multiple devices, multiple users, multiple tabs. How can we over time update the data on screen?
+
+SWR will give you the option to automatically refetch data. It’s smart which means refetching will only happen if the component associated with the hook is on screen.
+
+Video: when a user makes a change, both sessions will eventually render the same data.
+You can enable it by setting a refreshInterval value:
+
+useSWR('/api/todos', fetcher, { refreshInterval: 1000 })
+
+There're also options such as refreshWhenHidden and refreshWhenOffline. Both are disabled by default so SWR won't fetch when the webpage is not on screen, or there's no network connection.
+
+Revalidate on Reconnect
+It's useful to also revalidate when the user is back online. This scenario happens a lot when the user unlocks their computer, but the internet is not yet connected at the same moment.
+
+To make sure the data is always up-to-date, SWR automatically revalidates when network recovers.
+
+This feature is enabled by default. You can disable it via the revalidateOnReconnect option.
+
+Disable Automatic Revalidations
+If the resource is immutable, that will never change if we revalidate again, we can disable all kinds of automatic revalidations for it.
+
+Since version 1.0, SWR provides a helper hook useSWRImmutable to mark the resource as immutable:
+
+import useSWRImmutable from 'swr/immutable'
+ 
+// ...
+useSWRImmutable(key, fetcher, options)
+
+It has the same API interface as the normal useSWR hook. You can also do the same thing by disabling the following revalidation options:
+
+useSWR(key, fetcher, {
+  revalidateIfStale: false,
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false
+})
+ 
+// equivalent to
+useSWRImmutable(key, fetcher)
+
+The revalidateIfStale controls if SWR should revalidate when it mounts and there is stale data.
+
+These 2 hooks above do the exact same thing. Once the data is cached, they will never request it again.
+
+Revalidate on Mount
+It's useful to force override SWR revalidation on mounting. By default, the value of revalidateOnMount is set to undefined.
+
+A SWR hook mounts as:
+
+First it checks if revalidateOnMount is defined. It starts request if it's true, stop if it's false.
+revalidateIfStale useful to control the mount behaviour. By default revalidateIfStale is set to true.
+
+If revalidateIfStale is set to true it only refetches if there's any cache data else it will not refetch.
+Mutation & Revalidation
+SWR provides the mutate and useSWRMutation APIs for mutating remote data and related cache.
+
+mutate
+There're 2 ways to use the mutate API to mutate the data, the global mutate API which can mutate any key and the bound mutate API which only can mutate the data of corresponding SWR hook.
+
+Global Mutate
+The recommended way to get the global mutator is to use the useSWRConfig hook:
+
+import { useSWRConfig } from "swr"
+ 
+function App() {
+  const { mutate } = useSWRConfig()
+  mutate(key, data, options)
+}
+
+You can also import it globally:
+
+import { mutate } from "swr"
+ 
+function App() {
+  mutate(key, data, options)
+}
+
+Using global mutator only with the key parameter will not update the cache or trigger revalidation unless there is a mounted SWR hook using the same key.
+
+Bound Mutate
+Bound mutate is the short path to mutate the current key with data. Which key is bounded to the key passing to useSWR, and receive the data as the first argument.
+
+It is functionally equivalent to the global mutate function in the previous section but does not require the key parameter:
+
+import useSWR from 'swr'
+ 
+function Profile () {
+  const { data, mutate } = useSWR('/api/user', fetcher)
+ 
+  return (
+    <div>
+      <h1>My name is {data.name}.</h1>
+      <button onClick={async () => {
+        const newName = data.name.toUpperCase()
+        // send a request to the API to update the data
+        await requestUpdateUsername(newName)
+        // update the local data immediately and revalidate (refetch)
+        // NOTE: key is not required when using useSWR's mutate as it's pre-bound
+        mutate({ ...data, name: newName })
+      }}>Uppercase my name!</button>
+    </div>
+  )
+}
+
+Revalidation
+When you call mutate(key) (or just mutate() with the bound mutate API) without any data, it will trigger a revalidation (mark the data as expired and trigger a refetch) for the resource. This example shows how to automatically refetch the login info (e.g. inside <Profile/>) when the user clicks the “Logout” button:
+
+import useSWR, { useSWRConfig } from 'swr'
+ 
+function App () {
+  const { mutate } = useSWRConfig()
+ 
+  return (
+    <div>
+      <Profile />
+      <button onClick={() => {
+        // set the cookie as expired
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+ 
+        // tell all SWRs with this key to revalidate
+        mutate('/api/user')
+      }}>
+        Logout
+      </button>
+    </div>
+  )
+}
+
+It broadcasts to SWR hooks under the same cache provider scope. If no cache provider exists, it will broadcast to all SWR hooks.
+
+API
+Parameters
+key: same as useSWR's key, but a function behaves as a filter function
+data: data to update the client cache, or an async function for the remote mutation
+options: accepts the following options
+optimisticData: data to immediately update the client cache, or a function that receives current data and returns the new client cache data, usually used in optimistic UI.
+revalidate = true: should the cache revalidate once the asynchronous update resolves. If set to a function, the function receives data and key.
+populateCache = true: should the result of the remote mutation be written to the cache, or a function that receives new result and current result as arguments and returns the mutation result.
+rollbackOnError = true: should the cache rollback if the remote mutation errors, or a function that receives the error thrown from fetcher as arguments and returns a boolean whether should rollback or not.
+throwOnError = true: should the mutate call throw the error when fails.
+Return Values
+mutate returns the results the data parameter has been resolved. The function passed to mutate will return an updated data which is used to update the corresponding cache value. If there is an error thrown while executing the function, the error will be thrown so it can be handled appropriately.
+
+try {
+  const user = await mutate('/api/user', updateUser(newUser))
+} catch (error) {
+  // Handle an error while updating the user here
+}
+
+useSWRMutation
+SWR also provides useSWRMutation as a hook for remote mutations. The remote mutations are only triggered manually, instead of automatically like useSWR.
+
+Also, this hook doesn’t share states with other useSWRMutation hooks.
+
+import useSWRMutation from 'swr/mutation'
+ 
+// Fetcher implementation.
+// The extra argument will be passed via the `arg` property of the 2nd parameter.
+// In the example below, `arg` will be `'my_token'`
+async function updateUser(url, { arg }: { arg: string }) {
+  await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${arg}`
+    }
+  })
+}
+ 
+function Profile() {
+  // A useSWR + mutate like API, but it will not start the request automatically.
+  const { trigger } = useSWRMutation('/api/user', updateUser, options)
+ 
+  return <button onClick={() => {
+    // Trigger `updateUser` with a specific argument.
+    trigger('my_token')
+  }}>Update User</button>
+}
+
+API
+Parameters
+key: same as mutate's key
+fetcher(key, { arg }): an async function for remote mutation
+options: an optional object with the following properties:
+optimisticData: same as mutate's optimisticData
+revalidate = true: same as mutate's revalidate
+populateCache = false: same as mutate's populateCache, but the default is false
+rollbackOnError = true: same as mutate's rollbackOnError
+throwOnError = true: same as mutate's throwOnError
+onSuccess(data, key, config):　 callback function when a remote mutation has been finished successfully
+onError(err, key, config): callback function when a remote mutation has returned an error
+Return Values
+data: data for the given key returned from fetcher
+error: error thrown by fetcher (or undefined)
+trigger(arg, options): a function to trigger a remote mutation
+reset: a function to reset the state (data, error, isMutating)
+isMutating: if there's an ongoing remote mutation
+Basic Usage
+import useSWRMutation from 'swr/mutation'
+ 
+async function sendRequest(url, { arg }: { arg: { username: string }}) {
+  return fetch(url, {
+    method: 'POST',
+    body: JSON.stringify(arg)
+  }).then(res => res.json())
+}
+ 
+function App() {
+  const { trigger, isMutating } = useSWRMutation('/api/user', sendRequest, /* options */)
+ 
+  return (
+    <button
+      disabled={isMutating}
+      onClick={async () => {
+        try {
+          const result = await trigger({ username: 'johndoe' }, /* options */)
+        } catch (e) {
+          // error handling
+        }
+      }}
+    >
+      Create User
+    </button>
+  )
+}
+
+If you want to use the mutation results in rendering, you can get them from the return values of useSWRMutation.
+
+const { trigger, data, error } = useSWRMutation('/api/user', sendRequest)
+
+useSWRMutation shares a cache store with useSWR, so it can detect and avoid race conditions between useSWR. It also supports mutate's functionalities like optimistic updates and rollback on errors. You can pass these options useSWRMutation and its trigger function.
+
+const { trigger } = useSWRMutation('/api/user', updateUser, {
+  optimisticData: current => ({ ...current, name: newName })
+})
+ 
+// or
+ 
+trigger(newName, {
+  optimisticData: current => ({ ...current, name: newName })
+})
+
+Defer loading data until needed
+You can also use useSWRMutation for loading data. useSWRMutation won't start requesting until trigger is called, so you can defer loading data when you actually need it.
+
+import { useState } from 'react'
+import useSWRMutation from 'swr/mutation'
+ 
+const fetcher = url => fetch(url).then(res => res.json())
+ 
+const Page = () => {
+  const [show, setShow] = useState(false)
+  // data is undefined until trigger is called
+  const { data: user, trigger } = useSWRMutation('/api/user', fetcher);
+ 
+  return (
+    <div>
+      <button onClick={() => {
+        trigger();
+        setShow(true);
+      }}>Show User</button>
+      {show && user ? <div>{user.name}</div> : null}
+    </div>
+  );
+}
+
+Optimistic Updates
+In many cases, applying local mutations to data is a good way to make changes feel faster — no need to wait for the remote source of data.
+
+With the optimisticData option, you can update your local data manually, while waiting for the remote mutation to finish. Composing rollbackOnError you can also control when to rollback the data.
+
+import useSWR, { useSWRConfig } from 'swr'
+ 
+function Profile () {
+  const { mutate } = useSWRConfig()
+  const { data } = useSWR('/api/user', fetcher)
+ 
+  return (
+    <div>
+      <h1>My name is {data.name}.</h1>
+      <button onClick={async () => {
+        const newName = data.name.toUpperCase()
+        const user = { ...data, name: newName }
+        const options = {
+          optimisticData: user,
+          rollbackOnError(error) {
+            // If it's timeout abort error, don't rollback
+            return error.name !== 'AbortError'
+          },
+        }
+ 
+        // updates the local data immediately
+        // send a request to update the data
+        // triggers a revalidation (refetch) to make sure our local data is correct
+        mutate('/api/user', updateFn(user), options);
+      }}>Uppercase my name!</button>
+    </div>
+  )
+}
+
+The updateFn should be a promise or asynchronous function to handle the remote mutation, it should return updated data.
+
+You can also pass a function to optimisticData to make it depending on the current data:
+
+import useSWR, { useSWRConfig } from 'swr'
+ 
+function Profile () {
+  const { mutate } = useSWRConfig()
+  const { data } = useSWR('/api/user', fetcher)
+ 
+  return (
+    <div>
+      <h1>My name is {data.name}.</h1>
+      <button onClick={async () => {
+        const newName = data.name.toUpperCase()
+        mutate('/api/user', updateUserName(newName), {
+          optimisticData: user => ({ ...user, name: newName }),
+          rollbackOnError: true
+        });
+      }}>Uppercase my name!</button>
+    </div>
+  )
+}
+
+You can also create the same thing with useSWRMutation and trigger:
+
+import useSWRMutation from 'swr/mutation'
+ 
+function Profile () {
+  const { trigger } = useSWRMutation('/api/user', updateUserName)
+ 
+  return (
+    <div>
+      <h1>My name is {data.name}.</h1>
+      <button onClick={async () => {
+        const newName = data.name.toUpperCase()
+ 
+        trigger(newName, {
+          optimisticData: user => ({ ...user, name: newName }),
+          rollbackOnError: true
+        })
+      }}>Uppercase my name!</button>
+    </div>
+  )
+}
+
+Rollback on Errors
+When you have optimisticData set, it’s possible that the optimistic data gets displayed to the user, but the remote mutation fails. In this case, you can leverage rollbackOnError to revert the local cache to the previous state, to make sure the user is seeing the correct data.
+
+Update Cache After Mutation
+Sometimes, the remote mutation request directly returns the updated data, so there is no need to do an extra fetch to load it. You can enable the populateCache option to update the cache for useSWR with the response of the mutation:
+
+const updateTodo = () => fetch('/api/todos/1', {
+  method: 'PATCH',
+  body: JSON.stringify({ completed: true })
+})
+ 
+mutate('/api/todos', updateTodo, {
+  populateCache: (updatedTodo, todos) => {
+    // filter the list, and return it with the updated item
+    const filteredTodos = todos.filter(todo => todo.id !== '1')
+    return [...filteredTodos, updatedTodo]
+  },
+  // Since the API already gives us the updated information,
+  // we don't need to revalidate here.
+  revalidate: false
+})
+
+Or with the useSWRMutation hook:
+
+useSWRMutation('/api/todos', updateTodo, {
+  populateCache: (updatedTodo, todos) => {
+    // filter the list, and return it with the updated item
+    const filteredTodos = todos.filter(todo => todo.id !== '1')
+    return [...filteredTodos, updatedTodo]
+  },
+  // Since the API already gives us the updated information,
+  // we don't need to revalidate here.
+  revalidate: false
+})
+
+When combined with optimisticData and rollbackOnError, you’ll get a perfect optimistic UI experience.
+
+Avoid Race Conditions
+Both mutate and useSWRMutation can avoid race conditions between useSWR. For example,
+
+function Profile() {
+  const { data } = useSWR('/api/user', getUser, { revalidateInterval: 3000 })
+  const { trigger } = useSWRMutation('/api/user', updateUser)
+ 
+  return <>
+    {data ? data.username : null}
+    <button onClick={() => trigger()}>Update User</button>
+  </>
+}
+
+The normal useSWR hook might refresh its data any time due to focus, polling, or other conditions. This way the displayed username can be as fresh as possible. However, since we have a mutation there that can happen at the nearly same time of a refetch of useSWR, there could be a race condition that getUser request starts earlier, but takes longer than updateUser.
+
+Luckily, useSWRMutation handles this for you automatically. After the mutation, it will tell useSWR to ditch the ongoing request and revalidate, so the stale data will never be displayed.
+
+Mutate Based on Current Data
+Sometimes, you want to update a part of your data based on the current data.
+
+With mutate, you can pass an async function which will receive the current cached value, if any, and returns an updated document.
+
+mutate('/api/todos', async todos => {
+  // let's update the todo with ID `1` to be completed,
+  // this API returns the updated data
+  const updatedTodo = await fetch('/api/todos/1', {
+    method: 'PATCH',
+    body: JSON.stringify({ completed: true })
+  })
+ 
+  // filter the list, and return it with the updated item
+  const filteredTodos = todos.filter(todo => todo.id !== '1')
+  return [...filteredTodos, updatedTodo]
+// Since the API already gives us the updated information,
+// we don't need to revalidate here.
+}, { revalidate: false })
+
+Mutate Multiple Items
+The global mutate API accepts a filter function, which accepts key as the argument and returns which keys to revalidate. The filter function is applied to all the existing cache keys:
+
+import { mutate } from 'swr'
+// Or from the hook if you customized the cache provider:
+// { mutate } = useSWRConfig()
+ 
+mutate(
+  key => typeof key === 'string' && key.startsWith('/api/item?id='),
+  undefined,
+  { revalidate: true }
+)
+
+This also works with any key type like an array. The mutation matches all keys, of which the first element is 'item'.
+
+useSWR(['item', 123], ...)
+useSWR(['item', 124], ...)
+useSWR(['item', 125], ...)
+ 
+mutate(
+  key => Array.isArray(key) && key[0] === 'item',
+  undefined,
+  { revalidate: false }
+)
+
+The filter function is applied to all existing cache keys, so you should not assume the shape of keys when using multiple shapes of keys.
+
+// ✅ matching array key
+mutate((key) => key[0].startsWith('/api'), data)
+// ✅ matching string key
+mutate((key) => typeof key === 'string' && key.startsWith('/api'), data)
+ 
+// ❌ ERROR: mutate uncertain keys (array or string)
+mutate((key: any) => /\/api/.test(key.toString()))
+
+You can use the filter function to clear all cache data, which is useful when logging out:
+
+const clearCache = () => mutate(
+  () => true,
+  undefined,
+  { revalidate: false }
+)
+ 
+// ...clear cache on logout
+clearCache()
+Usage with Next.js
+App Router
+Server Components
+In Next.js App Router, all components are React Server Components (RSC) by default. You could only import the key serialization APIs from SWR in RSC.
+
+app/page.tsx
+import { unstable_serialize } from 'swr' // ✅ Available in server components
+import { unstable_serialize as infinite_unstable_serialize } from 'swr/infinite' // ✅ Available in server components
+
+You could not import any other APIs from SWR since they are not available in RSC.
+
+app/page.tsx
+import useSWR from 'swr' // ❌ This is not available in server components
+
+Client Components
+You can mark your components with 'use client' directive or import SWR from client components, both ways will allow you to use the SWR client data fetching hooks.
+
+app/page.tsx
+'use client'
+import useSWR from 'swr'
+export default function Page() {
+  const { data } = useSWR('/api/user', fetcher)
+  return <h1>{data.name}</h1>
+}
+
+If you need to use SWRConfig to configure global settings in server components layout or page, create a separate provider client component to setup the provider and configuration then use it in the server component pages.
+
+app/swr-provider.tsx
+'use client';
+import { SWRConfig } from 'swr'
+export const SWRProvider = ({ children }) => {
+  return <SWRConfig>{children}</SWRConfig>
+};
+
+app/page.tsx
+// This is still a server component
+import { SWRProvider } from './swr-provider'
+export default function Page() {
+  return (
+    <SWRProvider>
+      <h1>hello SWR</h1>
+    </SWRProvider>
+  )
+}
+
+Client Side Data Fetching
+If your page contains frequently updating data, and you don’t need to pre-render the data, SWR is a perfect fit and no special setup is needed: just import useSWR and use the hook inside any components that use the data.
+
+Here’s how it works:
+
+First, immediately show the page without data. You can show loading states for missing data.
+Then, fetch the data on the client side and display it when ready.
+This approach works well for user dashboard pages, for example. Because a dashboard is a private, user-specific page, SEO is not relevant and the page doesn’t need to be pre-rendered. The data is frequently updated, which requires request-time data fetching.
+
+Pre-rendering with Default Data
+If the page must be pre-rendered, Next.js supports 2 forms of pre-rendering(opens in a new tab): Static Generation (SSG) and Server-side Rendering (SSR).
+
+Together with SWR, you can pre-render the page for SEO, and also have features such as caching, revalidation, focus tracking, refetching on interval on the client side.
+
+You can use the fallback option of SWRConfig to pass the pre-fetched data as the initial value of all SWR hooks.
+
+For example with getStaticProps:
+
+ export async function getStaticProps () {
+  // `getStaticProps` is executed on the server side.
+  const article = await getArticleFromAPI()
+  return {
+    props: {
+      fallback: {
+        '/api/article': article
+      }
+    }
+  }
+}
+ 
+function Article() {
+  // `data` will always be available as it's in `fallback`.
+  const { data } = useSWR('/api/article', fetcher)
+  return <h1>{data.title}</h1>
+}
+ 
+export default function Page({ fallback }) {
+  // SWR hooks inside the `SWRConfig` boundary will use those values.
+  return (
+    <SWRConfig value={{ fallback }}>
+      <Article />
+    </SWRConfig>
+  )
+}
+
+The page is still pre-rendered. It's SEO friendly, fast to response, but also fully powered by SWR on the client side. The data can be dynamic and self-updated over time.
+
+The Article component will render the pre-generated data first, and after the page is hydrated, it will fetch the latest data again to keep it fresh.
+
+Complex Keys
+useSWR can be used with keys that are array and function types. Utilizing pre-fetched data with these kinds of keys requires serializing the fallback keys with unstable_serialize.
+
+import useSWR, { unstable_serialize } from 'swr'
+ 
+export async function getStaticProps () {
+  const article = await getArticleFromAPI(1)
+  return {
+    props: {
+      fallback: {
+        // unstable_serialize() array style key
+        [unstable_serialize(['api', 'article', 1])]: article,
+      }
+    }
+  }
+}
+ 
+function Article() {
+  // using an array style key.
+  const { data } = useSWR(['api', 'article', 1], fetcher)
+  return <h1>{data.title}</h1>
+}
+ 
+export default function Page({ fallback }) {
+  return (
+    <SWRConfig value={{ fallback }}>
+      <Article />
+    </SWRConfig>
+  )
+}
