@@ -3,7 +3,7 @@
 import { TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
 import { formatCurrency } from '~/utils/numberFormat';
-import { vehicleTypes } from '~/utils/soatPricing';
+import { type VehicleType, vehicleTypes } from '~/utils/soatPricing';
 
 import AsesorSelect from './AsesorSelect';
 import {
@@ -307,17 +307,26 @@ export function useTransactionTableInputs({
 
     // Inside renderInput function, add these conditions before the final return:
     if (field === 'tipoVehiculo') {
+      // Si el valor guardado no está en las opciones, lo agrega temporalmente para mostrarlo seleccionado
+      const valueStr = value ? String(value) : '';
+      const options: readonly string[] = tipoVehiculoOptions.includes(
+        valueStr as VehicleType
+      )
+        ? tipoVehiculoOptions
+        : valueStr && valueStr !== ''
+          ? [...tipoVehiculoOptions, valueStr]
+          : tipoVehiculoOptions;
       return (
         <select
-          value={value ? String(value) : ''}
+          value={valueStr}
           onChange={(e) =>
             handleInputChangeAction(row.id, field, e.target.value || null)
           }
           className="table-select-base w-[150px] rounded border border-gray-600"
-          title={value ? String(value) : ''}
+          title={valueStr}
         >
           <option value="">Seleccionar...</option>
-          {tipoVehiculoOptions.map((option: string) => (
+          {options.map((option) => (
             <option
               key={option}
               value={option}
