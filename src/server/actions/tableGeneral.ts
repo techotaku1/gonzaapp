@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 import { randomUUID } from 'crypto';
 import { desc, eq, inArray, sql as _sql } from 'drizzle-orm';
@@ -10,36 +10,13 @@ import { asesores, transactions } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 
-// Utilidad para reintentos (igual que en tu otro proyecto)
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  retries = 5,
-  initialDelay = 1000
-): Promise<T> {
-  let lastError;
-  for (let i = 0; i < retries; i++) {
-    try {
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Operation timed out')), 30000);
-      });
-      return (await Promise.race([operation(), timeoutPromise])) as T;
-    } catch (error) {
-      lastError = error;
-      if (i < retries - 1) {
-        const delay = initialDelay * Math.pow(2, i);
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-    }
-  }
-  throw lastError;
-}
-
 // Función original de lectura
 export async function getTransactions(): Promise<TransactionRecord[]> {
   try {
-    const results = await withRetry(() =>
-      db.select().from(transactions).orderBy(desc(transactions.fecha))
-    );
+    const results = await db
+      .select()
+      .from(transactions)
+      .orderBy(desc(transactions.fecha));
     return results.map((record) => ({
       ...record,
       fecha: new Date(record.fecha),
@@ -68,6 +45,79 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
     );
   }
 }
+
+// Función cacheada para paginación (solo para el API Route)
+export const getTransactionsPaginated = unstable_cache(
+  async (date: string, limit: number, offset: number) => {
+    // Consulta paginada solo para ese día
+    const columns = {
+      id: transactions.id,
+      fecha: transactions.fecha,
+      placa: transactions.placa,
+      nombre: transactions.nombre,
+      ciudad: transactions.ciudad,
+      asesor: transactions.asesor,
+      tramite: transactions.tramite,
+      emitidoPor: transactions.emitidoPor,
+      precioNeto: transactions.precioNeto,
+      tarifaServicio: transactions.tarifaServicio,
+      impuesto4x1000: transactions.impuesto4x1000,
+      gananciaBruta: transactions.gananciaBruta,
+      pagado: transactions.pagado,
+      boleta: transactions.boleta,
+      boletasRegistradas: transactions.boletasRegistradas,
+      tipoDocumento: transactions.tipoDocumento,
+      numeroDocumento: transactions.numeroDocumento,
+      novedad: transactions.novedad,
+      comisionExtra: transactions.comisionExtra,
+      rappi: transactions.rappi,
+      observaciones: transactions.observaciones,
+      cilindraje: transactions.cilindraje,
+      tipoVehiculo: transactions.tipoVehiculo,
+      celular: transactions.celular,
+    };
+    const where = _sql`DATE(${transactions.fecha}) = ${date}`;
+    const data = await db
+      .select(columns)
+      .from(transactions)
+      .where(where)
+      .orderBy(desc(transactions.fecha))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ count }] = await db
+      .select({ count: _sql<number>`COUNT(*)` })
+      .from(transactions)
+      .where(where);
+
+    // Normaliza tipos
+    const dataFixed = data.map((row) => ({
+      ...row,
+      fecha: new Date(row.fecha),
+      boletasRegistradas: Number(row.boletasRegistradas),
+      precioNeto: Number(row.precioNeto),
+      tarifaServicio: Number(row.tarifaServicio),
+      impuesto4x1000: Number(row.impuesto4x1000),
+      gananciaBruta: Number(row.gananciaBruta),
+      cilindraje:
+        typeof row.cilindraje !== 'undefined' && row.cilindraje !== null
+          ? Number(row.cilindraje)
+          : null,
+      tipoVehiculo:
+        typeof row.tipoVehiculo !== 'undefined' && row.tipoVehiculo !== null
+          ? String(row.tipoVehiculo)
+          : null,
+      celular:
+        typeof row.celular !== 'undefined' && row.celular !== null
+          ? String(row.celular)
+          : null,
+    }));
+
+    return { data: dataFixed, total: Number(count) };
+  },
+  ['transactions-paginated'],
+  { tags: ['transactions'], revalidate: 60 }
+);
 
 // Cache para búsqueda remota de transacciones
 async function _searchTransactions(

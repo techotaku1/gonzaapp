@@ -12,6 +12,7 @@ interface SWRResult<T> {
   mutate: SWRResponse<T[], Error>['mutate'];
 }
 
+// SWR directo a la Server Action para totales (sin cache, máxima inmediatez)
 const fetcher = async <T>(key: string): Promise<T[]> => {
   switch (key) {
     case 'transactions':

@@ -313,7 +313,25 @@ export function useTransactionTableLogic(props: {
         if (typeof window !== 'undefined') {
           const { mutate } = await import('swr');
           const dateKey = getDateKey(fechaColombia);
-          // Espera a que mutate termine y los datos estén en el frontend antes de terminar el loading
+          // Mutate optimista: agrega la fila localmente al instante
+          mutate(
+            `/api/transactions?date=${dateKey}&limit=50&offset=0`,
+            (
+              current: { data: TransactionRecord[]; total: number } | undefined
+            ) => {
+              const newData = current?.data
+                ? [{ ...newRow, id: newRowId }, ...current.data]
+                : [{ ...newRow, id: newRowId }];
+              // Corrige: siempre retorna un objeto con total (usa el anterior o 1 si no hay)
+              return {
+                data: newData,
+                total:
+                  typeof current?.total === 'number' ? current.total + 1 : 1,
+              };
+            },
+            false // No revalidar aún
+          );
+          // Luego revalida para sincronizar con otros dispositivos
           await mutate(
             `/api/transactions?date=${dateKey}&limit=50&offset=0`,
             undefined,
