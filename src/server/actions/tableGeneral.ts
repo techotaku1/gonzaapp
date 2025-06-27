@@ -3,7 +3,7 @@
 import { revalidateTag, unstable_cache } from 'next/cache';
 
 import { randomUUID } from 'crypto';
-import { desc, eq, inArray, sql as _sql } from 'drizzle-orm'; // <- usa _sql
+import { desc, eq, inArray, sql as _sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { asesores, transactions } from '~/server/db/schema';
@@ -69,34 +69,9 @@ async function _getTransactions(): Promise<TransactionRecord[]> {
   }
 }
 
-// Exporta solo la función directa:
+// Exporta la función cacheada para SSR/API, pero el SWR del frontend llama directo a la Server Action
 export const getTransactions = unstable_cache(
-  async () => {
-    const results = await withRetry(() =>
-      db.select().from(transactions).orderBy(desc(transactions.fecha))
-    );
-    return results.map((record) => ({
-      ...record,
-      fecha: new Date(record.fecha),
-      boletasRegistradas: Number(record.boletasRegistradas),
-      precioNeto: Number(record.precioNeto),
-      tarifaServicio: Number(record.tarifaServicio),
-      impuesto4x1000: Number(record.impuesto4x1000),
-      gananciaBruta: Number(record.gananciaBruta),
-      cilindraje:
-        record.cilindraje !== null && record.cilindraje !== undefined
-          ? Number(record.cilindraje)
-          : null,
-      tipoVehiculo:
-        record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
-          ? String(record.tipoVehiculo)
-          : null,
-      celular:
-        record.celular !== null && record.celular !== undefined
-          ? String(record.celular)
-          : null,
-    }));
-  },
+  _getTransactions,
   ['transactions-list'],
   { tags: ['transactions'], revalidate: false }
 );

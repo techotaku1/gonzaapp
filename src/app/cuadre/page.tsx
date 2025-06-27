@@ -5,7 +5,7 @@ import { getCuadreRecords } from '~/server/actions/cuadreActions';
 export default async function Page() {
   const initialData = await getCuadreRecords();
   return (
-    <SWRProvider fallback={{ '/api/cuadre': initialData }}>
+    <SWRProvider>
       <CuadreClientTable initialData={initialData} />
     </SWRProvider>
   );

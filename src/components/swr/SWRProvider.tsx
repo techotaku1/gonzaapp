@@ -2,17 +2,11 @@
 
 import { SWRConfig } from 'swr';
 
-export function SWRProvider({
-  children,
-}: {
-  children: React.ReactNode;
-  fallback?: Record<string, unknown>;
-}) {
-  const swrConfig = {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    dedupingInterval: 0,
-    fallback: {},
-  };
+const swrConfig = {
+  revalidateOnFocus: true,
+  revalidateOnReconnect: true,
+};
+
+export function SWRProvider({ children }: { children: React.ReactNode }) {
   return <SWRConfig value={swrConfig}>{children}</SWRConfig>;
 }

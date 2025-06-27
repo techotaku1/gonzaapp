@@ -1,32 +1,53 @@
 'use client';
 
-import useSWR from 'swr';
+import useSWR, { type SWRResponse } from 'swr';
+
+import { getTransactions } from '~/server/actions/tableGeneral';
 
 import type { TransactionRecord } from '~/types';
 
+interface SWRResult<T> {
+  data: T[] | undefined;
+  error: Error | undefined;
+  mutate: SWRResponse<T[], Error>['mutate'];
+}
+
+const fetcher = async <T>(key: string): Promise<T[]> => {
+  switch (key) {
+    case 'transactions':
+      return (await getTransactions()) as T[];
+    default:
+      throw new Error('Invalid key');
+  }
+};
+
+const config = {
+  revalidateOnFocus: true,
+  shouldRetryOnError: true,
+  dedupingInterval: 2000,
+  errorRetryCount: 3,
+  errorRetryInterval: 5000,
+  loadingTimeout: 30000,
+} as const;
+
 export function useAppData(initialData?: TransactionRecord[]) {
-  const { data, error, mutate } = useSWR(
-    '/api/transactions',
-    async (url) => {
-      const res = await fetch(url);
-      const json: unknown = await res.json();
-      // Tipado seguro para evitar acceso inseguro a .data
-      if (typeof json === 'object' && json !== null && 'data' in json) {
-        return (json as { data: TransactionRecord[] }).data;
-      }
-      throw new Error('Respuesta inválida del backend');
-    },
+  const { data, error, mutate }: SWRResult<TransactionRecord> = useSWR(
+    'transactions',
+    fetcher<TransactionRecord>,
     {
+      ...config,
+      refreshInterval: 2000,
       fallbackData: initialData,
-      revalidateOnFocus: true,
-      dedupingInterval: 10000,
-      refreshInterval: 0, // o 10000 si quieres polling
     }
   );
+
   return {
     data: data ?? [],
     isLoading: !error && !data,
-    isError: !!error,
-    mutate,
+    isError: error !== undefined,
+    mutate: async () => {
+      const result = await mutate();
+      return result ?? [];
+    },
   };
 }
