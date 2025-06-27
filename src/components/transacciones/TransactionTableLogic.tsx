@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
+import * as XLSX from 'xlsx';
 
 import { useDebouncedCallback } from '~/hooks/hook-swr/useDebouncedCallback';
 import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
@@ -10,6 +11,7 @@ import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
 import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
+import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice } from '~/utils/soatPricing';
 
 import AsesorSelect from './AsesorSelect';
@@ -480,14 +482,125 @@ export function useTransactionTableLogic(props: {
     ),
     [handleInputChange]
   );
-  // handleExport: solo depende de initialData
-  const handleExport = useCallback(
-    (_startDate: Date, _endDate: Date) => {
-      // ...existing code for export (igual que antes, sin cambios)...
-    },
-    [] // Removed initialData from dependencies
-  );
-  // handleToggleAsesorMode: sin dependencias externas
+  // --- Exportar a Excel usando XLSX ---
+  const handleExport = (startDate: Date, endDate: Date) => {
+    try {
+      const colombiaTimeZone = 'America/Bogota';
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      // Filtrar los datos usando las fechas en la zona horaria de Colombia
+      const filteredData = props.initialData.filter((record) => {
+        const recordDate = new Date(record.fecha);
+        const colombiaDate = new Date(
+          recordDate.toLocaleString('en-US', { timeZone: colombiaTimeZone })
+        );
+        return colombiaDate >= start && colombiaDate <= end;
+      });
+
+      if (filteredData.length === 0) {
+        alert('No hay datos para exportar en el rango de fechas seleccionado');
+        return;
+      }
+
+      // Ordenar los datos por fecha
+      const sortedData = [...filteredData].sort(
+        (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
+      );
+
+      // Transformar los datos aplicando las fórmulas antes de exportar
+      const excelData = sortedData.map((record) => {
+        const {
+          precioNetoAjustado,
+          tarifaServicioAjustada,
+          impuesto4x1000,
+          gananciaBruta,
+        } = calculateFormulas(record);
+
+        const fecha = new Date(record.fecha);
+        const fechaColombia = new Date(
+          fecha.toLocaleString('en-US', { timeZone: colombiaTimeZone })
+        );
+
+        return {
+          Fecha: fechaColombia.toLocaleString('es-CO', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+            timeZone: colombiaTimeZone,
+          }),
+          Trámite: record.tramite,
+          Pagado: record.pagado ? 'Sí' : 'No',
+          'Boletas Registradas': record.boletasRegistradas,
+          'Emitido Por': record.emitidoPor,
+          Placa: record.placa.toUpperCase(),
+          'Tipo Documento': record.tipoDocumento,
+          'Número Documento': record.numeroDocumento,
+          Nombre: record.nombre,
+          Cilindraje: record.cilindraje,
+          'Tipo Vehículo': record.tipoVehiculo,
+          Celular: record.celular,
+          Ciudad: record.ciudad,
+          Asesor: record.asesor,
+          Novedad: record.novedad,
+          'Precio Neto': precioNetoAjustado,
+          'Comisión Extra': record.comisionExtra ? 'Sí' : 'No',
+          'Tarifa Servicio': tarifaServicioAjustada,
+          '4x1000': impuesto4x1000,
+          'Ganancia Bruta': gananciaBruta,
+          Rappi: record.rappi ? 'Sí' : 'No',
+          Observaciones: record.observaciones,
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      ws['!cols'] = [
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 8 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 30 },
+        { wch: 10 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 12 },
+        { wch: 8 },
+        { wch: 40 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Registros');
+
+      const formatDateForFileName = (date: Date) => {
+        return date
+          .toLocaleDateString('es-CO', {
+            timeZone: colombiaTimeZone,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          })
+          .replace(/\//g, '-');
+      };
+
+      const fileName = `registros_${formatDateForFileName(start)}_a_${formatDateForFileName(end)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    } catch (error: unknown) {
+      console.error('Error al exportar:', error);
+      alert('Error al exportar los datos');
+    }
+  };
+
   const handleToggleAsesorMode = useCallback(async () => {
     try {
       setIsLoadingAsesorMode(true);

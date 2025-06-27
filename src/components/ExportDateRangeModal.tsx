@@ -21,6 +21,7 @@ export default function ExportDateRangeModal({
     const startDate = new Date(`${startInput}T00:00:00`);
     const endDate = new Date(`${endInput}T23:59:59`);
 
+    // Llama a la función de exportación (que ahora sí descarga el archivo)
     onExport(startDate, endDate);
     setIsOpen(false);
   };
