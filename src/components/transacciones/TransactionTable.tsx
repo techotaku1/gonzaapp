@@ -610,29 +610,11 @@ export default function TransactionTable(props: TransactionTableProps) {
             </div>
           </div>
         ) : null}
+        
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
-        {/* (Eliminado el segundo SearchFilters aquí) */}
-
         {props.showTotals ? (
           <TransactionTotals transactions={props.initialData} />
         ) : null}
-
-        {!props.showTotals &&
-          !props.searchTerm &&
-          !logic.dateFilter.startDate &&
-          !logic.dateFilter.endDate && (
-            <DatePagination
-              currentPage={logic.currentPage}
-              setCurrentPage={logic.setCurrentPage}
-              totalPages={totalPages}
-              selectedDate={logic.selectedDate}
-              goToPreviousDay={logic.goToPreviousDay}
-              goToNextDay={logic.goToNextDay}
-              selectedDateObj={selectedDateObj}
-              hasPreviousDay={hasPreviousDay}
-              hasNextDay={hasNextDay}
-            />
-          )}
 
         {/* Add the payment UI */}
         {logic.selectedRows.size > 0 && (
@@ -657,7 +639,7 @@ export default function TransactionTable(props: TransactionTableProps) {
           </div>
         )}
       </div>
-      {/* Muestra SIEMPRE la paginación de días abajo de la tabla */}
+      {/* Muestra SOLO UNA VEZ la paginación de días abajo de la tabla */}
       <DatePagination
         currentPage={logic.currentPage}
         setCurrentPage={logic.setCurrentPage}

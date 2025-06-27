@@ -4,8 +4,8 @@ import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
 import * as XLSX from 'xlsx';
 
-import { useDebouncedCallback } from '~/hooks/hook-swr/useDebouncedCallback';
-import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
+import { useDebouncedCallback } from '~/hooks/useDebouncedCallback';
+import { useDebouncedSave } from '~/hooks/useDebouncedSave';
 import { useTransactionsByDate } from '~/hooks/useTransactionsByDate';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
