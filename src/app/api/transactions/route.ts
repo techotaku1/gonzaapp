@@ -20,6 +20,7 @@ interface RawTransaction {
   impuesto4x1000: string | number;
   gananciaBruta: string | number;
   pagado: boolean;
+  boleta: boolean;
   boletasRegistradas: string | number;
   tipoDocumento: string;
   numeroDocumento: string;
@@ -27,8 +28,9 @@ interface RawTransaction {
   comisionExtra: boolean;
   rappi: boolean;
   observaciones: string | null;
-  cilindraje?: string | number | null;
-  tipoVehiculo?: string | null;
+  cilindraje: string | number | null;
+  tipoVehiculo: string | null;
+  celular: string | null;
 }
 
 export async function GET(req: NextRequest) {
@@ -53,6 +55,7 @@ export async function GET(req: NextRequest) {
       impuesto4x1000: transactions.impuesto4x1000,
       gananciaBruta: transactions.gananciaBruta,
       pagado: transactions.pagado,
+      boleta: transactions.boleta,
       boletasRegistradas: transactions.boletasRegistradas,
       tipoDocumento: transactions.tipoDocumento,
       numeroDocumento: transactions.numeroDocumento,
@@ -60,6 +63,9 @@ export async function GET(req: NextRequest) {
       comisionExtra: transactions.comisionExtra,
       rappi: transactions.rappi,
       observaciones: transactions.observaciones,
+      cilindraje: transactions.cilindraje,
+      tipoVehiculo: transactions.tipoVehiculo,
+      celular: transactions.celular,
     };
 
     // Validar que la fecha esté presente y en formato correcto
@@ -125,6 +131,10 @@ export async function GET(req: NextRequest) {
       tipoVehiculo:
         typeof row.tipoVehiculo !== 'undefined' && row.tipoVehiculo !== null
           ? String(row.tipoVehiculo)
+          : null,
+      celular:
+        typeof row.celular !== 'undefined' && row.celular !== null
+          ? String(row.celular)
           : null,
     }));
 

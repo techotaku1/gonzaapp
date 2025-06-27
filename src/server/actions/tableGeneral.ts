@@ -44,7 +44,7 @@ async function _getTransactions(): Promise<TransactionRecord[]> {
       ...record,
       fecha: new Date(record.fecha),
       boletasRegistradas: Number(record.boletasRegistradas),
-      precioNeto: Number(record.precioNeto), // <-- aquí
+      precioNeto: Number(record.precioNeto),
       tarifaServicio: Number(record.tarifaServicio),
       impuesto4x1000: Number(record.impuesto4x1000),
       gananciaBruta: Number(record.gananciaBruta),
@@ -52,10 +52,13 @@ async function _getTransactions(): Promise<TransactionRecord[]> {
         record.cilindraje !== null && record.cilindraje !== undefined
           ? Number(record.cilindraje)
           : null,
-      // Asegura que tipoVehiculo sea string o null
       tipoVehiculo:
         record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
           ? String(record.tipoVehiculo)
+          : null,
+      celular:
+        record.celular !== null && record.celular !== undefined
+          ? String(record.celular)
           : null,
     }));
   } catch (error) {
