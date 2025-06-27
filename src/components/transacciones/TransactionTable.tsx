@@ -42,9 +42,11 @@ function DatePagination({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setCurrentPage, // No se usa, pero se deja para compatibilidad de props
   totalPages,
-  selectedDate,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  selectedDate, // No se usa, pero se deja para compatibilidad de props
   goToPreviousDay,
   goToNextDay,
+  selectedDateObj,
 }: {
   currentPage: number;
   setCurrentPage: (page: number) => void;
@@ -52,24 +54,40 @@ function DatePagination({
   selectedDate: string;
   goToPreviousDay: () => void;
   goToNextDay: () => void;
+  selectedDateObj: Date;
 }) {
+  // Formato largo: "MIÉRCOLES, 25 DE JUNIO DE 2025"
+  const formattedLong =
+    selectedDateObj?.toLocaleDateString('es-CO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'America/Bogota',
+    }).toUpperCase();
+
   return (
-    <div className="mt-4 flex justify-center gap-2">
-      <button
-        onClick={goToPreviousDay}
-        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
-      >
-        Día anterior
-      </button>
-      <span className="font-display flex items-center px-4 text-sm text-black">
-        {selectedDate} - Página {currentPage} de {totalPages}
+    <div className="mt-4 flex flex-col items-center gap-2">
+      <span className="font-display text-lg font-bold text-black">
+        {formattedLong}
       </span>
-      <button
-        onClick={goToNextDay}
-        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
-      >
-        Día siguiente
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={goToPreviousDay}
+          className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
+        >
+          Día anterior
+        </button>
+        <span className="font-display flex items-center px-4 text-sm text-black">
+          Página {currentPage} de {totalPages}
+        </span>
+        <button
+          onClick={goToNextDay}
+          className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
+        >
+          Día siguiente
+        </button>
+      </div>
     </div>
   );
 }
@@ -84,13 +102,16 @@ export default function TransactionTable(props: TransactionTableProps) {
   });
   const router = useRouter();
 
-  // Mostrar siempre la tabla, nunca el mensaje de "Cargando..."
-  // Si quieres un loader solo la primera vez, deberías manejarlo en el padre (TransactionTableClient)
-  // Aquí solo renderiza la tabla normalmente
-
   // Calcula el total de páginas para la paginación
   const totalPages = Math.max(1, Math.ceil((logic.totalRecords ?? 1) / 50));
 
+  // Convierte selectedDate (YYYY-MM-DD) a Date para mostrar en formato largo
+  const selectedDateObj = (() => {
+    const [y, m, d] = logic.selectedDate.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  })();
+
+  // Muestra SIEMPRE la paginación de días abajo de la tabla (no la ocultes)
   return (
     <div className="relative">
       {/* Mostrar fecha solo si NO estamos en la vista de totales */}
@@ -573,6 +594,7 @@ export default function TransactionTable(props: TransactionTableProps) {
               selectedDate={logic.selectedDate}
               goToPreviousDay={logic.goToPreviousDay}
               goToNextDay={logic.goToNextDay}
+              selectedDateObj={selectedDateObj}
             />
           )}
 
