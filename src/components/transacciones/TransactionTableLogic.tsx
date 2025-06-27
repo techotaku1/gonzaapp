@@ -101,6 +101,27 @@ export function useTransactionTableLogic(props: {
     return getDateKey(new Date());
   }, [dateFilter.startDate]);
 
+  // --- CORRECCIÓN DE PAGINACIÓN POR FECHA ---
+  // Cuando el usuario cambia de página, debe cambiar la fecha seleccionada al día anterior/siguiente.
+  // Agrega helpers para avanzar/retroceder días.
+  const goToPreviousDay = useCallback(() => {
+    const current = dateFilter.startDate
+      ? new Date(dateFilter.startDate)
+      : new Date();
+    current.setDate(current.getDate() - 1);
+    setDateFilter({ startDate: current, endDate: null });
+    setCurrentPage(1);
+  }, [dateFilter.startDate]);
+
+  const goToNextDay = useCallback(() => {
+    const current = dateFilter.startDate
+      ? new Date(dateFilter.startDate)
+      : new Date();
+    current.setDate(current.getDate() + 1);
+    setDateFilter({ startDate: current, endDate: null });
+    setCurrentPage(1);
+  }, [dateFilter.startDate]);
+
   // Hook para obtener los datos paginados del backend
   const {
     transactions: paginatedData,
@@ -691,5 +712,7 @@ export function useTransactionTableLogic(props: {
     handlePay,
     handleZoomOut,
     handleZoomIn,
+    goToPreviousDay,
+    goToNextDay,
   };
 }

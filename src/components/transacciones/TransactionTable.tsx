@@ -39,33 +39,36 @@ interface TransactionTableProps {
 
 function DatePagination({
   currentPage,
-  setCurrentPage,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  setCurrentPage, // No se usa, pero se deja para compatibilidad de props
   totalPages,
   selectedDate,
+  goToPreviousDay,
+  goToNextDay,
 }: {
   currentPage: number;
   setCurrentPage: (page: number) => void;
   totalPages: number;
   selectedDate: string;
+  goToPreviousDay: () => void;
+  goToNextDay: () => void;
 }) {
   return (
     <div className="mt-4 flex justify-center gap-2">
       <button
-        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-        disabled={currentPage === 1}
-        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
+        onClick={goToPreviousDay}
+        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
       >
-        Anterior
+        Día anterior
       </button>
       <span className="font-display flex items-center px-4 text-sm text-black">
         {selectedDate} - Página {currentPage} de {totalPages}
       </span>
       <button
-        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-        disabled={currentPage === totalPages}
-        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 disabled:opacity-50"
+        onClick={goToNextDay}
+        className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
       >
-        Siguiente
+        Día siguiente
       </button>
     </div>
   );
@@ -568,6 +571,8 @@ export default function TransactionTable(props: TransactionTableProps) {
               setCurrentPage={logic.setCurrentPage}
               totalPages={totalPages}
               selectedDate={logic.selectedDate}
+              goToPreviousDay={logic.goToPreviousDay}
+              goToNextDay={logic.goToNextDay}
             />
           )}
 
