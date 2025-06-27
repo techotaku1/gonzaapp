@@ -52,13 +52,15 @@ function formatLongDate(date: Date) {
 function DatePagination({
   currentPage,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setCurrentPage,
+  setCurrentPage, // No se usa, solo para compatibilidad de props
   totalPages,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  selectedDate,
+  selectedDate, // No se usa, solo para compatibilidad de props
   goToPreviousDay,
   goToNextDay,
   selectedDateObj,
+  hasPreviousDay,
+  hasNextDay,
 }: {
   currentPage: number;
   setCurrentPage: (page: number) => void;
@@ -67,6 +69,8 @@ function DatePagination({
   goToPreviousDay: () => void;
   goToNextDay: () => void;
   selectedDateObj: Date;
+  hasPreviousDay: boolean;
+  hasNextDay: boolean;
 }) {
   const formattedLong = formatLongDate(selectedDateObj);
 
@@ -78,7 +82,10 @@ function DatePagination({
       <div className="flex gap-2">
         <button
           onClick={goToPreviousDay}
-          className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
+          disabled={!hasPreviousDay}
+          className={`rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 ${
+            !hasPreviousDay ? 'cursor-not-allowed opacity-50' : ''
+          }`}
         >
           Día anterior
         </button>
@@ -87,7 +94,10 @@ function DatePagination({
         </span>
         <button
           onClick={goToNextDay}
-          className="rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10"
+          disabled={!hasNextDay}
+          className={`rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 ${
+            !hasNextDay ? 'cursor-not-allowed opacity-50' : ''
+          }`}
         >
           Día siguiente
         </button>
@@ -106,15 +116,35 @@ export default function TransactionTable(props: TransactionTableProps) {
   });
   const router = useRouter();
 
-  // Calcula el total de páginas para la paginación
+  // Calcula el total de páginas para la paginación del día actual
   const totalPages = Math.max(1, Math.ceil((logic.totalRecords ?? 1) / 50));
   const selectedDateObj = (() => {
     const [y, m, d] = logic.selectedDate.split('-').map(Number);
     return new Date(y, m - 1, d);
   })();
 
+  // --- NUEVO: Determina los días mínimo y máximo disponibles en los registros ---
+  const allDates = React.useMemo(() => {
+    // Extrae todas las fechas únicas de los registros iniciales
+    const set = new Set(
+      props.initialData.map((r) =>
+        r.fecha instanceof Date
+          ? r.fecha.toISOString().slice(0, 10)
+          : new Date(r.fecha).toISOString().slice(0, 10)
+      )
+    );
+    return Array.from(set).sort();
+  }, [props.initialData]);
+
+  const minDate = allDates[0];
+  const maxDate = allDates[allDates.length - 1];
+
+  // Determina si hay días anteriores o siguientes disponibles
+  const hasPreviousDay = logic.selectedDate > minDate;
+  const hasNextDay = logic.selectedDate < maxDate;
+
   // --- SIEMPRE muestra la fecha arriba del botón agregar en formato largo ---
-  // --- SIEMPRE muestra la paginación de días abajo de la tabla ---
+  // --- SOLO muestra la paginación de días abajo de la tabla (NO la muestres dos veces) ---
 
   return (
     <div className="relative">
@@ -599,6 +629,8 @@ export default function TransactionTable(props: TransactionTableProps) {
               goToPreviousDay={logic.goToPreviousDay}
               goToNextDay={logic.goToNextDay}
               selectedDateObj={selectedDateObj}
+              hasPreviousDay={hasPreviousDay}
+              hasNextDay={hasNextDay}
             />
           )}
 
@@ -625,7 +657,6 @@ export default function TransactionTable(props: TransactionTableProps) {
           </div>
         )}
       </div>
-
       {/* Muestra SIEMPRE la paginación de días abajo de la tabla */}
       <DatePagination
         currentPage={logic.currentPage}
@@ -635,6 +666,8 @@ export default function TransactionTable(props: TransactionTableProps) {
         goToPreviousDay={logic.goToPreviousDay}
         goToNextDay={logic.goToNextDay}
         selectedDateObj={selectedDateObj}
+        hasPreviousDay={hasPreviousDay}
+        hasNextDay={hasNextDay}
       />
     </div>
   );
