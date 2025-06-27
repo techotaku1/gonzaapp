@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
     const date = searchParams.get('date'); // YYYY-MM-DD
-    const limit = Number(searchParams.get('limit') ?? 50);
+    const limit = Number(searchParams.get('limit') ?? 100);
     const offset = Number(searchParams.get('offset') ?? 0);
 
     // Solo columnas necesarias (usar objeto, no array)
