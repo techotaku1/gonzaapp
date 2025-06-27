@@ -2,6 +2,7 @@
 
 import { TransactionRecord } from '~/types';
 import { calculateFormulas } from '~/utils/formulas';
+import { formatCurrency } from '~/utils/numberFormat';
 import { vehicleTypes } from '~/utils/soatPricing';
 
 import AsesorSelect from './AsesorSelect';
@@ -102,10 +103,11 @@ export const emitidoPorOptions = [
 
 export type EmitidoPorOption = (typeof emitidoPorOptions)[number];
 
+// Elimina la función global formatValue y muévela dentro de renderInput para que tenga acceso a field/isMoneyField
 export function useTransactionTableInputs({
   editValues,
   handleInputChangeAction,
-  formatCurrencyAction,
+  formatCurrencyAction: _formatCurrencyAction, // prefijo _ para evitar warning de unused
   parseNumberAction,
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
@@ -142,7 +144,6 @@ export function useTransactionTableInputs({
       field === 'impuesto4x1000' ||
       field === 'gananciaBruta'
     ) {
-      // Construir un registro actualizado con los edits actuales
       const editedRow = { ...row, ...(editValues[row.id] || {}) };
       const formulas = calculateFormulas(editedRow);
       if (field === 'precioNeto') adjustedValue = formulas.precioNetoAjustado;
@@ -152,11 +153,11 @@ export function useTransactionTableInputs({
       if (field === 'gananciaBruta') adjustedValue = formulas.gananciaBruta;
     }
 
+    // formatValue ahora es función local y tiene acceso a field/isMoneyField
     const formatValue = (val: unknown): string => {
       if (val === null || val === undefined) {
         return '';
       }
-
       if (field === 'fecha' && val instanceof Date) {
         try {
           const date = val;
@@ -166,18 +167,14 @@ export function useTransactionTableInputs({
           return '';
         }
       }
-
-      // Format cilindraje with thousands separator
+      // Cilindraje: solo número, sin formato de moneda
       if (field === 'cilindraje' && typeof val === 'number') {
-        return formatCurrencyAction(val);
+        return String(val);
       }
-
-      // Handle money fields
+      // Formatea campos monetarios correctamente
       if (isMoneyField && typeof val === 'number') {
-        return `$ ${formatCurrencyAction(val)}`;
+        return `$ ${formatCurrency(val)}`;
       }
-
-      // Handle primitive types
       switch (typeof val) {
         case 'string':
           return val;
