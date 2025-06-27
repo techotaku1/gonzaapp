@@ -44,7 +44,7 @@ async function _getTransactions(): Promise<TransactionRecord[]> {
       ...record,
       fecha: new Date(record.fecha),
       boletasRegistradas: Number(record.boletasRegistradas),
-      precioNeto: Number(record.precioNeto),
+      precioNeto: Number(record.precioNeto), // <-- aquí
       tarifaServicio: Number(record.tarifaServicio),
       impuesto4x1000: Number(record.impuesto4x1000),
       gananciaBruta: Number(record.gananciaBruta),

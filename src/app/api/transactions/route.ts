@@ -5,6 +5,32 @@ import { desc, sql } from 'drizzle-orm';
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';
 
+// Define un tipo para los resultados de la consulta
+interface RawTransaction {
+  id: string;
+  fecha: string | Date;
+  placa: string;
+  nombre: string;
+  ciudad: string;
+  asesor: string;
+  tramite: string;
+  emitidoPor: string;
+  precioNeto: string | number;
+  tarifaServicio: string | number;
+  impuesto4x1000: string | number;
+  gananciaBruta: string | number;
+  pagado: boolean;
+  boletasRegistradas: string | number;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  novedad: string | null;
+  comisionExtra: boolean;
+  rappi: boolean;
+  observaciones: string | null;
+  cilindraje?: string | number | null;
+  tipoVehiculo?: string | null;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
@@ -83,9 +109,28 @@ export async function GET(req: NextRequest) {
       .from(transactions)
       .where(where);
 
+    // --- SOLUCIÓN: CONVIERTE CAMPOS NUMÉRICOS ANTES DE ENVIAR AL FRONT ---
+    const dataFixed = (data as RawTransaction[]).map((row) => ({
+      ...row,
+      fecha: new Date(row.fecha),
+      boletasRegistradas: Number(row.boletasRegistradas),
+      precioNeto: Number(row.precioNeto),
+      tarifaServicio: Number(row.tarifaServicio),
+      impuesto4x1000: Number(row.impuesto4x1000),
+      gananciaBruta: Number(row.gananciaBruta),
+      cilindraje:
+        typeof row.cilindraje !== 'undefined' && row.cilindraje !== null
+          ? Number(row.cilindraje)
+          : null,
+      tipoVehiculo:
+        typeof row.tipoVehiculo !== 'undefined' && row.tipoVehiculo !== null
+          ? String(row.tipoVehiculo)
+          : null,
+    }));
+
     // Cache-Control: 1 minuto en edge, 10 seg en browser
     return NextResponse.json(
-      { data, total: Number(count) },
+      { data: dataFixed, total: Number(count) },
       {
         status: 200,
         headers: {
