@@ -55,8 +55,8 @@ function DatePagination({
   hasNextDay,
   totalDays,
   currentDayIndex,
-  isLoadingPage, // <-- nuevo prop
-  onPaginate, // <-- nuevo prop
+  isLoadingPage,
+  onPaginate,
 }: {
   currentPage: number;
   setCurrentPage: (page: number) => void;
@@ -75,7 +75,7 @@ function DatePagination({
   const formattedLong = formatLongDate(selectedDateObj);
 
   return (
-    <div className="mt-4 flex flex-col items-center gap-2">
+    <div className="mt-4 flex flex-col items-center gap-2 pb-8">
       <span className="font-display text-lg font-bold text-black">
         {formattedLong}
       </span>
@@ -83,14 +83,14 @@ function DatePagination({
         <button
           onClick={() => onPaginate('prev')}
           disabled={!hasPreviousDay || isLoadingPage}
-          className={`flex items-center gap-2 rounded border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-gray-100 ${
+          className={`flex items-center gap-2 rounded-lg border border-gray-400 bg-gradient-to-r from-gray-100 to-gray-200 px-6 py-2 text-sm font-semibold text-gray-800 shadow transition hover:bg-gray-300 hover:from-gray-200 hover:to-gray-300 active:scale-95 ${
             !hasPreviousDay || isLoadingPage
               ? 'cursor-not-allowed opacity-50'
               : ''
           }`}
         >
           {isLoadingPage ? <Icons.spinner className="h-4 w-4" /> : null}
-          Día anterior
+          <span className="font-bold">&larr;</span> Día anterior
         </button>
         <span className="font-display flex items-center px-4 text-sm text-black">
           Día {currentDayIndex + 1} de {totalDays}
@@ -98,12 +98,12 @@ function DatePagination({
         <button
           onClick={() => onPaginate('next')}
           disabled={!hasNextDay || isLoadingPage}
-          className={`flex items-center gap-2 rounded border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-gray-100 ${
+          className={`flex items-center gap-2 rounded-lg border border-gray-400 bg-gradient-to-r from-gray-100 to-gray-200 px-6 py-2 text-sm font-semibold text-gray-800 shadow transition hover:bg-gray-300 hover:from-gray-200 hover:to-gray-300 active:scale-95 ${
             !hasNextDay || isLoadingPage ? 'cursor-not-allowed opacity-50' : ''
           }`}
         >
+          Día siguiente <span className="font-bold">&rarr;</span>
           {isLoadingPage ? <Icons.spinner className="h-4 w-4" /> : null}
-          Día siguiente
         </button>
       </div>
     </div>
@@ -669,21 +669,23 @@ export default function TransactionTable(props: TransactionTableProps) {
         )}
       </div>
       {/* Muestra SOLO UNA VEZ la paginación de días abajo de la tabla */}
-      <DatePagination
-        currentPage={logic.currentPage}
-        setCurrentPage={logic.setCurrentPage}
-        totalPages={totalPages}
-        selectedDate={logic.selectedDate}
-        goToPreviousDay={logic.goToPreviousDay}
-        goToNextDay={logic.goToNextDay}
-        selectedDateObj={selectedDateObj}
-        hasPreviousDay={hasPreviousDay}
-        hasNextDay={hasNextDay}
-        totalDays={totalDays}
-        currentDayIndex={currentDayIndex}
-        isLoadingPage={isLoadingPage || isPaginating}
-        onPaginate={handlePaginate}
-      />
+      {!props.showTotals && (
+        <DatePagination
+          currentPage={logic.currentPage}
+          setCurrentPage={logic.setCurrentPage}
+          totalPages={totalPages}
+          selectedDate={logic.selectedDate}
+          goToPreviousDay={logic.goToPreviousDay}
+          goToNextDay={logic.goToNextDay}
+          selectedDateObj={selectedDateObj}
+          hasPreviousDay={hasPreviousDay}
+          hasNextDay={hasNextDay}
+          totalDays={totalDays}
+          currentDayIndex={currentDayIndex}
+          isLoadingPage={isLoadingPage || isPaginating}
+          onPaginate={handlePaginate}
+        />
+      )}
     </div>
   );
 }

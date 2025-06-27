@@ -1,6 +1,6 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidateTag, unstable_cache } from 'next/cache';
 
 import { randomUUID } from 'crypto';
 import { desc, eq, inArray, sql as _sql } from 'drizzle-orm';
@@ -35,7 +35,7 @@ async function withRetry<T>(
 }
 
 // Función original de lectura
-export async function getTransactions(): Promise<TransactionRecord[]> {
+async function _getTransactions(): Promise<TransactionRecord[]> {
   try {
     const results = await withRetry(() =>
       db.select().from(transactions).orderBy(desc(transactions.fecha))
@@ -69,6 +69,13 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
   }
 }
 
+// Exporta la función cacheada para SSR/API, pero el SWR del frontend llama directo a la Server Action
+export const getTransactions = unstable_cache(
+  _getTransactions,
+  ['transactions-list'],
+  { tags: ['transactions'], revalidate: false }
+);
+
 // Cache para búsqueda remota de transacciones
 async function _searchTransactions(
   query: string
@@ -80,12 +87,11 @@ async function _searchTransactions(
   return [];
 }
 
-// No uses unstable_cache aquí, solo exporta la función async
-export async function searchTransactions(
-  query: string
-): Promise<TransactionRecord[]> {
-  return await _searchTransactions(query);
-}
+export const searchTransactions = unstable_cache(
+  _searchTransactions,
+  ['transactions-search'],
+  { tags: ['transactions'], revalidate: 60 }
+);
 
 // Cache para asesores
 async function _getAllAsesores(): Promise<string[]> {
@@ -96,10 +102,11 @@ async function _getAllAsesores(): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b, 'es'));
 }
 
-// No uses unstable_cache aquí, solo exporta la función async
-export async function getAllAsesores(): Promise<string[]> {
-  return await _getAllAsesores();
-}
+export const getAllAsesores = unstable_cache(
+  _getAllAsesores,
+  ['asesores-list'],
+  { tags: ['asesores'], revalidate: 60 }
+);
 
 export async function createRecord(
   record: TransactionRecord

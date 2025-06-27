@@ -266,6 +266,7 @@ export function useTransactionTableLogic(props: {
   };
   // Cuando agregas un nuevo registro, asegúrate de que la fecha sea la de hoy (Colombia) y que la paginación lo lleve a la página correcta
   const addNewRow = async () => {
+    // Inicia la barra de progreso al 30%
     progress.start(0.3);
     setIsAddingRow(true);
     try {
@@ -310,17 +311,14 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
-        // --- CORRECCIÓN: Forzar recarga SWR local y también de la tabla principal (SWR global) ---
         if (typeof window !== 'undefined') {
           const { mutate } = await import('swr');
-          // Refresca la lista paginada del día actual
+          const dateKey = getDateKey(fechaColombia);
           await mutate(
-            `/api/transactions?date=${getDateKey(fechaColombia)}&limit=50&offset=0`,
+            `/api/transactions?date=${dateKey}&limit=50&offset=0`,
             undefined,
             { revalidate: true }
           );
-          // Refresca la lista global (usada por useAppData en la página principal)
-          await mutate('/api/transactions', undefined, { revalidate: true });
         }
         setCurrentPage(1);
       } else {
@@ -328,7 +326,10 @@ export function useTransactionTableLogic(props: {
       }
     } finally {
       setIsAddingRow(false);
-      progress.stop();
+      // Detiene la barra de progreso (usa stop, no done ni finish)
+      if (typeof progress.stop === 'function') {
+        progress.stop();
+      }
     }
   };
   // handleSaveOperation: solo depende de onUpdateRecordAction
@@ -838,3 +839,12 @@ export function useTransactionTableLogic(props: {
     goToNextDay,
   };
 }
+
+// Documentación de uso de useProgress y useRouter (bprogress):
+// import { useProgress } from '@bprogress/next';
+// import { useRouter } from '@bprogress/next/app';
+// const progress = useProgress();
+// const router = useRouter();
+// progress.start(0.3); // Inicia barra de progreso al 30%
+// progress.stop();     // Detiene la barra de progreso
+// router.push('/ruta', { startPosition: 0.3 }); // Navega con barra de progreso
