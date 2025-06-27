@@ -266,7 +266,6 @@ export function useTransactionTableLogic(props: {
   };
   // Cuando agregas un nuevo registro, asegúrate de que la fecha sea la de hoy (Colombia) y que la paginación lo lleve a la página correcta
   const addNewRow = async () => {
-    // Inicia la barra de progreso al 30%
     progress.start(0.3);
     setIsAddingRow(true);
     try {
@@ -314,6 +313,7 @@ export function useTransactionTableLogic(props: {
         if (typeof window !== 'undefined') {
           const { mutate } = await import('swr');
           const dateKey = getDateKey(fechaColombia);
+          // Espera a que mutate termine y los datos estén en el frontend antes de terminar el loading
           await mutate(
             `/api/transactions?date=${dateKey}&limit=50&offset=0`,
             undefined,
@@ -326,7 +326,6 @@ export function useTransactionTableLogic(props: {
       }
     } finally {
       setIsAddingRow(false);
-      // Detiene la barra de progreso (usa stop, no done ni finish)
       if (typeof progress.stop === 'function') {
         progress.stop();
       }
@@ -847,4 +846,5 @@ export function useTransactionTableLogic(props: {
 // const router = useRouter();
 // progress.start(0.3); // Inicia barra de progreso al 30%
 // progress.stop();     // Detiene la barra de progreso
+// router.push('/ruta', { startPosition: 0.3 }); // Navega con barra de progreso
 // router.push('/ruta', { startPosition: 0.3 }); // Navega con barra de progreso
