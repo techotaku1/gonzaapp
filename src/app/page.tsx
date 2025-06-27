@@ -1,15 +1,19 @@
 import Header from '~/components/Header';
 import { SWRProvider } from '~/components/swr/SWRProvider';
 import TransactionTableClient from '~/components/transacciones/TransactionTableClient';
-import { updateRecords } from '~/server/actions/tableGeneral';
+import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
 
-export default function HomePage() {
+export default async function HomePage() {
+  const initialData = await getTransactions();
   return (
     <SWRProvider>
       <div className="fixed top-0 left-0 z-50 w-full">
         <Header />
       </div>
-      <TransactionTableClient onUpdateRecordAction={updateRecords} />
+      <TransactionTableClient
+        initialData={initialData}
+        onUpdateRecordAction={updateRecords}
+      />
     </SWRProvider>
   );
 }

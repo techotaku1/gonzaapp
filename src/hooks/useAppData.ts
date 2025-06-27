@@ -1,49 +1,32 @@
 'use client';
 
-import useSWR, { type SWRResponse } from 'swr';
+import useSWR from 'swr';
 
 import type { TransactionRecord } from '~/types';
 
-interface SWRResult<T> {
-  data: T[] | undefined;
-  error: Error | undefined;
-  mutate: SWRResponse<T[], Error>['mutate'];
-}
-
-const fetcher = async <T>(key: string): Promise<T[]> => {
-  if (key === '/api/transactions') {
-    const res = await fetch('/api/transactions', { cache: 'no-store' });
-    if (!res.ok) throw new Error('Error fetching transactions');
-    const json: unknown = await res.json();
-    // Tipado seguro para evitar acceso inseguro a .data
-    if (typeof json === 'object' && json !== null && 'data' in json) {
-      return (json as { data: T[] }).data;
-    }
-    throw new Error('Respuesta inválida del backend');
-  }
-  throw new Error('Invalid key');
-};
-
-export function useAppData() {
-  const { data, error, mutate }: SWRResult<TransactionRecord> = useSWR(
+export function useAppData(initialData?: TransactionRecord[]) {
+  const { data, error, mutate } = useSWR(
     '/api/transactions',
-    fetcher<TransactionRecord>,
+    async (url) => {
+      const res = await fetch(url);
+      const json: unknown = await res.json();
+      // Tipado seguro para evitar acceso inseguro a .data
+      if (typeof json === 'object' && json !== null && 'data' in json) {
+        return (json as { data: TransactionRecord[] }).data;
+      }
+      throw new Error('Respuesta inválida del backend');
+    },
     {
+      fallbackData: initialData,
       revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      refreshInterval: 2000,
-      dedupingInterval: 0,
-      fallbackData: undefined,
+      dedupingInterval: 10000,
+      refreshInterval: 0, // o 10000 si quieres polling
     }
   );
-
   return {
     data: data ?? [],
     isLoading: !error && !data,
-    isError: error !== undefined,
-    mutate: async () => {
-      const result = await mutate();
-      return result ?? [];
-    },
+    isError: !!error,
+    mutate,
   };
 }

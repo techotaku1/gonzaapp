@@ -70,9 +70,36 @@ async function _getTransactions(): Promise<TransactionRecord[]> {
 }
 
 // Exporta solo la función directa:
-export async function getTransactions(): Promise<TransactionRecord[]> {
-  return await _getTransactions();
-}
+export const getTransactions = unstable_cache(
+  async () => {
+    const results = await withRetry(() =>
+      db.select().from(transactions).orderBy(desc(transactions.fecha))
+    );
+    return results.map((record) => ({
+      ...record,
+      fecha: new Date(record.fecha),
+      boletasRegistradas: Number(record.boletasRegistradas),
+      precioNeto: Number(record.precioNeto),
+      tarifaServicio: Number(record.tarifaServicio),
+      impuesto4x1000: Number(record.impuesto4x1000),
+      gananciaBruta: Number(record.gananciaBruta),
+      cilindraje:
+        record.cilindraje !== null && record.cilindraje !== undefined
+          ? Number(record.cilindraje)
+          : null,
+      tipoVehiculo:
+        record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
+          ? String(record.tipoVehiculo)
+          : null,
+      celular:
+        record.celular !== null && record.celular !== undefined
+          ? String(record.celular)
+          : null,
+    }));
+  },
+  ['transactions-list'],
+  { tags: ['transactions'], revalidate: false }
+);
 
 // Cache para búsqueda remota de transacciones
 async function _searchTransactions(
@@ -118,7 +145,7 @@ export async function createRecord(
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
     });
-    // revalidateTag('transactions'); // <-- Desactivado temporalmente para pruebas de frontend
+    revalidateTag('transactions');
     return { success: true };
   } catch (error) {
     console.error('Error creating record:', error);

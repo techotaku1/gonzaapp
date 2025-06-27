@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { desc, sql } from 'drizzle-orm';
 
+// Agrega este import para que 'transactions' esté definido
 import { db } from '~/server/db';
 import { transactions } from '~/server/db/schema';
+
+// Elimina import no usado para evitar warning de eslint
+// import { getTransactions } from '~/server/actions/tableGeneral';
 
 // Define un tipo para los resultados de la consulta
 interface RawTransaction {
@@ -89,19 +93,21 @@ export async function GET(req: NextRequest) {
       .offset(offset);
 
     // Validar que todos los registros devueltos sean solo de ese día
-    const allSameDay =
-      data.length === 0 ||
-      data.every((row) => {
-        const fecha: unknown = row.fecha;
-        if (typeof fecha === 'string') {
-          // Solo ejecuta slice si es string
-          return fecha.slice(0, 10) === date;
-        }
-        if (fecha instanceof Date) {
-          return fecha.toISOString().slice(0, 10) === date;
-        }
-        return false;
-      });
+    let allSameDay = true;
+    if (Array.isArray(data)) {
+      allSameDay =
+        data.length === 0 ||
+        data.every((row) => {
+          const fecha: unknown = row.fecha;
+          if (typeof fecha === 'string') {
+            return fecha.slice(0, 10) === date;
+          }
+          if (fecha instanceof Date) {
+            return fecha.toISOString().slice(0, 10) === date;
+          }
+          return false;
+        });
+    }
     if (!allSameDay) {
       return NextResponse.json(
         { error: 'La consulta devolvió registros de más de un día.' },
@@ -138,15 +144,9 @@ export async function GET(req: NextRequest) {
           : null,
     }));
 
-
     return NextResponse.json(
       { data: dataFixed, total: Number(count) },
-      {
-        status: 200,
-        headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=10',
-        },
-      }
+      { status: 200 }
     );
   } catch (_error) {
     return NextResponse.json(
