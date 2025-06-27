@@ -173,7 +173,8 @@ export function useTransactionTableInputs({
       }
       // Formatea campos monetarios correctamente
       if (isMoneyField && typeof val === 'number') {
-        return `$ ${formatCurrency(val)}`;
+        // Asegura que no tenga decimales extra
+        return `$ ${formatCurrency(Math.round(val))}`;
       }
       switch (typeof val) {
         case 'string':

@@ -48,6 +48,15 @@ async function _getTransactions(): Promise<TransactionRecord[]> {
       tarifaServicio: Number(record.tarifaServicio),
       impuesto4x1000: Number(record.impuesto4x1000),
       gananciaBruta: Number(record.gananciaBruta),
+      cilindraje:
+        record.cilindraje !== null && record.cilindraje !== undefined
+          ? Number(record.cilindraje)
+          : null,
+      // Asegura que tipoVehiculo sea string o null
+      tipoVehiculo:
+        record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
+          ? String(record.tipoVehiculo)
+          : null,
     }));
   } catch (error) {
     console.error('Error fetching transactions:', error);
