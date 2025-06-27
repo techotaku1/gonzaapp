@@ -50,17 +50,21 @@ function formatLongDate(date: Date) {
 }
 
 function DatePagination({
-  currentPage,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setCurrentPage, // No se usa, solo para compatibilidad de props
-  totalPages,
+  currentPage, // No se usa
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  selectedDate, // No se usa, solo para compatibilidad de props
+  setCurrentPage, // No se usa
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  totalPages, // No se usa
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  selectedDate, // No se usa
   goToPreviousDay,
   goToNextDay,
   selectedDateObj,
   hasPreviousDay,
   hasNextDay,
+  totalDays,
+  currentDayIndex,
 }: {
   currentPage: number;
   setCurrentPage: (page: number) => void;
@@ -71,6 +75,8 @@ function DatePagination({
   selectedDateObj: Date;
   hasPreviousDay: boolean;
   hasNextDay: boolean;
+  totalDays: number;
+  currentDayIndex: number;
 }) {
   const formattedLong = formatLongDate(selectedDateObj);
 
@@ -90,7 +96,8 @@ function DatePagination({
           Día anterior
         </button>
         <span className="font-display flex items-center px-4 text-sm text-black">
-          Página {currentPage} de {totalPages}
+          {/* Mostrar el índice del día en vez de la página de registros */}
+          Día {currentDayIndex + 1} de {totalDays}
         </span>
         <button
           onClick={goToNextDay}
@@ -123,9 +130,8 @@ export default function TransactionTable(props: TransactionTableProps) {
     return new Date(y, m - 1, d);
   })();
 
-  // --- NUEVO: Determina los días mínimo y máximo disponibles en los registros ---
+  // --- NUEVO: Determina los días únicos disponibles en los registros ---
   const allDates = React.useMemo(() => {
-    // Extrae todas las fechas únicas de los registros iniciales
     const set = new Set(
       props.initialData.map((r) =>
         r.fecha instanceof Date
@@ -142,6 +148,10 @@ export default function TransactionTable(props: TransactionTableProps) {
   // Determina si hay días anteriores o siguientes disponibles
   const hasPreviousDay = logic.selectedDate > minDate;
   const hasNextDay = logic.selectedDate < maxDate;
+
+  // --- NUEVO: Calcula el índice del día actual y el total de días únicos ---
+  const currentDayIndex = allDates.findIndex((d) => d === logic.selectedDate);
+  const totalDays = allDates.length;
 
   // --- SIEMPRE muestra la fecha arriba del botón agregar en formato largo ---
   // --- SOLO muestra la paginación de días abajo de la tabla (NO la muestres dos veces) ---
@@ -610,7 +620,7 @@ export default function TransactionTable(props: TransactionTableProps) {
             </div>
           </div>
         ) : null}
-        
+
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
         {props.showTotals ? (
           <TransactionTotals transactions={props.initialData} />
@@ -650,6 +660,8 @@ export default function TransactionTable(props: TransactionTableProps) {
         selectedDateObj={selectedDateObj}
         hasPreviousDay={hasPreviousDay}
         hasNextDay={hasNextDay}
+        totalDays={totalDays}
+        currentDayIndex={currentDayIndex}
       />
     </div>
   );
