@@ -8,6 +8,7 @@ import { MdOutlineTableChart } from 'react-icons/md';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { type TransactionRecord } from '~/types';
+import { getDateKey } from '~/utils/dateUtils';
 
 import ExportDateRangeModal from '../ExportDateRangeModal';
 import SearchFilters from '../filters/SearchFilters';
@@ -37,21 +38,17 @@ interface TransactionTableProps {
   isLoading?: boolean; // <-- agrega esta prop
 }
 
-interface DatePaginationProps {
-  groupedByDate: { date: string; records: TransactionRecord[] }[];
-  currentPage: number;
-  setCurrentPage: (page: number) => void;
-  dateFilter: { startDate: Date | null; endDate: Date | null };
-}
-
 function DatePagination({
-  groupedByDate,
   currentPage,
   setCurrentPage,
-  dateFilter,
-}: DatePaginationProps) {
-  if (dateFilter.startDate || dateFilter.endDate) return null;
-  const totalPages = groupedByDate.length;
+  totalPages,
+  selectedDate,
+}: {
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  totalPages: number;
+  selectedDate: string;
+}) {
   return (
     <div className="mt-4 flex justify-center gap-2">
       <button
@@ -62,7 +59,7 @@ function DatePagination({
         Anterior
       </button>
       <span className="font-display flex items-center px-4 text-sm text-black">
-        Página {currentPage} de {totalPages}
+        {selectedDate} - Página {currentPage} de {totalPages}
       </span>
       <button
         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
@@ -526,9 +523,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                           key={row.id}
                           row={row}
                           isDeleteMode={logic.isDeleteMode}
-                          isAsesorSelectionMode={
-                            logic.isAsesorSelectionMode
-                          }
+                          isAsesorSelectionMode={logic.isAsesorSelectionMode}
                           selectedRows={logic.selectedRows}
                           rowsToDelete={logic.rowsToDelete}
                           handleInputChange={logic.handleInputChange}
@@ -566,10 +561,10 @@ export default function TransactionTable(props: TransactionTableProps) {
           !logic.dateFilter.startDate &&
           !logic.dateFilter.endDate && (
             <DatePagination
-              groupedByDate={logic.groupedByDate}
               currentPage={logic.currentPage}
               setCurrentPage={logic.setCurrentPage}
-              dateFilter={logic.dateFilter}
+              totalPages={Math.ceil((props.initialData.length || 1) / 50)}
+              selectedDate={getDateKey(new Date())}
             />
           )}
 
@@ -578,8 +573,7 @@ export default function TransactionTable(props: TransactionTableProps) {
           <div className="fixed right-4 bottom-4 flex w-[400px] flex-col gap-4 rounded-lg bg-white p-6 shadow-lg">
             <div className="text-center">
               <div className="mb-2 font-semibold">
-                Total Seleccionado: $
-                {logic.formatCurrency(logic.totalSelected)}
+                Total Seleccionado: ${logic.formatCurrency(logic.totalSelected)}
               </div>
               <div className="flex flex-col gap-2 text-base">
                 <div>Boletas: {logic.selectedRows.size}</div>

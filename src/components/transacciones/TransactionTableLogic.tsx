@@ -5,6 +5,7 @@ import { useRouter } from '@bprogress/next/app';
 
 import { useDebouncedCallback } from '~/hooks/hook-swr/useDebouncedCallback';
 import { useDebouncedSave } from '~/hooks/hook-swr/useDebouncedSave';
+import { useTransactionsByDate } from '~/hooks/useTransactionsByDate';
 import { toggleAsesorSelectionAction } from '~/server/actions/asesorSelection';
 import { createRecord, deleteRecords } from '~/server/actions/tableGeneral';
 import { type TransactionRecord } from '~/types';
@@ -35,17 +36,8 @@ export type HandleInputChange = (
   value: InputValue
 ) => void;
 
-export interface DateGroup extends Array<string | TransactionRecord[]> {
-  0: string;
-  1: TransactionRecord[];
-  date: string;
-  records: TransactionRecord[];
-  length: 2;
-}
-export type EditValues = Record<
-  string,
-  Partial<TransactionRecord> & Record<string, unknown>
->;
+// Elimina las referencias a EditValues y DateGroup, y define EditValues localmente aquí:
+type EditValues = Record<string, Partial<TransactionRecord> & Record<string, unknown>>;
 
 export function useTransactionTableLogic(props: {
   initialData: TransactionRecord[];
@@ -99,44 +91,14 @@ export function useTransactionTableLogic(props: {
   }, 350);
   const [isActuallySaving, setIsActuallySaving] = useState(false);
   const pendingEdits = useRef<EditValues>({});
-  const createDateGroup = useCallback(
-    (date: string, records: TransactionRecord[]): DateGroup => {
-      const group = [date, records] as const;
-      return Object.assign(group, {
-        date,
-        records,
-        [Symbol.iterator]: Array.prototype[Symbol.iterator],
-      }) as DateGroup;
-    },
-    []
-  );
   // Agrupación por fecha: solo agrupa por la fecha (YYYY-MM-DD) de cada registro, sin mezclar días distintos en la misma página
-  const groupedByDate = useMemo(() => {
-    const groups = new Map<string, TransactionRecord[]>();
-    props.initialData.forEach((record) => {
-      // Convierte a Date si es string
-      const fecha =
-        record.fecha instanceof Date ? record.fecha : new Date(record.fecha);
-      // Usa getDateKey para obtener la fecha en formato YYYY-MM-DD (Colombia)
-      const dateKey = getDateKey(fecha);
-      if (!dateKey) return;
-      const existingGroup = groups.get(dateKey) ?? [];
-      groups.set(dateKey, [...existingGroup, record]);
-    });
-    // Ordena los registros dentro de cada grupo por fecha descendente
-    groups.forEach((records, key) => {
-      const sortedRecords = records.sort((a, b) => {
-        const dateA = toColombiaDate(new Date(b.fecha));
-        const dateB = toColombiaDate(new Date(a.fecha));
-        return dateA.getTime() - dateB.getTime();
-      });
-      groups.set(key, sortedRecords);
-    });
-    // Ordena los grupos por fecha descendente
-    return Array.from(groups.entries())
-      .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
-      .map(([date, records]) => createDateGroup(date, records));
-  }, [props.initialData, createDateGroup]);
+  const {
+    transactions,
+    total: _total,
+    isLoading: _isLoading,
+  } = useTransactionsByDate(getDateKey(new Date()), currentPage, 50);
+  const paginatedData = transactions;
+
   useEffect(() => {
     if (Object.keys(pendingEdits.current).length === 0) {
       setSelectedRows((prevSelected) => {
@@ -170,7 +132,7 @@ export function useTransactionTableLogic(props: {
     800
   );
   const [editValues, setEditValues] = useState<EditValues>({});
-  // handleInputChange: depende de initialData, groupedByDate, debouncedSave, setIsActuallySaving
+  // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       setEditValues((prev: EditValues) => {
@@ -220,7 +182,6 @@ export function useTransactionTableLogic(props: {
           ...prev,
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
-        // No filtrar ni modificar el array de registros aquí, solo actualiza los edits
         setIsActuallySaving(true);
         debouncedSave(
           Object.entries(updated).map(([recordId, edits]) => {
@@ -232,22 +193,9 @@ export function useTransactionTableLogic(props: {
         );
         return updated;
       });
-      // Cambio de página si cambia la fecha
-      if (field === 'fecha' && value) {
-        const dateStr = (
-          value instanceof Date ? value : new Date(value as string)
-        )
-          .toISOString()
-          .split('T')[0];
-        const pageIndex = groupedByDate.findIndex(
-          ([gDate]) => gDate === dateStr
-        );
-        if (pageIndex !== -1) {
-          setCurrentPage(pageIndex + 1);
-        }
-      }
+      // Cambio de página si cambia la fecha (ya no hay groupedByDate, así que omite esta lógica)
     },
-    [initialData, groupedByDate, debouncedSave, setIsActuallySaving]
+    [initialData, debouncedSave, setIsActuallySaving]
   );
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -330,15 +278,7 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
-        const dateKey = getDateKey(fechaColombia);
-        const groupIndex = groupedByDate.findIndex(
-          (group) => group[0] === dateKey
-        );
-        if (groupIndex !== -1) {
-          setCurrentPage(groupIndex + 1);
-        } else {
-          setCurrentPage(1);
-        }
+        setCurrentPage(1); // Siempre vuelve a la primera página del día actual
         await handleSaveOperation([
           { ...newRow, id: newRowId },
           ...props.initialData,
@@ -418,27 +358,21 @@ export function useTransactionTableLogic(props: {
     }
   }, [props.initialData, dateFilter, debouncedSearchTerm]);
   // paginatedData: nunca debe depender de editValues ni de ningún estado de edición
-  const paginatedData: TransactionRecord[] = useMemo(() => {
-    // Aplica los edits locales SOLO para mostrar, pero nunca filtra el array
+  const paginatedDataFinal: TransactionRecord[] = useMemo(() => {
     const edits = editValues;
     let baseData: TransactionRecord[] = [];
 
     if (debouncedSearchTerm || (dateFilter.startDate && dateFilter.endDate)) {
       baseData = filteredData;
     } else {
-      const currentGroup = groupedByDate[currentPage - 1] as
-        | DateGroup
-        | undefined;
-      baseData = currentGroup ? currentGroup.records : [];
+      baseData = paginatedData;
     }
 
-    // Aplica los edits locales a cada registro, pero nunca filtra
     return baseData.map((row) =>
       edits[row.id] ? { ...row, ...edits[row.id] } : row
     );
   }, [
-    groupedByDate,
-    currentPage,
+    paginatedData,
     dateFilter,
     filteredData,
     debouncedSearchTerm,
@@ -617,30 +551,29 @@ export function useTransactionTableLogic(props: {
       } else if (startStr) {
         setCurrentDateDisplay(`${startStr} - Actual`);
       } else {
-        // Mostrar la fecha actual del grupo si no hay filtro
-        const currentGroup = groupedByDate[currentPage - 1];
-        if (currentGroup) {
-          const [dateStr] = currentGroup;
-          if (dateStr) {
-            const date = new Date(`${dateStr}T12:00:00-05:00`);
-            setCurrentDateDisplay(
-              date
-                .toLocaleDateString('es-CO', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  timeZone: 'America/Bogota',
-                })
-                .toUpperCase()
-            );
-          }
+        // Mostrar la fecha actual si no hay filtro
+        if (paginatedData.length > 0 && paginatedData[0].fecha) {
+          const date =
+            paginatedData[0].fecha instanceof Date
+              ? paginatedData[0].fecha
+              : new Date(paginatedData[0].fecha);
+          setCurrentDateDisplay(
+            date
+              .toLocaleDateString('es-CO', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                timeZone: 'America/Bogota',
+              })
+              .toUpperCase()
+          );
         } else {
           setCurrentDateDisplay('Todas las fechas');
         }
       }
     },
-    [setCurrentDateDisplay, groupedByDate, currentPage]
+    [setCurrentDateDisplay, paginatedData]
   );
 
   useEffect(() => {
@@ -716,8 +649,7 @@ export function useTransactionTableLogic(props: {
     isActuallySaving,
     setIsActuallySaving,
     pendingEdits,
-    createDateGroup,
-    groupedByDate,
+    paginatedData: paginatedDataFinal,
     initialData: props.initialData,
     onUpdateRecordAction: props.onUpdateRecordAction,
     showTotals: props.showTotals,
@@ -742,7 +674,6 @@ export function useTransactionTableLogic(props: {
     handleNavigateToCuadre,
     handleToggleTotals,
     isTotalsButtonLoading,
-    paginatedData,
     formatCurrency,
     parseNumber,
     addNewRow,
