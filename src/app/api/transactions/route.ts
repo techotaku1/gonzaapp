@@ -138,7 +138,10 @@ export async function GET(req: NextRequest) {
           : null,
     }));
 
-    // Cache-Control: 1 minuto en edge, 10 seg en browser
+    // --- CORRECCIÓN: SIEMPRE DEVUELVE EL TOTAL REAL DE REGISTROS DE ESE DÍA ---
+    // El total debe ser el número de registros para esa fecha, no solo los de la página actual.
+    // Ya se calcula correctamente arriba con COUNT(*), así que asegúrate de que el frontend lo use.
+
     return NextResponse.json(
       { data: dataFixed, total: Number(count) },
       {

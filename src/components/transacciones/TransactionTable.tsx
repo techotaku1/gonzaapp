@@ -625,6 +625,17 @@ export default function TransactionTable(props: TransactionTableProps) {
           </div>
         )}
       </div>
+
+      {/* Muestra SIEMPRE la paginación de días abajo de la tabla */}
+      <DatePagination
+        currentPage={logic.currentPage}
+        setCurrentPage={logic.setCurrentPage}
+        totalPages={totalPages}
+        selectedDate={logic.selectedDate}
+        goToPreviousDay={logic.goToPreviousDay}
+        goToNextDay={logic.goToNextDay}
+        selectedDateObj={selectedDateObj}
+      />
     </div>
   );
 }
