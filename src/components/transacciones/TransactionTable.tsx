@@ -50,21 +50,13 @@ function formatLongDate(date: Date) {
 }
 
 function DatePagination({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  currentPage, // No se usa
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setCurrentPage, // No se usa
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  totalPages, // No se usa
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  selectedDate, // No se usa
-  goToPreviousDay,
-  goToNextDay,
   selectedDateObj,
   hasPreviousDay,
   hasNextDay,
   totalDays,
   currentDayIndex,
+  isLoadingPage, // <-- nuevo prop
+  onPaginate, // <-- nuevo prop
 }: {
   currentPage: number;
   setCurrentPage: (page: number) => void;
@@ -77,6 +69,8 @@ function DatePagination({
   hasNextDay: boolean;
   totalDays: number;
   currentDayIndex: number;
+  isLoadingPage: boolean;
+  onPaginate: (direction: 'prev' | 'next') => void;
 }) {
   const formattedLong = formatLongDate(selectedDateObj);
 
@@ -87,25 +81,28 @@ function DatePagination({
       </span>
       <div className="flex gap-2">
         <button
-          onClick={goToPreviousDay}
-          disabled={!hasPreviousDay}
-          className={`rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 ${
-            !hasPreviousDay ? 'cursor-not-allowed opacity-50' : ''
+          onClick={() => onPaginate('prev')}
+          disabled={!hasPreviousDay || isLoadingPage}
+          className={`flex items-center gap-2 rounded border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-gray-100 ${
+            !hasPreviousDay || isLoadingPage
+              ? 'cursor-not-allowed opacity-50'
+              : ''
           }`}
         >
+          {isLoadingPage ? <Icons.spinner className="h-4 w-4" /> : null}
           Día anterior
         </button>
         <span className="font-display flex items-center px-4 text-sm text-black">
-          {/* Mostrar el índice del día en vez de la página de registros */}
           Día {currentDayIndex + 1} de {totalDays}
         </span>
         <button
-          onClick={goToNextDay}
-          disabled={!hasNextDay}
-          className={`rounded px-4 py-2 text-sm font-medium text-black hover:bg-white/10 ${
-            !hasNextDay ? 'cursor-not-allowed opacity-50' : ''
+          onClick={() => onPaginate('next')}
+          disabled={!hasNextDay || isLoadingPage}
+          className={`flex items-center gap-2 rounded border border-gray-400 bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-gray-100 ${
+            !hasNextDay || isLoadingPage ? 'cursor-not-allowed opacity-50' : ''
           }`}
         >
+          {isLoadingPage ? <Icons.spinner className="h-4 w-4" /> : null}
           Día siguiente
         </button>
       </div>
@@ -155,6 +152,21 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   // --- SIEMPRE muestra la fecha arriba del botón agregar en formato largo ---
   // --- SOLO muestra la paginación de días abajo de la tabla (NO la muestres dos veces) ---
+
+  // Saber si está cargando la página de registros
+  const isLoadingPage = logic.paginatedData.length === 0 && !props.isLoading;
+
+  // Handler para paginación con loading
+  const [isPaginating, setIsPaginating] = React.useState(false);
+  const handlePaginate = (direction: 'prev' | 'next') => {
+    setIsPaginating(true);
+    if (direction === 'prev') {
+      logic.goToPreviousDay();
+    } else {
+      logic.goToNextDay();
+    }
+    setTimeout(() => setIsPaginating(false), 800);
+  };
 
   return (
     <div className="relative">
@@ -573,51 +585,58 @@ export default function TransactionTable(props: TransactionTableProps) {
               padding: '1rem',
             }}
           >
-            <div
-              className="table-scroll-container"
-              style={{
-                transform: `scale(${logic.zoom})`,
-                transformOrigin: 'left top',
-                width: `${(1 / logic.zoom) * 100}%`,
-                height: `${(1 / logic.zoom) * 100}%`,
-                overflowX: logic.zoom === 1 ? 'auto' : 'scroll',
-                overflowY: 'auto',
-              }}
-            >
-              <table className="w-full text-left text-sm text-gray-600">
-                <HeaderTitles isDeleteMode={logic.isDeleteMode} />
-                <tbody>
-                  {logic.paginatedData.map(
-                    (row: TransactionRecord, index: number) => {
-                      return (
-                        <TransactionTableRow
-                          key={row.id}
-                          row={row}
-                          isDeleteMode={logic.isDeleteMode}
-                          isAsesorSelectionMode={logic.isAsesorSelectionMode}
-                          selectedRows={logic.selectedRows}
-                          rowsToDelete={logic.rowsToDelete}
-                          handleInputChange={logic.handleInputChange}
-                          handleRowSelect={logic.handleRowSelect}
-                          handleDeleteSelect={logic.handleDeleteSelect}
-                          renderCheckbox={logic.renderCheckbox}
-                          renderAsesorSelect={logic.renderAsesorSelect}
-                          renderInput={
-                            renderInput as (
-                              row: TransactionRecord,
-                              field: keyof TransactionRecord,
-                              type?: InputType
-                            ) => React.ReactNode
-                          }
-                          getEmitidoPorClass={getEmitidoPorClass}
-                          _index={index}
-                        />
-                      );
-                    }
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {isLoadingPage || isPaginating ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-lg font-bold text-blue-700">
+                <Icons.spinner className="h-6 w-6" />
+                Cargando registros...
+              </div>
+            ) : (
+              <div
+                className="table-scroll-container"
+                style={{
+                  transform: `scale(${logic.zoom})`,
+                  transformOrigin: 'left top',
+                  width: `${(1 / logic.zoom) * 100}%`,
+                  height: `${(1 / logic.zoom) * 100}%`,
+                  overflowX: logic.zoom === 1 ? 'auto' : 'scroll',
+                  overflowY: 'auto',
+                }}
+              >
+                <table className="w-full text-left text-sm text-gray-600">
+                  <HeaderTitles isDeleteMode={logic.isDeleteMode} />
+                  <tbody>
+                    {logic.paginatedData.map(
+                      (row: TransactionRecord, index: number) => {
+                        return (
+                          <TransactionTableRow
+                            key={row.id}
+                            row={row}
+                            isDeleteMode={logic.isDeleteMode}
+                            isAsesorSelectionMode={logic.isAsesorSelectionMode}
+                            selectedRows={logic.selectedRows}
+                            rowsToDelete={logic.rowsToDelete}
+                            handleInputChange={logic.handleInputChange}
+                            handleRowSelect={logic.handleRowSelect}
+                            handleDeleteSelect={logic.handleDeleteSelect}
+                            renderCheckbox={logic.renderCheckbox}
+                            renderAsesorSelect={logic.renderAsesorSelect}
+                            renderInput={
+                              renderInput as (
+                                row: TransactionRecord,
+                                field: keyof TransactionRecord,
+                                type?: InputType
+                              ) => React.ReactNode
+                            }
+                            getEmitidoPorClass={getEmitidoPorClass}
+                            _index={index}
+                          />
+                        );
+                      }
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -662,6 +681,8 @@ export default function TransactionTable(props: TransactionTableProps) {
         hasNextDay={hasNextDay}
         totalDays={totalDays}
         currentDayIndex={currentDayIndex}
+        isLoadingPage={isLoadingPage || isPaginating}
+        onPaginate={handlePaginate}
       />
     </div>
   );

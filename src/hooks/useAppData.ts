@@ -21,23 +21,16 @@ const fetcher = async <T>(key: string): Promise<T[]> => {
   }
 };
 
-const config = {
-  revalidateOnFocus: true,
-  shouldRetryOnError: true,
-  dedupingInterval: 2000,
-  errorRetryCount: 3,
-  errorRetryInterval: 5000,
-  loadingTimeout: 30000,
-} as const;
-
-export function useAppData(initialData?: TransactionRecord[]) {
+export function useAppData() {
   const { data, error, mutate }: SWRResult<TransactionRecord> = useSWR(
     'transactions',
     fetcher<TransactionRecord>,
     {
-      ...config,
-      refreshInterval: 2000,
-      fallbackData: initialData,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 2000, // actualiza cada 2 segundos
+      dedupingInterval: 0, // desactiva deduplicación de cache
+      fallbackData: undefined, // no usar fallbackData para forzar fetch real
     }
   );
 

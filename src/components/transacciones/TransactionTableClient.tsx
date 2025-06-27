@@ -8,10 +8,8 @@ import { useAppData } from '~/hooks/useAppData';
 import type { TransactionRecord } from '~/types';
 
 export default function TransactionTableClient({
-  initialData,
   onUpdateRecordAction,
 }: {
-  initialData: TransactionRecord[];
   onUpdateRecordAction: (
     records: TransactionRecord[]
   ) => Promise<{ success: boolean; error?: string }>;
@@ -19,7 +17,7 @@ export default function TransactionTableClient({
   const [showTotals, setShowTotals] = useState(false);
 
   // Usa el hook global de datos SWR
-  const { data, isLoading } = useAppData(initialData); // mutate eliminado
+  const { data, isLoading } = useAppData(); // <-- Elimina initialData
 
   // Cuando guardes, actualiza el caché SWR global y revalida para todos los dispositivos
   const handleUpdateRecords = async (records: TransactionRecord[]) => {
@@ -38,4 +36,4 @@ export default function TransactionTableClient({
       />
     </main>
   );
-} 
+}
