@@ -5,7 +5,15 @@ import { addAsesor, getAllAsesores } from '~/server/actions/tableGeneral';
 export async function GET() {
   try {
     const asesores = await getAllAsesores();
-    return NextResponse.json({ asesores });
+    return NextResponse.json(
+      { asesores },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=10',
+        },
+      }
+    );
   } catch (_error) {
     return NextResponse.json(
       { asesores: [], error: 'Error fetching asesores' },

@@ -63,7 +63,7 @@ export const getTransactions = unstable_cache(
   ['transactions-list'],
   {
     tags: ['transactions'],
-    // revalidate: 60, // opcional: segundos para revalidar automáticamente
+    revalidate: 60, // 1 minuto
   }
 );
 
@@ -104,7 +104,7 @@ async function _searchTransactions(
 export const searchTransactions = unstable_cache(
   _searchTransactions,
   ['transactions-search'],
-  { tags: ['transactions'] }
+  { tags: ['transactions'], revalidate: 60 }
 );
 
 // Cache para asesores
@@ -119,7 +119,7 @@ async function _getAllAsesores(): Promise<string[]> {
 export const getAllAsesores = unstable_cache(
   _getAllAsesores,
   ['asesores-list'],
-  { tags: ['asesores'] }
+  { tags: ['asesores'], revalidate: 60 }
 );
 
 export async function createRecord(

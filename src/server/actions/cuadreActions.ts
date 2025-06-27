@@ -85,7 +85,7 @@ async function _getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
 export const getCuadreRecords = unstable_cache(
   _getCuadreRecords,
   ['cuadre-list'],
-  { tags: ['cuadre'] }
+  { tags: ['cuadre'], revalidate: 60 }
 );
 
 export async function updateCuadreRecord(
