@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 
+import useSWR from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 
 import Header from '~/components/Header';
 import {
   deleteCuadreRecords,
-  getCuadreRecords,
   updateCuadreRecord,
 } from '~/server/actions/cuadreActions';
 
@@ -19,17 +19,35 @@ import type { CuadreData, ExtendedSummaryRecord } from '~/types';
 
 import '~/styles/deleteButton.css';
 
-export default function CuadrePage() {
-  const [summaryData, setSummaryData] = useState<ExtendedSummaryRecord[]>([]);
+function useCuadreData(initialData?: ExtendedSummaryRecord[]) {
+  const { data, mutate } = useSWR<ExtendedSummaryRecord[]>(
+    '/api/cuadre',
+    null,
+    {
+      fallbackData: initialData,
+      revalidateOnFocus: false,
+      dedupingInterval: 60000,
+    }
+  );
+  return {
+    data: data ?? [],
+    mutate,
+  };
+}
+
+export default function CuadreClientTable({
+  initialData,
+}: {
+  initialData: ExtendedSummaryRecord[];
+}) {
+  const { data: summaryData, mutate } = useCuadreData(initialData);
   const [isDeleteMode, setIsDeleteMode] = useState(false);
   const [rowsToDelete, setRowsToDelete] = useState<Set<string>>(new Set());
   const [editValues, setEditValues] = useState<
     Record<string, Partial<CuadreData>>
   >({});
-  // Ref para el checkbox de seleccionar todos
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  // Eliminar useDebouncedSave y usar useDebouncedCallback para guardar cambios debounced
   const debouncedSave = useDebouncedCallback(
     async (pendingEdits: Record<string, Partial<CuadreData>>) => {
       const updates = Object.entries(pendingEdits).map(
@@ -48,20 +66,6 @@ export default function CuadrePage() {
     800
   );
 
-  // Cargar registros de la base de datos al montar el componente
-  useEffect(() => {
-    const loadCuadreRecords = async () => {
-      try {
-        const records = await getCuadreRecords();
-        setSummaryData(records);
-      } catch (error) {
-        console.error('Error loading cuadre records:', error);
-      }
-    };
-
-    void loadCuadreRecords();
-  }, []);
-
   // Adaptar el handler para los nuevos campos y tipos
   const handleUpdateBancoReferencia = async (
     id: string,
@@ -72,7 +76,6 @@ export default function CuadrePage() {
       const record = summaryData.find((r) => r.id === id);
       if (!record) return;
 
-      // Construir el objeto cuadreData solo con el campo a actualizar
       const cuadreData: Partial<CuadreData> = {};
       if (field === 'banco') cuadreData.banco = value as string;
       if (field === 'monto') cuadreData.monto = value as number;
@@ -83,16 +86,12 @@ export default function CuadrePage() {
 
       await updateCuadreRecord(id, cuadreData as CuadreData);
 
-      // Actualizar estado local después de guardar en BD
-      setSummaryData((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
-      );
+      mutate(); // Actualiza el cache de SWR
     } catch (error) {
       console.error('Error updating record:', error);
     }
   };
 
-  // Nueva función para manejar cambios locales
   const handleLocalEdit = (
     id: string,
     field: keyof CuadreData,
@@ -109,9 +108,6 @@ export default function CuadrePage() {
       debouncedSave(updated);
       return updated;
     });
-    setSummaryData((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
-    );
   };
 
   // Agrupar registros por asesor y luego por fecha
@@ -161,7 +157,6 @@ export default function CuadrePage() {
       }
       asesorObj.fechas.get(fechaStr)!.records.push(record);
     });
-    // Convertir a array ordenado por asesor y por fecha descendente
     return Array.from(asesoresMap.values())
       .map((asesorObj) => ({
         asesor: asesorObj.asesor,
@@ -172,7 +167,6 @@ export default function CuadrePage() {
       .sort((a, b) => a.asesor.localeCompare(b.asesor));
   }, [summaryData]);
 
-  // Helper para clases de emitidoPor
   function getEmitidoPorClass(emitidoPor: string): string | undefined {
     switch (emitidoPor?.toUpperCase()) {
       case 'GONZAAPP':
@@ -186,7 +180,6 @@ export default function CuadrePage() {
     }
   }
 
-  // Seleccionar/deseleccionar todos los registros de todos los grupos
   const handleSelectAll = (allIds: string[]) => {
     if (rowsToDelete.size === allIds.length) {
       setRowsToDelete(new Set());
@@ -196,7 +189,7 @@ export default function CuadrePage() {
   };
 
   // Efecto para el estado indeterminado del checkbox de seleccionar todos
-  useEffect(() => {
+  React.useEffect(() => {
     if (selectAllRef.current && groupedRecords.length > 0) {
       const allIds = groupedRecords.flatMap((asesorGroup) =>
         asesorGroup.fechas.flatMap((fechaGroup) =>
@@ -208,7 +201,6 @@ export default function CuadrePage() {
     }
   }, [rowsToDelete, groupedRecords]);
 
-  // Add delete handlers
   const handleDeleteModeToggle = () => {
     setIsDeleteMode(!isDeleteMode);
     setRowsToDelete(new Set());
@@ -260,7 +252,7 @@ export default function CuadrePage() {
           </div>
           {/* Auto-save status */}
           <div className="mb-4 flex items-center gap-4">
-            {debouncedSave.isPending() ? (
+            {debouncedSave.isPending?.() ? (
               <span className="flex items-center gap-2 rounded-md bg-blue-300 px-3 py-2.5 text-sm font-bold text-blue-800">
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                   <circle
@@ -305,9 +297,7 @@ export default function CuadrePage() {
                       .filter((id): id is string => Boolean(id));
                     const res = await deleteCuadreRecords(ids);
                     if (res.success) {
-                      // Recargar los datos desde la base de datos
-                      const updatedRecords = await getCuadreRecords();
-                      setSummaryData(updatedRecords);
+                      mutate(); // Refresca el cache SWR tras eliminar
                       setRowsToDelete(new Set());
                       setIsDeleteMode(false);
                     } else {

@@ -25,8 +25,6 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string(),
     NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: z.string(),
     NEXT_PUBLIC_URL_BASE: z.string(),
-    NEXT_PUBLIC_WS_URL: z.string().min(1),
-    NEXT_PUBLIC_WS_BROADCAST_URL: z.string().min(1),
   },
 
   /**
@@ -44,8 +42,6 @@ export const env = createEnv({
     NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL:
       process.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL,
     NEXT_PUBLIC_URL_BASE: process.env.NEXT_PUBLIC_URL_BASE,
-    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
-    NEXT_PUBLIC_WS_BROADCAST_URL: process.env.NEXT_PUBLIC_WS_BROADCAST_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

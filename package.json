@@ -45,6 +45,7 @@
     "globals": "^16.2.0",
     "lodash": "^4.17.21",
     "next": "^15.3.4",
+    "npm": "^11.4.2",
     "postgres": "^3.4.7",
     "react": "^19.1.0",
     "react-datepicker": "^8.4.0",

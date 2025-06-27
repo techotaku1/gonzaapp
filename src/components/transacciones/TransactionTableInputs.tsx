@@ -217,14 +217,25 @@ export function useTransactionTableInputs({
 
     // Modificar la sección del renderInput donde se maneja el campo fecha
     if (field === 'fecha') {
+      // Asegura el formato correcto para datetime-local: 'YYYY-MM-DDTHH:mm'
+      let dateValue = '';
+      if (value instanceof Date && !isNaN(value.getTime())) {
+        // Ajusta a zona horaria local para que el input muestre la hora local
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        dateValue = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+      } else if (typeof value === 'string' && value) {
+        // Si ya es string, intenta usar los primeros 16 caracteres
+        dateValue = value.slice(0, 16);
+      }
       return (
         <div className="relative flex w-full items-center justify-center">
           <input
             type="datetime-local"
-            value={formatValue(value)}
+            value={dateValue}
             onChange={(e) => {
               try {
-                const inputDate = new Date(`${e.target.value}:00Z`);
+                // El valor del input es 'YYYY-MM-DDTHH:mm'
+                const inputDate = new Date(e.target.value);
                 handleInputChangeAction(row.id, field, inputDate);
               } catch (error) {
                 console.error('Error converting date:', error);

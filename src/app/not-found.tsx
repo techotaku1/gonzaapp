@@ -19,6 +19,7 @@ export default function NotFound() {
           </Link>
           <Link
             href="/cuadre"
+            prefetch={false}
             className="rounded-lg bg-blue-500 px-6 py-2 text-white transition-colors hover:bg-blue-600"
           >
             Ir al Cuadre

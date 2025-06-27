@@ -1,0 +1,109 @@
+FOT VERCEL = FAST ORIGIN TRANSFER
+
+- Fast Origin Transfer is incurred when using any of Vercel's compute products. These include Vercel Functions, Middleware, and the Data Cache (used through ISR).
+
+Select a Region
+
+Washington, D.C., USA (iad1)
+Managed Infrastructure pricing
+Resource
+Hobby Included
+Pro Included
+Pro Extra
+Fast Origin Transfer
+
+First 10 GB	First 100 GB	$0.06 per 1 GB
+Calculating Fast Origin Transfer
+Usage is incurred on both the input and output data transfer when using compute on Vercel. For example:
+
+Incoming: The number of bytes sent as part of the HTTP Request (Headers & Body).
+For common GET requests, the incoming bytes are normally inconsequential (less than 1KB for a normal request).
+For POST requests, like a file upload API, the incoming bytes would include the entire uploaded file.
+Outgoing: The number of bytes sent as the HTTP Response (Headers & Body).
+Optimizing Fast Origin Transfer
+Functions
+When using Incremental Static Regeneration (ISR) on Vercel, a Vercel Function is used to generate the static page. This optimization section applies for both server-rendered function usage, as well as usage for ISR. ISR usage on Vercel is billed under the Vercel Data Cache.
+
+If using Vercel Functions, you can optimize Fast Origin Transfer by reducing the size of the response. Ensure your Function is only responding with relevant data (no extraneous API fields).
+
+You can also add caching headers to the function response. By caching the response, future requests serve from the Edge Network cache, rather than invoking the function again. This reduces Fast Origin Transfer usage and improves performance.
+
+Ensure your Function supports If-Modified-Since or Etag to prevent duplicate data transmission (on by default for Next.js applications).
+
+Middleware
+If using Middleware, it is possible to accrue Fast Origin Transfer twice for a single Function request. To prevent this, you want to only run Middleware when necessary. For example, Next.js allows you to set a matcher to restrict what requests run Middleware.
+
+Investigating Usage
+Look at the Fast Origin Transfer section of the Usage page:
+Observe incoming vs outgoing usage. Reference the list above for optimization tips.
+Observe the breakdown by project.
+Observe the breakdown by region (Fast Origin Transfer is priced regionally)
+If optimizing Outgoing Fast Origin Transfer:
+Observe the Top Paths on the Usage page
+Filter by invocations to see which specific compute is being accessed most
+Edge Requests
+When visiting your site, requests are made to an Edge Network region. Traffic is routed to the nearest region to the visitor. Static assets and functions all incur Edge Requests.
+
+Requests to Edge Network regions are not only for Functions using the edge runtime. Edge Requests are for all requests made to your site, including static assets and functions.
+
+Select a Region
+
+Washington, D.C., USA (iad1)
+Managed Infrastructure pricing
+Resource
+Hobby Included
+Pro Included
+Pro Extra
+Edge Requests
+
+First 1,000,000	First 10,000,000	$2.00 per 1,000,000 Requests
+Edge Request Additional CPU Duration
+
+N/A	1 Hour	$0.30 per 1 Hour
+Managing Edge Requests
+You can view the Edge Requests chart on the Usage tab of your dashboard. This chart shows:
+
+Count: The total count of requests made to your deployments
+Projects: The projects that received the requests
+Region: The region where the requests are made
+As with all charts on the Usage tab, you can select the caret icon to view the chart in full screen mode.
+
+Optimizing Edge Requests
+Frameworks such as Next.js, SvelteKit, Nuxt, and others help build applications that automatically reduce unnecessary requests.
+
+The most significant opportunities for optimizing Edge Requests include:
+
+Identifying frequent re-mounting: If your application involves rendering a large number of images and re-mounts them, it can inadvertently increase requests
+To identify: Use your browsers devtools and browse your site. Pay attention to responses with a 304 status code on repeated requests paths. This indicates content that has been fetched multiple times
+Excessive polling or data fetching: Applications that poll APIs for live updates, or use tools like SWR or React Query to reload data on user focus can contribute to increased requests
+Reducing the amount of prefetching: While prefetching can improve perceived page navigation performance, it can also increase the number of requests made to your site. Consider reducing the number of prefetches, for example in a framework like Next.js with prefetch="false" on <Link> components.
+Edge Request CPU Duration
+Edge Request CPU Duration is the measurement of CPU processing time per Edge Request. Edge Requests of 10ms or less in duration do not incur any additional charges. CPU Duration is metered in increments of 10ms.
+
+Managing Edge Request CPU Duration
+View the Edge Request CPU Duration chart on the Usage tab of your dashboard. If you notice an increase in CPU Duration, investigate the following aspects of your application:
+
+Number of routes.
+Number of redirects.
+Complex regular expressions in routing.
+To investigate further:
+
+Identify the deployment where the metric increased.
+Compare rewrites, redirects, and pages to the previous deployment.
+
+-------------------------------------------------------------------------------------
+
+NEON EGRESS
+
+- Data transfer
+A usage metric that measures the total volume of data transferred out of Neon (egress) during a billing period. Egress also includes data transferred from Neon via Postgres logical replication to any destination, including Neon itself. Neon does not charge for data transfer, but Free Plan projects are limited to 5 GB per month. See Data transfer.
+
+Data Transfer
+Data transfer refers to the total volume of data transferred out of Neon (egress) during a billing period. Egress also includes data transferred from Neon via Postgres logical replication to any destination, including Neon itself. While Neon doesn’t charge for egress, Free plan projects are limited to 5 GB of data transfer per month. If a project exceeds this limit, its compute is suspended and the following error is shown:
+
+Your project has exceeded the data transfer quota. Upgrade your plan to increase limits.
+If you hit the data transfer limit on the Free plan, you can upgrade your plan from the Billing page in your Neon account. For details, see Change your plan.
+
+For paid plans, Neon applies a reasonable usage policy—there’s no fixed limit, but usage should remain within what’s typical for most workloads. If usage is unusually high, Neon may reach out to discuss your use case and plan options.
+
+You can monitor your data transfer usage on the Project Dashboard or Billing page.

@@ -70,7 +70,6 @@ Algunas opciones del CLI de npm para optimizar o reaprar tus librerias
 
 - `npm dedupe` //Reducir la duplicación en el árbol de paquetes
 - `npm doctor` //Comprueba el estado de tu entorno npm
-- `npm prune` //Eliminar paquetes extraños
 - `npm ci` //# Para CI/CD y despliegues
 - `npm install -g npm@latest` //actualizar ultima version del npm
 
@@ -193,6 +192,16 @@ Windows: `C:\Users\TU_USUARIO\AppData\Roaming\Code`
 
 Instalar dependencias globales en una sola :
 
-`npm install -g npm-check-updates@latest npm@latest eslint@latest typescript@latest`
+`npm install -g npm-check-updates@latest npm@latest eslint@latest typescript@latest`,
+
+'npm install -g npm@11.4.2'
 
 ---
+
+Verificar la Ruta de NODE y fnm :
+
+1. `which node` : ruta de node con fnm
+2. `fnm install --lts` : instalar la ultima version stable de node
+3. `fnm use (version)` : elegir la version de node que quieres usar
+4. `fnm alias (version) default` : configurar la version predeterminada de nose
+5. `eval "$(fnm env)"` : Proteger tu entorno
