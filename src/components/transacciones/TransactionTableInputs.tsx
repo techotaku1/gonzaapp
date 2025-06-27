@@ -311,12 +311,12 @@ export function useTransactionTableInputs({
     if (field === 'tipoVehiculo') {
       return (
         <select
-          value={(value as string) || ''}
+          value={value ? String(value) : ''}
           onChange={(e) =>
-            handleInputChangeAction(row.id, field, e.target.value)
+            handleInputChangeAction(row.id, field, e.target.value || null)
           }
           className="table-select-base w-[150px] rounded border border-gray-600"
-          title={value as string}
+          title={value ? String(value) : ''}
         >
           <option value="">Seleccionar...</option>
           {tipoVehiculoOptions.map((option: string) => (
@@ -324,7 +324,7 @@ export function useTransactionTableInputs({
               key={option}
               value={option}
               className="text-center"
-              title={option} // Añadir título también a las opciones
+              title={option}
             >
               {option}
             </option>

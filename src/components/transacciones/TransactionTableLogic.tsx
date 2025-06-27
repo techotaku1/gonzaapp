@@ -37,7 +37,10 @@ export type HandleInputChange = (
 ) => void;
 
 // Elimina las referencias a EditValues y DateGroup, y define EditValues localmente aquí:
-type EditValues = Record<string, Partial<TransactionRecord> & Record<string, unknown>>;
+type EditValues = Record<
+  string,
+  Partial<TransactionRecord> & Record<string, unknown>
+>;
 
 export function useTransactionTableLogic(props: {
   initialData: TransactionRecord[];
@@ -92,12 +95,18 @@ export function useTransactionTableLogic(props: {
   const [isActuallySaving, setIsActuallySaving] = useState(false);
   const pendingEdits = useRef<EditValues>({});
   // Agrupación por fecha: solo agrupa por la fecha (YYYY-MM-DD) de cada registro, sin mezclar días distintos en la misma página
+  // Obtén la fecha seleccionada (o la de hoy si no hay filtro)
+  const selectedDate = useMemo(() => {
+    if (dateFilter.startDate) return getDateKey(dateFilter.startDate);
+    return getDateKey(new Date());
+  }, [dateFilter.startDate]);
+
+  // Hook para obtener los datos paginados del backend
   const {
-    transactions,
-    total: _total,
-    isLoading: _isLoading,
-  } = useTransactionsByDate(getDateKey(new Date()), currentPage, 50);
-  const paginatedData = transactions;
+    transactions: paginatedData,
+    total: totalRecords,
+    isLoading: _isLoadingPage, // prefijo _ para evitar warning de unused var
+  } = useTransactionsByDate(selectedDate, currentPage, 50);
 
   useEffect(() => {
     if (Object.keys(pendingEdits.current).length === 0) {
@@ -650,6 +659,8 @@ export function useTransactionTableLogic(props: {
     setIsActuallySaving,
     pendingEdits,
     paginatedData: paginatedDataFinal,
+    totalRecords,
+    selectedDate,
     initialData: props.initialData,
     onUpdateRecordAction: props.onUpdateRecordAction,
     showTotals: props.showTotals,

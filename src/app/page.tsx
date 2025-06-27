@@ -3,8 +3,6 @@ import { SWRProvider } from '~/components/swr/SWRProvider';
 import TransactionTableClient from '~/components/transacciones/TransactionTableClient';
 import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
 
-export const dynamic = 'force-static';
-
 export default async function HomePage() {
   const initialData = await getTransactions();
   return (

@@ -8,7 +8,6 @@ import { MdOutlineTableChart } from 'react-icons/md';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { type TransactionRecord } from '~/types';
-import { getDateKey } from '~/utils/dateUtils';
 
 import ExportDateRangeModal from '../ExportDateRangeModal';
 import SearchFilters from '../filters/SearchFilters';
@@ -86,6 +85,9 @@ export default function TransactionTable(props: TransactionTableProps) {
   // Si quieres un loader solo la primera vez, deberías manejarlo en el padre (TransactionTableClient)
   // Aquí solo renderiza la tabla normalmente
 
+  // Calcula el total de páginas para la paginación
+  const totalPages = Math.max(1, Math.ceil((logic.totalRecords ?? 1) / 50));
+
   return (
     <div className="relative">
       {/* Mostrar fecha solo si NO estamos en la vista de totales */}
@@ -136,6 +138,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                       </div>
                     ) : (
                       <svg
+                        xmlns="http://www.w3.org/2000/svg"
                         className="w-8 text-white group-active:scale-[0.8]"
                         fill="none"
                         height="24"
@@ -563,8 +566,8 @@ export default function TransactionTable(props: TransactionTableProps) {
             <DatePagination
               currentPage={logic.currentPage}
               setCurrentPage={logic.setCurrentPage}
-              totalPages={Math.ceil((props.initialData.length || 1) / 50)}
-              selectedDate={getDateKey(new Date())}
+              totalPages={totalPages}
+              selectedDate={logic.selectedDate}
             />
           )}
 
