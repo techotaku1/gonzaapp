@@ -146,7 +146,7 @@ export async function createRecord(
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
     });
-    revalidateTag('transactions'); // Solo revalida el tag de datos
+    revalidateTag('transactions'); // <- Esto ya está, asegura que el tag sea el mismo que usa unstable_cache
     return { success: true };
   } catch (error) {
     console.error('Error creating record:', error);

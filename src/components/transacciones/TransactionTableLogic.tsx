@@ -310,16 +310,17 @@ export function useTransactionTableLogic(props: {
       };
       const result = await createRecord({ ...newRow, id: newRowId });
       if (result.success) {
-        // --- CORRECCIÓN: Forzar recarga SWR para que la nueva fila aparezca en la tabla del día actual ---
+        // --- CORRECCIÓN: Forzar recarga SWR global y local para que la nueva fila aparezca ---
         if (typeof window !== 'undefined') {
-          // Solo en cliente, refresca el SWR de la tabla
           const { mutate } = await import('swr');
+          // Refresca la lista global (todas las fechas, para la vista general)
+          mutate('/api/transactions');
+          // Refresca la lista paginada del día actual
           mutate(
             `/api/transactions?date=${getDateKey(fechaColombia)}&limit=50&offset=0`
           );
         }
-        setCurrentPage(1); // Siempre vuelve a la primera página del día actual
-        // No es necesario llamar a handleSaveOperation ni modificar initialData aquí
+        setCurrentPage(1);
       } else {
         console.error('Error creating new record:', result.error);
       }
