@@ -37,13 +37,25 @@ interface TransactionTableProps {
   isLoading?: boolean; // <-- agrega esta prop
 }
 
+function formatLongDate(date: Date) {
+  return date
+    .toLocaleDateString('es-CO', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'America/Bogota',
+    })
+    .toUpperCase();
+}
+
 function DatePagination({
   currentPage,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setCurrentPage, // No se usa, pero se deja para compatibilidad de props
+  setCurrentPage,
   totalPages,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  selectedDate, // No se usa, pero se deja para compatibilidad de props
+  selectedDate,
   goToPreviousDay,
   goToNextDay,
   selectedDateObj,
@@ -56,15 +68,7 @@ function DatePagination({
   goToNextDay: () => void;
   selectedDateObj: Date;
 }) {
-  // Formato largo: "MIÉRCOLES, 25 DE JUNIO DE 2025"
-  const formattedLong =
-    selectedDateObj?.toLocaleDateString('es-CO', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: 'America/Bogota',
-    }).toUpperCase();
+  const formattedLong = formatLongDate(selectedDateObj);
 
   return (
     <div className="mt-4 flex flex-col items-center gap-2">
@@ -104,24 +108,24 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   // Calcula el total de páginas para la paginación
   const totalPages = Math.max(1, Math.ceil((logic.totalRecords ?? 1) / 50));
-
-  // Convierte selectedDate (YYYY-MM-DD) a Date para mostrar en formato largo
   const selectedDateObj = (() => {
     const [y, m, d] = logic.selectedDate.split('-').map(Number);
     return new Date(y, m - 1, d);
   })();
 
-  // Muestra SIEMPRE la paginación de días abajo de la tabla (no la ocultes)
+  // --- SIEMPRE muestra la fecha arriba del botón agregar en formato largo ---
+  // --- SIEMPRE muestra la paginación de días abajo de la tabla ---
+
   return (
     <div className="relative">
-      {/* Mostrar fecha solo si NO estamos en la vista de totales */}
+      {/* Mostrar SIEMPRE la fecha en formato largo arriba del botón agregar */}
       {!props.showTotals && (
         <div className="mb-3 flex items-center justify-between">
           <time
             id="current-date-display"
             className="font-display text-3xl font-bold tracking-tight text-black"
           >
-            {logic._currentDateDisplay}
+            {formatLongDate(selectedDateObj)}
           </time>
         </div>
       )}
