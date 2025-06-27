@@ -4,10 +4,10 @@ import React, { useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 
-import useSWR from 'swr';
 import { useDebouncedCallback } from 'use-debounce';
 
 import Header from '~/components/Header';
+import { useCuadreData } from '~/hooks/useCuadreData';
 import {
   deleteCuadreRecords,
   updateCuadreRecord,
@@ -18,22 +18,6 @@ import CuadreTableBody from './CuadreTableBody';
 import type { CuadreData, ExtendedSummaryRecord } from '~/types';
 
 import '~/styles/deleteButton.css';
-
-function useCuadreData(initialData?: ExtendedSummaryRecord[]) {
-  const { data, mutate } = useSWR<ExtendedSummaryRecord[]>(
-    '/api/cuadre',
-    null,
-    {
-      fallbackData: initialData,
-      revalidateOnFocus: false,
-      dedupingInterval: 60000,
-    }
-  );
-  return {
-    data: data ?? [],
-    mutate,
-  };
-}
 
 export default function CuadreClientTable({
   initialData,

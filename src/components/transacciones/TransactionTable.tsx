@@ -590,6 +590,10 @@ export default function TransactionTable(props: TransactionTableProps) {
                 <Icons.spinner className="h-6 w-6" />
                 Cargando registros...
               </div>
+            ) : logic.paginatedData.length === 0 ? (
+              <div className="flex items-center justify-center py-12 text-lg font-semibold text-gray-500">
+                Este día no tiene registros
+              </div>
             ) : (
               <div
                 className="table-scroll-container"
