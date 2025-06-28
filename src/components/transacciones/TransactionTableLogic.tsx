@@ -322,7 +322,6 @@ export function useTransactionTableLogic(props: {
               const newData = current?.data
                 ? [{ ...newRow, id: newRowId }, ...current.data]
                 : [{ ...newRow, id: newRowId }];
-              // Corrige: siempre retorna un objeto con total (usa el anterior o 1 si no hay)
               return {
                 data: newData,
                 total:
@@ -337,6 +336,8 @@ export function useTransactionTableLogic(props: {
             undefined,
             { revalidate: true }
           );
+          // --- Fuerza refresco global de datos para que initialData incluya la nueva fila ---
+          await mutate('transactions');
         }
         setCurrentPage(1);
       } else {

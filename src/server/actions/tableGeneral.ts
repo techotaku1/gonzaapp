@@ -193,6 +193,12 @@ export async function updateRecords(
             record.fecha instanceof Date
               ? record.fecha
               : new Date(record.fecha),
+          // Asegura que los campos numéricos nunca sean undefined
+          boletasRegistradas: record.boletasRegistradas ?? 0,
+          precioNeto: record.precioNeto ?? 0,
+          tarifaServicio: record.tarifaServicio ?? 0,
+          impuesto4x1000: record.impuesto4x1000 ?? 0,
+          gananciaBruta: record.gananciaBruta ?? 0,
         };
         await db
           .update(transactions)
@@ -201,10 +207,10 @@ export async function updateRecords(
             boletasRegistradas: Number(
               safeRecord.boletasRegistradas
             ).toString(),
-            precioNeto: safeRecord.precioNeto.toString(),
-            tarifaServicio: safeRecord.tarifaServicio.toString(),
-            impuesto4x1000: safeRecord.impuesto4x1000.toString(),
-            gananciaBruta: safeRecord.gananciaBruta.toString(),
+            precioNeto: Number(safeRecord.precioNeto).toString(),
+            tarifaServicio: Number(safeRecord.tarifaServicio).toString(),
+            impuesto4x1000: Number(safeRecord.impuesto4x1000).toString(),
+            gananciaBruta: Number(safeRecord.gananciaBruta).toString(),
           })
           .where(eq(transactions.id, record.id));
       })
