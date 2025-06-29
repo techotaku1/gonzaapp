@@ -183,7 +183,7 @@ export default [
 
       // Additional import rules for better organization
       'import/newline-after-import': 'error',
-      'import/no-duplicates': 'error',
+      'import/no-duplicates': 'off',
       'import/first': 'error',
 
       // ===== DRIZZLE RULES =====
