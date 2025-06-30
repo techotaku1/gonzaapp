@@ -170,35 +170,8 @@ export function useTransactionTableLogic(props: {
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
-        if (
-          field === 'fecha' &&
-          value instanceof Date &&
-          !isNaN(value.getTime())
-        ) {
-          // Obtén los componentes de la fecha/hora en la zona horaria de Colombia
-          const formatter = new Intl.DateTimeFormat('en-US', {
-            timeZone: 'America/Bogota',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-          });
-          const parts = formatter.formatToParts(value);
-          const get = (type: string) =>
-            Number(parts.find((p) => p.type === type)?.value ?? '0');
-          // Crea un Date LOCAL (no UTC) con los componentes de Colombia
-          newValue = new Date(
-            get('year'),
-            get('month') - 1,
-            get('day'),
-            get('hour'),
-            get('minute'),
-            get('second')
-          );
-        }
+        // --- CORREGIDO: NO convertir la fecha editada a zona horaria de Colombia ---
+        // Simplemente guarda el Date tal como lo entrega el input
         if (
           [
             'precioNeto',
@@ -298,8 +271,8 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Usar la utilidad para obtener la fecha/hora exacta de Colombia
-      const fechaColombia = getCurrentColombiaDate();
+      // --- CORREGIDO: Usa la hora local del navegador ---
+      const fechaColombia = new Date();
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
@@ -876,44 +849,3 @@ export function useTransactionTableLogic(props: {
     goToNextDay,
   };
 }
-
-// Utilidad robusta para obtener la fecha/hora actual de Colombia como objeto Date local
-function getCurrentColombiaDate(): Date {
-  // Obtiene la hora actual de Colombia en UTC
-  const now = new Date();
-  // Obtiene los componentes de la fecha/hora en la zona horaria de Colombia
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Bogota',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(now);
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value ?? '0');
-  // Crea un Date en UTC con los componentes de Colombia
-  return new Date(
-    Date.UTC(
-      get('year'),
-      get('month') - 1,
-      get('day'),
-      get('hour'),
-      get('minute'),
-      get('second')
-    )
-  );
-}
-
-// Documentación de uso de useProgress y useRouter (bprogress):
-// import { useProgress } from '@bprogress/next';
-// import { useRouter } from '@bprogress/next/app';
-// const progress = useProgress();
-// const router = useRouter();
-// progress.start(0.3); // Inicia barra de progreso al 30%
-// progress.stop();     // Detiene la barra de progreso
-// router.push('/ruta', { startPosition: 0.3 }); // Navega con barra de progreso
-// router.push('/ruta', { startPosition: 0.3 }); // Navega con barra de progreso

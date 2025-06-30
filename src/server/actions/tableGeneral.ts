@@ -151,12 +151,33 @@ export async function getAllAsesores(): Promise<string[]> {
   return await _getAllAsesores();
 }
 
+// Utilidad: interpreta una fecha local como si fuera de Colombia y la convierte a UTC
+function toColombiaUTC(date: Date): Date {
+  // Colombia es UTC-5 todo el año (sin horario de verano)
+  // Creamos una fecha UTC con los mismos componentes que la local de Colombia
+  return new Date(
+    Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds()
+    )
+  );
+}
+
 export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // --- CORREGIDO: Guarda la fecha como UTC interpretando que es hora de Colombia ---
+    const fechaUTC =
+      record.fecha instanceof Date ? toColombiaUTC(record.fecha) : record.fecha;
     await db.insert(transactions).values({
       ...record,
+      fecha: fechaUTC,
       boletasRegistradas: Number(record.boletasRegistradas).toString(),
       precioNeto: record.precioNeto.toString(),
       tarifaServicio: record.tarifaServicio.toString(),
@@ -189,11 +210,11 @@ export async function updateRecords(
           tipoDocumento: record.tipoDocumento || '',
           numeroDocumento: record.numeroDocumento || '',
           asesor: record.asesor || '',
+          // --- CORREGIDO: SIEMPRE convertir la fecha a UTC interpretando como hora de Colombia ---
           fecha:
             record.fecha instanceof Date
-              ? record.fecha
-              : new Date(record.fecha),
-          // Asegura que los campos numéricos nunca sean undefined
+              ? toColombiaUTC(record.fecha)
+              : toColombiaUTC(new Date(record.fecha)),
           boletasRegistradas: record.boletasRegistradas ?? 0,
           precioNeto: record.precioNeto ?? 0,
           tarifaServicio: record.tarifaServicio ?? 0,

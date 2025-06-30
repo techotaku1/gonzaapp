@@ -1,6 +1,7 @@
 'use client';
 
 import { TransactionRecord } from '~/types';
+import { fromDatetimeLocalStringToColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { formatCurrency } from '~/utils/numberFormat';
 import { type VehicleType, vehicleTypes } from '~/utils/soatPricing';
@@ -233,9 +234,10 @@ export function useTransactionTableInputs({
             onChange={(e) => {
               try {
                 // El valor del input es 'YYYY-MM-DDTHH:mm'
-                const inputDate = new Date(e.target.value);
-                // --- CORREGIR: NO conviertas a hora de Colombia aquí ---
-                // Solo pasa el Date tal cual, la lógica de ajuste debe estar en TransactionTableLogic
+                // --- CORREGIDO: convierte a fecha en zona horaria de Colombia ---
+                const inputDate = fromDatetimeLocalStringToColombiaDate(
+                  e.target.value
+                );
                 handleInputChangeAction(row.id, field, inputDate);
               } catch (error) {
                 console.error('Error converting date:', error);

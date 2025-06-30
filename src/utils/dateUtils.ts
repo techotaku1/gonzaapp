@@ -54,13 +54,13 @@ export const toColombiaDatetimeLocalString = (date: Date): string => {
   return format(tzDate, "yyyy-MM-dd'T'HH:mm");
 };
 
-// Convierte un string de input type="datetime-local" a Date en zona America/Bogota
+// Convierte un string de input type="datetime-local" a Date local puro (sin zona horaria)
 export const fromDatetimeLocalStringToColombiaDate = (value: string): Date => {
   // value: 'yyyy-MM-ddTHH:mm'
-  // Crear un Date como si el string fuera hora local de Bogotá
+  // Crear un Date local puro (sin conversión de zona horaria)
   const [datePart, timePart] = value.split('T');
   const [year, month, day] = datePart.split('-').map(Number);
   const [hour, minute] = timePart.split(':').map(Number);
-  // Crear la fecha en la zona horaria de Bogotá usando TZDate
-  return new TZDate(year, month - 1, day, hour, minute, 0, 0, TIMEZONE);
+  // El constructor Date(año, mes, día, hora, minuto) crea la fecha en la zona local del navegador
+  return new Date(year, month - 1, day, hour, minute, 0, 0);
 };
