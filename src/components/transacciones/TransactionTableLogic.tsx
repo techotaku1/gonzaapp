@@ -795,6 +795,11 @@ export function useTransactionTableLogic(props: {
     debouncedSearchTerm,
   ]);
 
+  // --- NUEVO: Limpia editValues cuando llegan nuevos datos remotos (por polling SWR) ---
+  useEffect(() => {
+    setEditValues({});
+  }, [props.initialData]);
+
   return {
     selectedRows,
     setSelectedRows,
