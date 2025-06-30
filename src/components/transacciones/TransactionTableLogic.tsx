@@ -271,9 +271,8 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // --- CORREGIDO: Usa la hora local del navegador ---
+      // --- SIEMPRE usa la fecha de hoy ---
       const fechaColombia = new Date();
-
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: fechaColombia,
@@ -331,6 +330,8 @@ export function useTransactionTableLogic(props: {
           // --- Fuerza refresco global de datos para que initialData incluya la nueva fila ---
           await mutate('transactions');
         }
+        // --- SIEMPRE navega al día de hoy después de agregar ---
+        setDateFilter({ startDate: new Date(), endDate: null });
         setCurrentPage(1);
       } else {
         console.error('Error creating new record:', result.error);
@@ -770,6 +771,30 @@ export function useTransactionTableLogic(props: {
       router.push('/cuadre', { startPosition: 0.3 });
     }, 500);
   }, [router]);
+  // --- NUEVO: Mover automáticamente al día anterior si no hay registros ---
+  useEffect(() => {
+    // Solo si no está cargando, no está buscando, y no está agregando
+    if (
+      !isAddingRow &&
+      !isActuallySaving &&
+      !debouncedSearchTerm &&
+      paginatedData.length === 0 &&
+      dateFilter.startDate
+    ) {
+      // Busca el día anterior con registros
+      const prevDay = new Date(dateFilter.startDate);
+      prevDay.setDate(prevDay.getDate() - 1);
+      setDateFilter({ startDate: prevDay, endDate: null });
+      setCurrentPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    paginatedData.length,
+    isAddingRow,
+    isActuallySaving,
+    debouncedSearchTerm,
+  ]);
+
   return {
     selectedRows,
     setSelectedRows,
