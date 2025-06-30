@@ -92,7 +92,7 @@ const RemoteSearchInput: React.FC<
 
 export default function SearchFilters({
   data,
-  onFilterAction: _onFilterAction, // prefijo _ para evitar warning
+  onFilterAction,
   onDateFilterChangeAction,
   onToggleAsesorSelectionAction,
   onGenerateCuadreAction,
@@ -100,7 +100,6 @@ export default function SearchFilters({
   isAsesorSelectionMode,
   hasSelectedAsesores,
   isLoadingAsesorMode,
-  searchTerm: _searchTerm, // prefijo _ para evitar warning
   setSearchTermAction,
 }: SearchControlsProps) {
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -154,8 +153,16 @@ export default function SearchFilters({
   const handleRemoteSearch = useCallback(() => {
     setRemoteLoading(true);
     setSearchTermAction(remoteSearch);
+    // --- CORREGIDO: Llama a onFilterAction con los resultados filtrados localmente ---
+    const filtered = data.filter((item) =>
+      Object.entries(item).some(([key, value]) => {
+        if (key === 'fecha' || value === null) return false;
+        return String(value).toLowerCase().includes(remoteSearch.toLowerCase());
+      })
+    );
+    onFilterAction(filtered, remoteSearch);
     setTimeout(() => setRemoteLoading(false), 400); // Simula loading
-  }, [remoteSearch, setSearchTermAction]);
+  }, [remoteSearch, setSearchTermAction, data, onFilterAction]);
 
   const minDateValue = startDate ?? undefined;
 
