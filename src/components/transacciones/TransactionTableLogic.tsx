@@ -164,14 +164,42 @@ export function useTransactionTableLogic(props: {
     800
   );
   const [editValues, setEditValues] = useState<EditValues>({});
+  const isEditingRef = useRef(false);
+  const editTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
+      // --- NUEVO: Marca que el usuario está editando ---
+      isEditingRef.current = true;
+      if (editTimeoutRef.current) clearTimeout(editTimeoutRef.current);
+      editTimeoutRef.current = setTimeout(() => {
+        isEditingRef.current = false;
+      }, 1200); // 1.2s después de dejar de escribir
+
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
-        // --- CORREGIDO: NO convertir la fecha editada a zona horaria de Colombia ---
-        // Simplemente guarda el Date tal como lo entrega el input
+
+        // --- CORREGIDO: Para el campo 'fecha', convierte el Date local editado a UTC con los componentes de la hora de Colombia ---
+        if (field === 'fecha' && value instanceof Date) {
+          // value es la fecha local seleccionada por el usuario (en la zona del navegador)
+          // Queremos guardar la hora de Colombia como UTC real
+          const colombiaNow = toColombiaDate(value);
+          newValue = new Date(
+            Date.UTC(
+              colombiaNow.getFullYear(),
+              colombiaNow.getMonth(),
+              colombiaNow.getDate(),
+              colombiaNow.getHours(),
+              colombiaNow.getMinutes(),
+              colombiaNow.getSeconds(),
+              colombiaNow.getMilliseconds()
+            )
+          );
+        }
+
+        // ...existing code for other fields...
         if (
           [
             'precioNeto',
@@ -271,8 +299,23 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // --- SIEMPRE usa la fecha de hoy ---
-      const fechaColombia = new Date();
+      // --- Crea la fecha UTC correspondiente a la hora actual de Colombia ---
+      const now = new Date();
+      // Obtiene la hora actual en Colombia
+      const colombiaNow = toColombiaDate(now);
+      // Crea un Date UTC con los componentes de la hora de Colombia
+      const fechaColombia = new Date(
+        Date.UTC(
+          colombiaNow.getFullYear(),
+          colombiaNow.getMonth(),
+          colombiaNow.getDate(),
+          colombiaNow.getHours(),
+          colombiaNow.getMinutes(),
+          colombiaNow.getSeconds(),
+          colombiaNow.getMilliseconds()
+        )
+      );
+
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
         fecha: fechaColombia,
@@ -797,8 +840,10 @@ export function useTransactionTableLogic(props: {
 
   // --- NUEVO: Limpia editValues y el estado de guardado cuando llegan datos remotos (por polling SWR) ---
   useEffect(() => {
-    setEditValues({});
-    setIsActuallySaving(false); // <-- Esto evita que el botón se quede pegado
+    if (!isEditingRef.current) {
+      setEditValues({});
+      setIsActuallySaving(false);
+    }
   }, [props.initialData]);
 
   return {
