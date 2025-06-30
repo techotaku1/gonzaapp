@@ -165,17 +165,23 @@ export function useTransactionTableLogic(props: {
   );
   const [editValues, setEditValues] = useState<EditValues>({});
   const isEditingRef = useRef(false);
-  const editTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const editTimeoutRef = useRef<Record<string, NodeJS.Timeout | null>>({});
 
   // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
-      // --- NUEVO: Marca que el usuario está editando ---
       isEditingRef.current = true;
-      if (editTimeoutRef.current) clearTimeout(editTimeoutRef.current);
-      editTimeoutRef.current = setTimeout(() => {
-        isEditingRef.current = false;
-      }, 1200); // 1.2s después de dejar de escribir
+      // --- Soporta múltiples campos editándose a la vez ---
+      if (editTimeoutRef.current[`${id}-${field}`]) {
+        clearTimeout(editTimeoutRef.current[`${id}-${field}`]!);
+      }
+      editTimeoutRef.current[`${id}-${field}`] = setTimeout(() => {
+        // Cuando expira el timeout de este campo, verifica si quedan otros editando
+        delete editTimeoutRef.current[`${id}-${field}`];
+        if (Object.keys(editTimeoutRef.current).length === 0) {
+          isEditingRef.current = false;
+        }
+      }, 1200);
 
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
@@ -838,13 +844,52 @@ export function useTransactionTableLogic(props: {
     debouncedSearchTerm,
   ]);
 
-  // --- NUEVO: Limpia editValues y el estado de guardado cuando llegan datos remotos (por polling SWR) ---
+  // --- NUEVO: Limpia editValues y el estado de guardado SOLO si los datos remotos reflejan los edits Y los valores remotos son realmente distintos a los edits previos ---
   useEffect(() => {
     if (!isEditingRef.current) {
-      setEditValues({});
-      setIsActuallySaving(false);
+      // Solo limpia editValues si los datos remotos ya reflejan todos los cambios locales
+      const allEditsAreInRemote = Object.entries(editValues).every(
+        ([id, edits]) => {
+          const remote = props.initialData.find((r) => r.id === id);
+          if (!remote) return false;
+          return Object.entries(edits).every(([field, value]) => {
+            // Compara usando JSON.stringify para soportar fechas y nulls
+            return (
+              JSON.stringify(remote[field as keyof typeof remote]) ===
+              JSON.stringify(value)
+            );
+          });
+        }
+      );
+      // --- ARREGLO FINAL: Solo limpia editValues si hay edits, el usuario NO está editando NINGÚN campo, y los valores remotos son realmente distintos a los edits previos ---
+      if (
+        allEditsAreInRemote &&
+        Object.keys(editValues).length > 0 &&
+        !Object.values(editTimeoutRef.current ?? {}).some(Boolean)
+      ) {
+        // Solo limpia si los valores remotos son IGUALES a los edits (no si solo existen los edits)
+        let shouldClear = true;
+        for (const [id, edits] of Object.entries(editValues)) {
+          const remote = props.initialData.find((r) => r.id === id);
+          if (!remote) continue;
+          for (const [field, value] of Object.entries(edits)) {
+            if (
+              JSON.stringify(remote[field as keyof typeof remote]) !==
+              JSON.stringify(value)
+            ) {
+              shouldClear = false;
+              break;
+            }
+          }
+          if (!shouldClear) break;
+        }
+        if (shouldClear) {
+          setEditValues({});
+          setIsActuallySaving(false);
+        }
+      }
     }
-  }, [props.initialData]);
+  }, [props.initialData, editValues]);
 
   // --- NUEVO: Si al cargar la página por primera vez no hay registros en el día actual, navega automáticamente al día anterior con registros ---
   useEffect(() => {
