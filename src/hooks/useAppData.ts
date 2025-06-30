@@ -25,10 +25,13 @@ const fetcher = async <T>(key: string): Promise<T[]> => {
 const config = {
   revalidateOnFocus: true,
   shouldRetryOnError: true,
-  dedupingInterval: 2000,
+  dedupingInterval: 1000,
   errorRetryCount: 3,
   errorRetryInterval: 5000,
   loadingTimeout: 30000,
+  refreshInterval: 2000, // <-- Asegura polling aquí también
+  refreshWhenHidden: true,
+  refreshWhenOffline: true,
 } as const;
 
 export function useAppData(initialData?: TransactionRecord[]) {
@@ -37,7 +40,6 @@ export function useAppData(initialData?: TransactionRecord[]) {
     fetcher<TransactionRecord>,
     {
       ...config,
-      refreshInterval: 0,
       fallbackData: initialData,
     }
   );

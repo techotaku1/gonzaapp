@@ -6,8 +6,10 @@ const swrConfig = {
   revalidateOnFocus: true,
   revalidateOnReconnect: true,
   refreshInterval: 2000, // Polling cada 2 segundos
-  refreshWhenHidden: true, // Polling aunque la pestaña esté oculta
-  refreshWhenOffline: true, // Polling cuando vuelva el internet
+  refreshWhenHidden: true,
+  refreshWhenOffline: true,
+  dedupingInterval: 1000, // Reduce deduplicación para que el polling sea más efectivo
+  keepPreviousData: true, // Mantén los datos previos mientras llegan nuevos
 };
 
 export function SWRProvider({ children }: { children: React.ReactNode }) {
