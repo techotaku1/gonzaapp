@@ -407,29 +407,35 @@ export function useTransactionTableInputs({
     return (
       <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
         <input
-          type={
-            field === 'cilindraje'
-              ? 'text'
-              : field === 'numeroDocumento' || field === 'celular'
-                ? 'text'
-                : isMoneyField
-                  ? 'text'
-                  : type === 'date'
-                    ? 'datetime-local'
-                    : type
+          // ...existing code...
+          value={
+            // --- CORREGIDO: Muestra el valor editado mientras el usuario escribe, aunque SWR refresque los datos ---
+            editValues[row.id] &&
+            Object.prototype.hasOwnProperty.call(editValues[row.id], field)
+              ? (() => {
+                  // Si el usuario está editando, nunca sobrescribas el valor con el de row[field]
+                  const v = editValues[row.id][field];
+                  if (typeof v === 'boolean') return v ? '1' : '';
+                  if (v === null || typeof v === 'undefined') return '';
+                  return v as string | number;
+                })()
+              : (() => {
+                  // Solo muestra el valor original si no hay edición pendiente
+                  const v = row[field];
+                  if (typeof v === 'boolean') return v ? '1' : '';
+                  if (v === null || typeof v === 'undefined') return '';
+                  return v as string | number;
+                })()
           }
-          value={formatValue(value)}
           title={formatValue(value)} // Agregar tooltip a todos los inputs
           onChange={(e) => {
             let newValue: InputValue;
             if (field === 'cilindraje') {
-              // Permitir borrar completamente (null si vacío)
               newValue =
                 e.target.value === ''
                   ? null
                   : parseNumberAction(e.target.value);
             } else if (field === 'numeroDocumento' || field === 'celular') {
-              // Solo permitir números
               const onlyNumbers = e.target.value.replace(/[^\d]/g, '');
               newValue = onlyNumbers === '' ? null : onlyNumbers;
             } else if (isMoneyField) {

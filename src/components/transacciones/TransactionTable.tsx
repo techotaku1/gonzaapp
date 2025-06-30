@@ -154,7 +154,19 @@ export default function TransactionTable(props: TransactionTableProps) {
   // --- SOLO muestra la paginación de días abajo de la tabla (NO la muestres dos veces) ---
 
   // Saber si está cargando la página de registros
-  const isLoadingPage = logic.paginatedData.length === 0 && !props.isLoading;
+  // ARREGLO: Solo muestra "Cargando registros..." si realmente está esperando datos de un día que sí existe en initialData
+  const isLoadingPage =
+    logic.isTrulyLoadingPage ||
+    (logic.paginatedData.length === 0 &&
+      !props.isLoading &&
+      !!logic.dateFilter.startDate &&
+      props.initialData.some((r) => {
+        const d =
+          r.fecha instanceof Date
+            ? r.fecha.toISOString().slice(0, 10)
+            : new Date(r.fecha).toISOString().slice(0, 10);
+        return d === logic.selectedDate;
+      }));
 
   // Handler para paginación con loading
   const [isPaginating, setIsPaginating] = React.useState(false);
@@ -540,7 +552,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         {/* Modal de exportación por rango de fechas */}
         <ExportDateRangeModal
           isOpen={logic.isExportModalOpen}
-          setIsOpen={logic.setIsExportModalOpen}
+          setIsOpen={logic.setIsExportModalOpen} // <-- corregido aquí
           onExport={logic.handleExport}
         />
 

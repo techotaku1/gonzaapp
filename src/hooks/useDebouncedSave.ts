@@ -33,9 +33,7 @@ export function useDebouncedSave(
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      if (isSavingRef.current) {
-        return;
-      }
+      // --- CORREGIDO: Permite guardar aunque esté guardando, pero solo toma el último cambio ---
       timeoutRef.current = setTimeout(async () => {
         if (!pendingDataRef.current) return;
         isSavingRef.current = true;
@@ -46,14 +44,14 @@ export function useDebouncedSave(
               const result = await saveFunction(pendingDataRef.current!);
               if (result.success) {
                 onSuccess();
-                // No retornes datos aquí, deja que SWR revalide desde el backend solo si es necesario
+                // --- CORREGIDO: NO limpies el cache ni revalides aquí, deja que el polling SWR lo haga ---
                 return undefined;
               }
               throw new Error(result.error ?? 'Error al guardar');
             },
             {
               rollbackOnError: true,
-              revalidate: false, // Cambiado a false para no refetchear globalmente
+              revalidate: false, // No refetch inmediato, solo polling
               populateCache: false,
             }
           );

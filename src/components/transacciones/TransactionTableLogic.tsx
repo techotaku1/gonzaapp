@@ -854,7 +854,15 @@ export function useTransactionTableLogic(props: {
       !isActuallySaving &&
       !debouncedSearchTerm &&
       paginatedData.length === 0 &&
-      dateFilter.startDate === null &&
+      (dateFilter.startDate === null ||
+        (dateFilter.startDate &&
+          !props.initialData.some((r) => {
+            const d =
+              r.fecha instanceof Date
+                ? r.fecha.toISOString().slice(0, 10)
+                : new Date(r.fecha).toISOString().slice(0, 10);
+            return d === getDateKey(dateFilter.startDate!);
+          }))) &&
       props.initialData.length > 0
     ) {
       // Busca el día más reciente con registros (el más grande)
@@ -882,6 +890,22 @@ export function useTransactionTableLogic(props: {
     dateFilter.startDate,
     props.initialData,
   ]);
+
+  // --- ARREGLO: Si no hay registros en la página actual, y tampoco hay registros en initialData para ese día, NO mostrar "Cargando registros..." infinito ---
+  // Esto se maneja en el componente TransactionTable, pero aquí puedes exponer una bandera:
+  const isTrulyLoadingPage =
+    paginatedData.length === 0 &&
+    !isAddingRow &&
+    !isActuallySaving &&
+    !debouncedSearchTerm &&
+    !!dateFilter.startDate &&
+    props.initialData.some((r) => {
+      const d =
+        r.fecha instanceof Date
+          ? r.fecha.toISOString().slice(0, 10)
+          : new Date(r.fecha).toISOString().slice(0, 10);
+      return d === getDateKey(dateFilter.startDate!);
+    });
 
   return {
     selectedRows,
@@ -960,5 +984,6 @@ export function useTransactionTableLogic(props: {
     handleZoomIn,
     goToPreviousDay,
     goToNextDay,
+    isTrulyLoadingPage,
   };
 }
