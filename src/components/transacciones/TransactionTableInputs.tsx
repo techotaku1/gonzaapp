@@ -234,6 +234,8 @@ export function useTransactionTableInputs({
               try {
                 // El valor del input es 'YYYY-MM-DDTHH:mm'
                 const inputDate = new Date(e.target.value);
+                // --- CORREGIR: NO conviertas a hora de Colombia aquí ---
+                // Solo pasa el Date tal cual, la lógica de ajuste debe estar en TransactionTableLogic
                 handleInputChangeAction(row.id, field, inputDate);
               } catch (error) {
                 console.error('Error converting date:', error);

@@ -171,6 +171,35 @@ export function useTransactionTableLogic(props: {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
         if (
+          field === 'fecha' &&
+          value instanceof Date &&
+          !isNaN(value.getTime())
+        ) {
+          // Obtén los componentes de la fecha/hora en la zona horaria de Colombia
+          const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Bogota',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false,
+          });
+          const parts = formatter.formatToParts(value);
+          const get = (type: string) =>
+            Number(parts.find((p) => p.type === type)?.value ?? '0');
+          // Crea un Date LOCAL (no UTC) con los componentes de Colombia
+          newValue = new Date(
+            get('year'),
+            get('month') - 1,
+            get('day'),
+            get('hour'),
+            get('minute'),
+            get('second')
+          );
+        }
+        if (
           [
             'precioNeto',
             'tarifaServicio',
@@ -269,18 +298,8 @@ export function useTransactionTableLogic(props: {
     progress.start(0.3);
     setIsAddingRow(true);
     try {
-      // Obtener la fecha y hora actual y restar 5 horas manualmente para Colombia
-      const now = new Date();
-      now.setHours(now.getHours() - 5);
-      const fechaColombia = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        now.getHours(),
-        now.getMinutes(),
-        now.getSeconds(),
-        now.getMilliseconds()
-      );
+      // Usar la utilidad para obtener la fecha/hora exacta de Colombia
+      const fechaColombia = getCurrentColombiaDate();
 
       const newRowId = crypto.randomUUID();
       const newRow: Omit<TransactionRecord, 'id'> = {
@@ -856,6 +875,37 @@ export function useTransactionTableLogic(props: {
     goToPreviousDay,
     goToNextDay,
   };
+}
+
+// Utilidad robusta para obtener la fecha/hora actual de Colombia como objeto Date local
+function getCurrentColombiaDate(): Date {
+  // Obtiene la hora actual de Colombia en UTC
+  const now = new Date();
+  // Obtiene los componentes de la fecha/hora en la zona horaria de Colombia
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(now);
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value ?? '0');
+  // Crea un Date en UTC con los componentes de Colombia
+  return new Date(
+    Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour'),
+      get('minute'),
+      get('second')
+    )
+  );
 }
 
 // Documentación de uso de useProgress y useRouter (bprogress):
