@@ -846,6 +846,43 @@ export function useTransactionTableLogic(props: {
     }
   }, [props.initialData]);
 
+  // --- NUEVO: Si al cargar la página por primera vez no hay registros en el día actual, navega automáticamente al día anterior con registros ---
+  useEffect(() => {
+    // Solo ejecuta en el primer render y cuando no hay registros en el día actual
+    if (
+      !isAddingRow &&
+      !isActuallySaving &&
+      !debouncedSearchTerm &&
+      paginatedData.length === 0 &&
+      dateFilter.startDate === null &&
+      props.initialData.length > 0
+    ) {
+      // Busca el día más reciente con registros (el más grande)
+      const allDates = Array.from(
+        new Set(
+          props.initialData.map((r) =>
+            r.fecha instanceof Date
+              ? r.fecha.toISOString().slice(0, 10)
+              : new Date(r.fecha).toISOString().slice(0, 10)
+          )
+        )
+      ).sort();
+      const lastDate = allDates[allDates.length - 1];
+      if (lastDate) {
+        const [y, m, d] = lastDate.split('-').map(Number);
+        setDateFilter({ startDate: new Date(y, m - 1, d), endDate: null });
+        setCurrentPage(1);
+      }
+    }
+  }, [
+    paginatedData.length,
+    isAddingRow,
+    isActuallySaving,
+    debouncedSearchTerm,
+    dateFilter.startDate,
+    props.initialData,
+  ]);
+
   return {
     selectedRows,
     setSelectedRows,
