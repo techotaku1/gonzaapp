@@ -45,7 +45,7 @@ export function useAppData(initialData?: TransactionRecord[]) {
   );
 
   return {
-    data: data ?? [],
+    data: Array.isArray(data) ? data : [],
     isLoading: !error && !data,
     isError: error !== undefined,
     mutate: async () => {

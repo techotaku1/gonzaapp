@@ -170,15 +170,31 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   // Handler para paginación con loading
   const [isPaginating, setIsPaginating] = React.useState(false);
+  const paginatingRef = React.useRef(false);
+
+  // Refactor: solo cambia el estado en el handler, nunca en render
   const handlePaginate = (direction: 'prev' | 'next') => {
+    if (paginatingRef.current) return;
+    paginatingRef.current = true;
     setIsPaginating(true);
     if (direction === 'prev') {
       logic.goToPreviousDay();
     } else {
       logic.goToNextDay();
     }
-    setTimeout(() => setIsPaginating(false), 800);
   };
+
+  // Cuando cambie selectedDate, termina el loading de paginación
+  React.useEffect(() => {
+    if (isPaginating) {
+      // Da tiempo a que la tabla recargue, luego quita el loading
+      const timeout = setTimeout(() => {
+        setIsPaginating(false);
+        paginatingRef.current = false;
+      }, 800);
+      return () => clearTimeout(timeout);
+    }
+  }, [logic.selectedDate, isPaginating]);
 
   return (
     <div className="relative">

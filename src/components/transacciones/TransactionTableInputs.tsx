@@ -409,18 +409,16 @@ export function useTransactionTableInputs({
         <input
           // ...existing code...
           value={
-            // --- CORREGIDO: Muestra el valor editado mientras el usuario escribe, aunque SWR refresque los datos ---
-            editValues[row.id] &&
-            Object.prototype.hasOwnProperty.call(editValues[row.id], field)
+            // --- SIEMPRE muestra el valor editado mientras existan edits locales, incluso tras guardar ---
+            editValues[row.id] && Object.keys(editValues[row.id]).includes(field)
               ? (() => {
-                  // Si el usuario está editando, nunca sobrescribas el valor con el de row[field]
                   const v = editValues[row.id][field];
+                  if (isMoneyField && typeof v === 'number') return v;
                   if (typeof v === 'boolean') return v ? '1' : '';
                   if (v === null || typeof v === 'undefined') return '';
                   return v as string | number;
                 })()
               : (() => {
-                  // Solo muestra el valor original si no hay edición pendiente
                   const v = row[field];
                   if (typeof v === 'boolean') return v ? '1' : '';
                   if (v === null || typeof v === 'undefined') return '';

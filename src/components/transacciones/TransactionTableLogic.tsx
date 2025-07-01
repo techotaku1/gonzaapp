@@ -167,21 +167,19 @@ export function useTransactionTableLogic(props: {
   const isEditingRef = useRef(false);
   const editTimeoutRef = useRef<Record<string, NodeJS.Timeout | null>>({});
 
-  // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
+  // handleInputChange: nunca sobrescribe edits locales mientras el usuario escribe
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       isEditingRef.current = true;
-      // --- Soporta múltiples campos editándose a la vez ---
       if (editTimeoutRef.current[`${id}-${field}`]) {
         clearTimeout(editTimeoutRef.current[`${id}-${field}`]!);
       }
       editTimeoutRef.current[`${id}-${field}`] = setTimeout(() => {
-        // Cuando expira el timeout de este campo, verifica si quedan otros editando
         delete editTimeoutRef.current[`${id}-${field}`];
         if (Object.keys(editTimeoutRef.current).length === 0) {
           isEditingRef.current = false;
         }
-      }, 1200);
+      }, 1500);
 
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
@@ -261,7 +259,6 @@ export function useTransactionTableLogic(props: {
         );
         return updated;
       });
-      // Cambio de página si cambia la fecha (ya no hay groupedByDate, así que omite esta lógica)
     },
     [initialData, debouncedSave, setIsActuallySaving]
   );
@@ -461,6 +458,7 @@ export function useTransactionTableLogic(props: {
   }, [props.initialData, dateFilter, debouncedSearchTerm]);
   // paginatedData: nunca debe depender de editValues ni de ningún estado de edición
   const paginatedDataFinal: TransactionRecord[] = useMemo(() => {
+    // --- SIEMPRE prioriza los edits locales sobre los datos remotos ---
     const edits = editValues;
     let baseData: TransactionRecord[] = [];
 
@@ -470,8 +468,16 @@ export function useTransactionTableLogic(props: {
       baseData = paginatedData;
     }
 
+    // Aplica los edits locales sobre los datos remotos, pero nunca los sobrescribas hasta que el backend confirme
     return baseData.map((row) =>
-      edits[row.id] ? { ...row, ...edits[row.id] } : row
+      edits[row.id]
+        ? {
+            ...row,
+            ...Object.fromEntries(
+              Object.entries(edits[row.id]).map(([k, v]) => [k, v])
+            ),
+          }
+        : row
     );
   }, [
     paginatedData,
