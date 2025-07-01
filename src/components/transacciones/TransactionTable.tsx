@@ -130,11 +130,24 @@ export default function TransactionTable(props: TransactionTableProps) {
   // --- NUEVO: Determina los días únicos disponibles en los registros ---
   const allDates = React.useMemo(() => {
     const set = new Set(
-      props.initialData.map((r) =>
-        r.fecha instanceof Date
-          ? r.fecha.toISOString().slice(0, 10)
-          : new Date(r.fecha).toISOString().slice(0, 10)
-      )
+      props.initialData
+        .map((r) => {
+          // ARREGLO: Solo procesa fechas válidas y tipa correctamente
+          let d: Date;
+          if (r.fecha instanceof Date) {
+            d = r.fecha;
+          } else if (
+            typeof r.fecha === 'string' ||
+            typeof r.fecha === 'number'
+          ) {
+            d = new Date(r.fecha);
+          } else {
+            return null;
+          }
+          if (isNaN(d.getTime())) return null;
+          return d.toISOString().slice(0, 10);
+        })
+        .filter((d): d is string => !!d)
     );
     return Array.from(set).sort();
   }, [props.initialData]);
@@ -195,6 +208,51 @@ export default function TransactionTable(props: TransactionTableProps) {
       return () => clearTimeout(timeout);
     }
   }, [logic.selectedDate, isPaginating]);
+
+  // --- NUEVO: Estado de loading para el botón de pagar boletas ---
+  const [isPaying, setIsPaying] = React.useState(false);
+  const [pendingPaidIds, setPendingPaidIds] = React.useState<string[]>([]);
+
+  // --- NUEVO: Limpia la selección de boletas pagadas automáticamente ---
+  React.useEffect(() => {
+    // Si algún registro seleccionado ya está pagado, quítalo de la selección
+    const pagados = Array.from(logic.selectedRows).filter((id) => {
+      const row = logic.paginatedData.find((r) => r.id === id);
+      return row && row.pagado === true;
+    });
+    if (pagados.length > 0) {
+      const newSelected = new Set(logic.selectedRows);
+      pagados.forEach((id) => newSelected.delete(id));
+      if (newSelected.size !== logic.selectedRows.size) {
+        logic.setSelectedRows(newSelected);
+      }
+    }
+    // Agrega 'logic' como dependencia para cumplir con react-hooks/exhaustive-deps
+  }, [logic.selectedRows, logic.paginatedData, logic.setSelectedRows, logic]);
+
+  // Handler para pagar boletas seleccionadas
+  const handlePayWithSpinner = async () => {
+    setIsPaying(true);
+    setPendingPaidIds(Array.from(logic.selectedRows));
+    await logic.handlePay();
+    // El efecto de abajo se encargará de limpiar la selección cuando todos estén pagados
+  };
+
+  // --- NUEVO: Efecto para limpiar selección cuando todos los pagados estén reflejados en la tabla ---
+  React.useEffect(() => {
+    if (isPaying && pendingPaidIds.length > 0) {
+      // Busca si todos los ids pendientes ya tienen pagado: true en la tabla
+      const allPaid = pendingPaidIds.every((id) => {
+        const row = logic.paginatedData.find((r) => r.id === id);
+        return row && row.pagado === true;
+      });
+      if (allPaid) {
+        logic.setSelectedRows(new Set());
+        setPendingPaidIds([]);
+        setIsPaying(false);
+      }
+    }
+  }, [logic.paginatedData, isPaying, pendingPaidIds, logic]);
 
   return (
     <div className="relative">
@@ -682,20 +740,55 @@ export default function TransactionTable(props: TransactionTableProps) {
           <div className="fixed right-4 bottom-4 flex w-[400px] flex-col gap-4 rounded-lg bg-white p-6 shadow-lg">
             <div className="text-center">
               <div className="mb-2 font-semibold">
-                Total Seleccionado: ${logic.formatCurrency(logic.totalSelected)}
+                Total Seleccionado: $
+                {logic.formatCurrency(
+                  Array.from(logic.selectedRows)
+                    .map((id) => {
+                      const row = logic.paginatedData.find((r) => r.id === id);
+                      return row && !row.pagado ? row.precioNeto : 0;
+                    })
+                    .reduce((a, b) => a + b, 0)
+                )}
               </div>
               <div className="flex flex-col gap-2 text-base">
-                <div>Boletas: {logic.selectedRows.size}</div>
+                <div>
+                  Boletas:{' '}
+                  {
+                    Array.from(logic.selectedRows).filter((id) => {
+                      const row = logic.paginatedData.find((r) => r.id === id);
+                      return row && !row.pagado;
+                    }).length
+                  }
+                </div>
                 <div className="font-mono uppercase">
-                  Placas: {logic._selectedPlates.join(', ')}
+                  Placas:{' '}
+                  {Array.from(logic.selectedRows)
+                    .filter((id) => {
+                      const row = logic.paginatedData.find((r) => r.id === id);
+                      return row && !row.pagado;
+                    })
+                    .map((id) => {
+                      const row = logic.paginatedData.find((r) => r.id === id);
+                      return row?.placa?.toUpperCase();
+                    })
+                    .filter(Boolean)
+                    .join(', ')}
                 </div>
               </div>
             </div>
             <button
-              onClick={logic.handlePay}
-              className="mt-2 w-full rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+              onClick={handlePayWithSpinner}
+              className="mt-2 flex w-full items-center justify-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+              disabled={isPaying}
             >
-              Pagar Boletas Seleccionadas
+              {isPaying ? (
+                <>
+                  <Icons.spinner className="mr-2 h-5 w-5 animate-spin" />
+                  Procesando pago...
+                </>
+              ) : (
+                'Pagar Boletas Seleccionadas'
+              )}
             </button>
           </div>
         )}

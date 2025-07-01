@@ -410,7 +410,8 @@ export function useTransactionTableInputs({
           // ...existing code...
           value={
             // --- SIEMPRE muestra el valor editado mientras existan edits locales, incluso tras guardar ---
-            editValues[row.id] && Object.keys(editValues[row.id]).includes(field)
+            editValues[row.id] &&
+            Object.keys(editValues[row.id]).includes(field)
               ? (() => {
                   const v = editValues[row.id][field];
                   if (isMoneyField && typeof v === 'number') return v;
