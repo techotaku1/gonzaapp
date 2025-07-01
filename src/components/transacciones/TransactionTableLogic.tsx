@@ -167,19 +167,21 @@ export function useTransactionTableLogic(props: {
   const isEditingRef = useRef(false);
   const editTimeoutRef = useRef<Record<string, NodeJS.Timeout | null>>({});
 
-  // handleInputChange: nunca sobrescribe edits locales mientras el usuario escribe
+  // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       isEditingRef.current = true;
+      // --- Soporta múltiples campos editándose a la vez ---
       if (editTimeoutRef.current[`${id}-${field}`]) {
         clearTimeout(editTimeoutRef.current[`${id}-${field}`]!);
       }
       editTimeoutRef.current[`${id}-${field}`] = setTimeout(() => {
+        // Cuando expira el timeout de este campo, verifica si quedan otros editando
         delete editTimeoutRef.current[`${id}-${field}`];
         if (Object.keys(editTimeoutRef.current).length === 0) {
           isEditingRef.current = false;
         }
-      }, 1500);
+      }, 1200);
 
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
@@ -189,16 +191,17 @@ export function useTransactionTableLogic(props: {
         if (field === 'fecha' && value instanceof Date) {
           // value es la fecha local seleccionada por el usuario (en la zona del navegador)
           // Queremos guardar la hora de Colombia como UTC real
-          const colombiaNow = toColombiaDate(value);
+          // 1. Tomar los componentes de la fecha local seleccionada
+          // 2. Crear un Date UTC con esos componentes
           newValue = new Date(
             Date.UTC(
-              colombiaNow.getFullYear(),
-              colombiaNow.getMonth(),
-              colombiaNow.getDate(),
-              colombiaNow.getHours(),
-              colombiaNow.getMinutes(),
-              colombiaNow.getSeconds(),
-              colombiaNow.getMilliseconds()
+              value.getFullYear(),
+              value.getMonth(),
+              value.getDate(),
+              value.getHours(),
+              value.getMinutes(),
+              value.getSeconds(),
+              value.getMilliseconds()
             )
           );
         }
@@ -259,6 +262,7 @@ export function useTransactionTableLogic(props: {
         );
         return updated;
       });
+      // Cambio de página si cambia la fecha (ya no hay groupedByDate, así que omite esta lógica)
     },
     [initialData, debouncedSave, setIsActuallySaving]
   );

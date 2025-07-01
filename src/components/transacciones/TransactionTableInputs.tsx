@@ -219,9 +219,9 @@ export function useTransactionTableInputs({
       // Asegura el formato correcto para datetime-local: 'YYYY-MM-DDTHH:mm'
       let dateValue = '';
       if (value instanceof Date && !isNaN(value.getTime())) {
-        // Ajusta a zona horaria local para que el input muestre la hora local
+        // --- CORREGIDO: Usa los componentes UTC para mostrar la hora que el usuario editó ---
         const pad = (n: number) => n.toString().padStart(2, '0');
-        dateValue = `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}T${pad(value.getHours())}:${pad(value.getMinutes())}`;
+        dateValue = `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}T${pad(value.getUTCHours())}:${pad(value.getUTCMinutes())}`;
       } else if (typeof value === 'string' && value) {
         // Si ya es string, intenta usar los primeros 16 caracteres
         dateValue = value.slice(0, 16);
