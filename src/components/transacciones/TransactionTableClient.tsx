@@ -18,6 +18,7 @@ export default function TransactionTableClient({
 }) {
   const [showTotals, setShowTotals] = useState(false);
 
+  // Usa useAppData para obtener los datos optimizados y actualizados
   const { data, mutate, isLoading } = useAppData(initialData);
 
   const handleUpdateRecords = async (records: TransactionRecord[]) => {

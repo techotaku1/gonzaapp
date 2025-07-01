@@ -4,6 +4,7 @@ import TransactionTableClient from '~/components/transacciones/TransactionTableC
 import { getTransactions, updateRecords } from '~/server/actions/tableGeneral';
 
 export default async function HomePage() {
+  // Solo obtiene los datos iniciales una vez (no hace polling aquí)
   const initialData = await getTransactions();
   return (
     <SWRProvider>
@@ -13,6 +14,7 @@ export default async function HomePage() {
       <TransactionTableClient
         initialData={initialData}
         onUpdateRecordAction={updateRecords}
+        // onUpdateRecordAction se pasa igual, el polling incremental lo maneja useAppData
       />
     </SWRProvider>
   );

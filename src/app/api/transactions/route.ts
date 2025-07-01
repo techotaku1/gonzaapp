@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getTransactionsPaginated } from '~/server/actions/tableGeneral';
+import {
+  getTransactionsByIds, // <-- nuevo import
+  getTransactionsPaginated,
+  getTransactionsSummary,
+} from '~/server/actions/tableGeneral';
 
+// Nuevo endpoint: /api/transactions/summary
 export async function GET(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  if (pathname.endsWith('/summary')) {
+    try {
+      const summary = await getTransactionsSummary();
+      return NextResponse.json(summary, { status: 200 });
+    } catch (_error) {
+      return NextResponse.json(
+        { error: 'Error fetching transactions summary' },
+        { status: 500 }
+      );
+    }
+  }
+
   try {
     const { searchParams } = req.nextUrl;
     const date = searchParams.get('date'); // YYYY-MM-DD
@@ -30,4 +48,29 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+export async function POST(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  if (pathname.endsWith('/by-ids')) {
+    try {
+      const { ids } = await req.json();
+      // Asegura que ids es string[]
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return NextResponse.json([], { status: 200 });
+      }
+      // Forzar a string[]
+      const safeIds: string[] = ids.filter(
+        (id): id is string => typeof id === 'string'
+      );
+      const records = await getTransactionsByIds(safeIds);
+      return NextResponse.json(records, { status: 200 });
+    } catch (_error) {
+      return NextResponse.json(
+        { error: 'Error fetching transactions by ids' },
+        { status: 500 }
+      );
+    }
+  }
+  return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }

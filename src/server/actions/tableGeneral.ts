@@ -2,7 +2,7 @@
 
 import { revalidateTag, unstable_cache } from 'next/cache';
 
-import { randomUUID } from 'crypto';
+import crypto, { randomUUID } from 'crypto';
 import { desc, eq, inArray, sql as _sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
@@ -176,45 +176,101 @@ export async function createRecord(
   }
 }
 
+// Nuevo: función para obtener solo ids y hash/checksum
+export async function getTransactionsSummary(): Promise<
+  { id: string; hash: string }[]
+> {
+  const results = await db
+    .select({
+      id: transactions.id,
+      // Selecciona cada campo individualmente, no como array
+      pagado: transactions.pagado,
+      boleta: transactions.boleta,
+      boletasRegistradas: transactions.boletasRegistradas,
+      emitidoPor: transactions.emitidoPor,
+      placa: transactions.placa,
+      tipoDocumento: transactions.tipoDocumento,
+      numeroDocumento: transactions.numeroDocumento,
+      nombre: transactions.nombre,
+      cilindraje: transactions.cilindraje,
+      tipoVehiculo: transactions.tipoVehiculo,
+      celular: transactions.celular,
+      ciudad: transactions.ciudad,
+      asesor: transactions.asesor,
+      novedad: transactions.novedad,
+      precioNeto: transactions.precioNeto,
+      comisionExtra: transactions.comisionExtra,
+      tarifaServicio: transactions.tarifaServicio,
+      impuesto4x1000: transactions.impuesto4x1000,
+      gananciaBruta: transactions.gananciaBruta,
+      rappi: transactions.rappi,
+      observaciones: transactions.observaciones,
+    })
+    .from(transactions);
+
+  // Calcula un hash simple de los campos relevantes
+  return results.map((row) => {
+    // Solo usa los campos relevantes para el hash
+    const { id, ...fields } = row;
+    const hash = crypto
+      .createHash('md5')
+      .update(JSON.stringify(fields))
+      .digest('hex');
+    return { id: String(id), hash };
+  });
+}
+
 export async function updateRecords(
   records: TransactionRecord[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await Promise.all(
       records.map(async (record) => {
-        const safeRecord = {
-          ...record,
-          ciudad: record.ciudad || '',
-          nombre: record.nombre || '',
-          tramite: record.tramite || '',
-          emitidoPor: record.emitidoPor || '',
-          tipoDocumento: record.tipoDocumento || '',
-          numeroDocumento: record.numeroDocumento || '',
-          asesor: record.asesor || '',
-          // --- Guarda la fecha tal como la recibe ---
-          fecha: record.fecha,
-          boletasRegistradas: record.boletasRegistradas ?? 0,
-          precioNeto: record.precioNeto ?? 0,
-          tarifaServicio: record.tarifaServicio ?? 0,
-          impuesto4x1000: record.impuesto4x1000 ?? 0,
-          gananciaBruta: record.gananciaBruta ?? 0,
-        };
+        // Usa Record<string, unknown> para evitar any y problemas de tipo
+        const fieldsToUpdate: Record<string, unknown> = {};
+        Object.keys(record).forEach((key) => {
+          if (
+            key !== 'id' &&
+            record[key as keyof TransactionRecord] !== undefined
+          ) {
+            // Corrige boletasRegistradas para que sea string si corresponde
+            if (key === 'boletasRegistradas') {
+              const val = record[key as keyof TransactionRecord];
+              if (typeof val === 'number') {
+                fieldsToUpdate[key] = String(val);
+              } else if (typeof val === 'string') {
+                fieldsToUpdate[key] = val;
+              }
+              // Si es null o undefined, no lo asignes
+            } else if (
+              key === 'cilindraje' ||
+              key === 'tipoVehiculo' ||
+              key === 'celular' ||
+              key === 'novedad' ||
+              key === 'observaciones'
+            ) {
+              // Estos campos pueden ser string | number | boolean | Date | null | undefined
+              const val = record[key as keyof TransactionRecord];
+              // Solo asigna si no es undefined ni null
+              if (val !== undefined && val !== null) {
+                fieldsToUpdate[key] = val;
+              }
+            } else {
+              const val = record[key as keyof TransactionRecord];
+              // Solo asigna si no es undefined ni null
+              if (val !== undefined && val !== null) {
+                fieldsToUpdate[key] = val;
+              }
+            }
+          }
+        });
         await db
           .update(transactions)
-          .set({
-            ...safeRecord,
-            boletasRegistradas: Number(
-              safeRecord.boletasRegistradas
-            ).toString(),
-            precioNeto: Number(safeRecord.precioNeto).toString(),
-            tarifaServicio: Number(safeRecord.tarifaServicio).toString(),
-            impuesto4x1000: Number(safeRecord.impuesto4x1000).toString(),
-            gananciaBruta: Number(safeRecord.gananciaBruta).toString(),
-          })
+          .set(fieldsToUpdate)
           .where(eq(transactions.id, record.id));
       })
     );
-    revalidateTag('transactions'); // Revalida solo el tag de datos
+    revalidateTag('transactions');
     return { success: true };
   } catch (error) {
     console.error('Error updating records:', error);
@@ -260,4 +316,36 @@ export async function addAsesor(
       error: error instanceof Error ? error.message : 'Failed to add asesor',
     };
   }
+}
+
+// Nuevo: obtener registros completos por ids
+export async function getTransactionsByIds(
+  ids: string[]
+): Promise<TransactionRecord[]> {
+  if (!ids.length) return [];
+  const results = await db
+    .select()
+    .from(transactions)
+    .where(inArray(transactions.id, ids));
+  return results.map((record) => ({
+    ...record,
+    fecha: new Date(record.fecha),
+    boletasRegistradas: Number(record.boletasRegistradas),
+    precioNeto: Number(record.precioNeto),
+    tarifaServicio: Number(record.tarifaServicio),
+    impuesto4x1000: Number(record.impuesto4x1000),
+    gananciaBruta: Number(record.gananciaBruta),
+    cilindraje:
+      record.cilindraje !== null && record.cilindraje !== undefined
+        ? Number(record.cilindraje)
+        : null,
+    tipoVehiculo:
+      record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
+        ? String(record.tipoVehiculo)
+        : null,
+    celular:
+      record.celular !== null && record.celular !== undefined
+        ? String(record.celular)
+        : null,
+  }));
 }
