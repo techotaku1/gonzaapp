@@ -374,7 +374,8 @@ export function useTransactionTableInputs({
       field === 'precioNeto' ||
       field === 'tarifaServicio' ||
       field === 'impuesto4x1000' ||
-      field === 'gananciaBruta'
+      field === 'gananciaBruta' ||
+      field === 'boletasRegistradas' // <-- Añadido aquí para que use el mismo input formateado
     ) {
       return (
         <div className={`relative flex items-center`}>
