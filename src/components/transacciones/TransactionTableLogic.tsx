@@ -716,10 +716,25 @@ export function useTransactionTableLogic(props: {
       return newSet;
     });
   }, []);
-  // Reemplaza emptyAsync por una función sync que arroja error (cumple require-await)
-  const emptyAsync = () => {
-    throw new Error('onAddAsesorAction no implementado');
-  };
+  // Elimina emptyAsync (no se usa)
+  // const emptyAsync = () => {
+  //   throw new Error('onAddAsesorAction no implementado');
+  // };
+
+  // Desestructura onAddAsesorAction fuera del useCallback para evitar warning de dependencias
+  const { onAddAsesorAction } = props;
+
+  // Permite seleccionar automáticamente el asesor recién creado y guardar el cambio
+  const handleAddAndSelectAsesor = useCallback(
+    async (rowId: string, nombre: string) => {
+      if (onAddAsesorAction) {
+        await onAddAsesorAction(nombre);
+        // Selecciona el asesor recién creado y dispara guardado inmediato
+        handleInputChange(rowId, 'asesor', nombre);
+      }
+    },
+    [onAddAsesorAction, handleInputChange]
+  );
   const renderAsesorSelect = useCallback(
     (row: TransactionRecord) => {
       if (!isAsesorSelectionMode) return null;
@@ -744,7 +759,10 @@ export function useTransactionTableLogic(props: {
                 handleInputChange(row.id, 'asesor', newValue)
               }
               asesores={props.asesores ?? []}
-              onAddAsesorAction={props.onAddAsesorAction ?? emptyAsync}
+              // Usa la función que selecciona y guarda el asesor nuevo
+              onAddAsesorAction={async (nombre: string) =>
+                handleAddAndSelectAsesor(row.id, nombre)
+              }
             />
           </div>
         </div>
@@ -756,7 +774,7 @@ export function useTransactionTableLogic(props: {
       handleAsesorSelection,
       handleInputChange,
       props.asesores,
-      props.onAddAsesorAction,
+      handleAddAndSelectAsesor,
     ]
   );
   // handleFilterData: sin dependencias externas
