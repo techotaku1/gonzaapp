@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react'; // Elimina useEffect y useState si no se usan directamente aquí;
+import React, { useMemo, useState } from 'react'; // Elimina useEffect y useState si no se usan directamente aquí;
 
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
@@ -251,8 +251,7 @@ export default function TransactionTable(props: TransactionTableProps) {
   }, [logic.selectedDate, isPaginating]);
 
   // --- NUEVO: Estado de loading para el botón de pagar boletas ---
-  const [isPaying, setIsPaying] = React.useState(false);
-  const [pendingPaidIds, setPendingPaidIds] = React.useState<string[]>([]);
+  const [isPaying, setIsPaying] = useState(false);
 
   // --- NUEVO: Limpia la selección de boletas pagadas automáticamente ---
   React.useEffect(() => {
@@ -271,29 +270,126 @@ export default function TransactionTable(props: TransactionTableProps) {
     // Agrega 'logic' como dependencia para cumplir con react-hooks/exhaustive-deps
   }, [logic.selectedRows, logic.paginatedData, logic.setSelectedRows, logic]);
 
-  // Handler para pagar boletas seleccionadas
-  const handlePayWithSpinner = async () => {
+  // --- ELIMINADO: Handler para pagar boletas seleccionadas y efecto relacionado ---
+  // const handlePayWithSpinner = async () => {
+  //   setIsPaying(true);
+  //   setPendingPaidIds(Array.from(logic.selectedRows));
+  //   await logic.handlePay();
+  //   // El efecto de abajo se encargará de limpiar la selección cuando todos estén pagados
+  // };
+  // React.useEffect(() => {
+  //   if (isPaying && pendingPaidIds.length > 0) {
+  //     const allPaid = pendingPaidIds.every((id) => {
+  //       const row = logic.paginatedData.find((r) => r.id === id);
+  //       return row && row.pagado === true;
+  //     });
+  //     if (allPaid) {
+  //       logic.setSelectedRows(new Set());
+  //       setPendingPaidIds([]);
+  //       setIsPaying(false);
+  //     }
+  //   }
+  // }, [logic.paginatedData, isPaying, pendingPaidIds, logic]);
+
+  // --- NUEVO: Estado local para pagos pendientes ---
+  const [localPaid, setLocalPaid] = useState<Record<string, boolean>>({});
+
+  // Memoiza las filas seleccionadas y el total
+  const selectedRowsArray = useMemo(
+    () =>
+      Array.from(logic.selectedRows)
+        .map((id) => logic.paginatedData.find((r) => r.id === id))
+        .filter(Boolean) as TransactionRecord[],
+    [logic.selectedRows, logic.paginatedData]
+  );
+
+  const totalSelected = useMemo(
+    () =>
+      selectedRowsArray
+        .filter((row) => !row.pagado && !localPaid[row.id])
+        .reduce((sum, row) => sum + row.precioNeto, 0),
+    [selectedRowsArray, localPaid]
+  );
+
+  const placasSeleccionadas = useMemo(
+    () =>
+      selectedRowsArray
+        .filter((row) => !row.pagado && !localPaid[row.id])
+        .map((row) => row.placa?.toUpperCase())
+        .join(', '),
+    [selectedRowsArray, localPaid]
+  );
+
+  // Pagar boletas seleccionadas: ejecuta el pago directamente, muestra spinner y activa "Guardando cambios..."
+  const handlePayLocal = async () => {
     setIsPaying(true);
-    setPendingPaidIds(Array.from(logic.selectedRows));
-    await logic.handlePay();
-    // El efecto de abajo se encargará de limpiar la selección cuando todos estén pagados
+    logic.setIsActuallySaving(true); // <-- activa el estado de guardado
+    const toUpdate = selectedRowsArray
+      .filter((row) => !row.pagado)
+      .map((row) => ({
+        ...row,
+        pagado: true,
+        boletasRegistradas: totalSelected,
+      }));
+    if (toUpdate.length > 0) {
+      const updates: Record<string, boolean> = {};
+      toUpdate.forEach((row) => {
+        updates[row.id] = true;
+      });
+      setLocalPaid((prev) => ({ ...prev, ...updates }));
+      await logic.onUpdateRecordAction(toUpdate);
+      setLocalPaid({});
+      logic.setSelectedRows(new Set());
+    }
+    logic.setIsActuallySaving(false); // <-- desactiva el estado de guardado
+    setIsPaying(false);
   };
 
-  // --- NUEVO: Efecto para limpiar selección cuando todos los pagados estén reflejados en la tabla ---
-  React.useEffect(() => {
-    if (isPaying && pendingPaidIds.length > 0) {
-      // Busca si todos los ids pendientes ya tienen pagado: true en la tabla
-      const allPaid = pendingPaidIds.every((id) => {
-        const row = logic.paginatedData.find((r) => r.id === id);
-        return row && row.pagado === true;
-      });
-      if (allPaid) {
-        logic.setSelectedRows(new Set());
-        setPendingPaidIds([]);
-        setIsPaying(false);
-      }
+  // Checkbox personalizado para pagado: primero cambia UI, luego guarda, y activa "Guardando cambios..."
+  const renderCheckbox = (
+    id: string,
+    field: keyof TransactionRecord,
+    value: boolean,
+    disabled?: boolean
+  ) => {
+    if (field === 'pagado') {
+      const row = logic.paginatedData.find((r) => r.id === id);
+      return (
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={!!value}
+            disabled={disabled}
+            onChange={async (e) => {
+              setLocalPaid((prev) => ({ ...prev, [id]: e.target.checked }));
+              logic.setIsActuallySaving(true); // <-- activa el estado de guardado
+              if (row) {
+                await logic.onUpdateRecordAction([
+                  {
+                    ...row,
+                    pagado: e.target.checked,
+                    boletasRegistradas: e.target.checked
+                      ? row.boletasRegistradas
+                      : 0,
+                  },
+                ]);
+              }
+              setLocalPaid((prev) => {
+                const copy = { ...prev };
+                delete copy[id];
+                return copy;
+              });
+              logic.setIsActuallySaving(false); // <-- desactiva el estado de guardado
+            }}
+            className="sr-only"
+          />
+          <div className="checkmark" />
+        </label>
+      );
     }
-  }, [logic.paginatedData, isPaying, pendingPaidIds, logic]);
+    // Para otros checks usa el render original
+    return logic.renderCheckbox(id, field, value, disabled);
+  };
 
   return (
     <div className="relative">
@@ -749,7 +845,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                             handleInputChange={logic.handleInputChange}
                             handleRowSelect={logic.handleRowSelect}
                             handleDeleteSelect={logic.handleDeleteSelect}
-                            renderCheckbox={logic.renderCheckbox}
+                            renderCheckbox={renderCheckbox} // <-- usa el renderCheckbox personalizado
                             renderAsesorSelect={logic.renderAsesorSelect}
                             renderInput={
                               renderInput as (
@@ -781,46 +877,26 @@ export default function TransactionTable(props: TransactionTableProps) {
           <div className="fixed right-4 bottom-4 flex w-[400px] flex-col gap-4 rounded-lg bg-white p-6 shadow-lg">
             <div className="text-center">
               <div className="mb-2 font-semibold">
-                Total Seleccionado: $
-                {logic.formatCurrency(
-                  Array.from(logic.selectedRows)
-                    .map((id) => {
-                      const row = logic.paginatedData.find((r) => r.id === id);
-                      return row && !row.pagado ? row.precioNeto : 0;
-                    })
-                    .reduce((a, b) => a + b, 0)
-                )}
+                Total Seleccionado: ${logic.formatCurrency(totalSelected)}
               </div>
               <div className="flex flex-col gap-2 text-base">
                 <div>
                   Boletas:{' '}
                   {
-                    Array.from(logic.selectedRows).filter((id) => {
-                      const row = logic.paginatedData.find((r) => r.id === id);
-                      return row && !row.pagado;
-                    }).length
+                    selectedRowsArray.filter(
+                      (row) => !row.pagado && !localPaid[row.id]
+                    ).length
                   }
                 </div>
                 <div className="font-mono uppercase">
-                  Placas:{' '}
-                  {Array.from(logic.selectedRows)
-                    .filter((id) => {
-                      const row = logic.paginatedData.find((r) => r.id === id);
-                      return row && !row.pagado;
-                    })
-                    .map((id) => {
-                      const row = logic.paginatedData.find((r) => r.id === id);
-                      return row?.placa?.toUpperCase();
-                    })
-                    .filter(Boolean)
-                    .join(', ')}
+                  Placas: {placasSeleccionadas}
                 </div>
               </div>
             </div>
             <button
-              onClick={handlePayWithSpinner}
+              onClick={handlePayLocal}
               className="mt-2 flex w-full items-center justify-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-              disabled={isPaying}
+              disabled={totalSelected === 0 || isPaying}
             >
               {isPaying ? (
                 <>

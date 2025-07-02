@@ -295,20 +295,6 @@ export function useTransactionTableLogic(props: {
     }, 0);
     setTotalSelected(total);
   }, [selectedRows, props.initialData]);
-  const handlePay = async () => {
-    // Solo paga los seleccionados que están en la paginación actual
-    const updatedData = paginatedData
-      .filter((record) => selectedRows.has(record.id) && !record.pagado)
-      .map((record) => ({
-        ...record,
-        pagado: true,
-        // boletasRegistradas: totalSelected, // Si quieres sumar el total, pero normalmente es por boleta
-      }));
-    if (updatedData.length > 0) {
-      await props.onUpdateRecordAction(updatedData);
-    }
-    setSelectedRows(new Set());
-  };
   // Cuando agregas un nuevo registro, asegúrate de que la fecha sea la de hoy (Colombia) y que la paginación lo lleve a la página correcta
   const addNewRow = async () => {
     progress.start(0.3);
@@ -982,6 +968,15 @@ export function useTransactionTableLogic(props: {
       return d === getDateKey(dateFilter.startDate!);
     });
 
+  // --- NUEVO: handler para check pagado instantáneo ---
+  const handlePagadoCheckbox = async (
+    row: TransactionRecord,
+    checked: boolean
+  ) => {
+    // No uses setState aquí, solo expón la función para el componente
+    await props.onUpdateRecordAction([{ ...row, pagado: checked }]);
+  };
+
   return {
     selectedRows,
     setSelectedRows,
@@ -1054,11 +1049,11 @@ export function useTransactionTableLogic(props: {
     formatCurrency,
     parseNumber,
     addNewRow,
-    handlePay,
     handleZoomOut,
     handleZoomIn,
     goToPreviousDay,
     goToNextDay,
     isTrulyLoadingPage,
+    handlePagadoCheckbox,
   };
 }
