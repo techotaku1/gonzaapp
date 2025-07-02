@@ -252,6 +252,7 @@ export function useTransactionTableLogic(props: {
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
         setIsActuallySaving(true);
+        // CORREGIDO: Siempre pasa el registro base + edits, no solo los edits
         debouncedSave(
           Object.entries(updated).map(([recordId, edits]) => {
             const baseRecord =

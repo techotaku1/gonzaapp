@@ -53,11 +53,8 @@ const fetchByIds = async (ids: string[]): Promise<TransactionRecord[]> => {
 };
 
 export function useAppData(initialData?: TransactionRecord[]) {
-  // Estado local para los datos completos
   const [data, setData] = useState<TransactionRecord[]>(initialData ?? []);
-  // Ref para hashes previos
   const hashesRef = useRef<Map<string, string>>(new Map());
-  // SWR para polling de resumen
   const {
     data: summary,
     error,
@@ -67,34 +64,27 @@ export function useAppData(initialData?: TransactionRecord[]) {
     revalidateOnFocus: true,
   });
 
-  // Efecto: compara hashes y pide solo los registros que cambiaron
   useEffect(() => {
     if (!summary) return;
     const prevHashes = hashesRef.current;
     const changedIds: string[] = [];
     const summaryMap = new Map(summary.map((s) => [s.id, s.hash]));
-    // Detecta nuevos o modificados
     for (const item of summary) {
       if (isTransactionSummary(item)) {
         if (prevHashes.get(item.id) !== item.hash) changedIds.push(item.id);
       }
     }
-    // Detecta eliminados
     const deletedIds = Array.from(prevHashes.keys()).filter(
       (id) => !summaryMap.has(id)
     );
-    // Si hay cambios, fetch selectivo
     if (changedIds.length > 0) {
       fetchByIds(changedIds).then((changedRecords) => {
         setData((prev) => {
-          // Actualiza solo los cambiados
           const map = new Map(prev.map((r) => [r.id, r]));
           for (const rec of changedRecords) map.set(rec.id, rec);
-          // Elimina los borrados
           for (const id of deletedIds) map.delete(id);
           return Array.from(map.values());
         });
-        // Actualiza hashesRef
         for (const item of summary) {
           if (isTransactionSummary(item)) prevHashes.set(item.id, item.hash);
         }
@@ -104,7 +94,6 @@ export function useAppData(initialData?: TransactionRecord[]) {
       setData((prev) => prev.filter((r) => !deletedIds.includes(r.id)));
       for (const id of deletedIds) prevHashes.delete(id);
     }
-    // Si no hay cambios, solo actualiza hashesRef
     if (changedIds.length === 0 && deletedIds.length === 0) {
       for (const item of summary) {
         if (isTransactionSummary(item)) prevHashes.set(item.id, item.hash);

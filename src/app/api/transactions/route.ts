@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
-  getTransactionsByIds, // <-- nuevo import
+  getTransactionsByIds,
   getTransactionsPaginated,
   getTransactionsSummary,
 } from '~/server/actions/tableGeneral';
@@ -51,25 +51,38 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  if (pathname.endsWith('/by-ids')) {
+  const url = req.nextUrl;
+  if (url.pathname === '/api/transactions/by-ids') {
     try {
-      const { ids } = await req.json();
-      // Asegura que ids es string[]
+      let ids: string[] = [];
+      let body: unknown;
+      try {
+        body = await req.json();
+      } catch {
+        return NextResponse.json([], { status: 200 });
+      }
+      if (
+        body &&
+        typeof body === 'object' &&
+        Array.isArray((body as { ids?: unknown }).ids)
+      ) {
+        ids = (body as { ids: unknown[] }).ids.filter(
+          (id): id is string => typeof id === 'string'
+        );
+      }
       if (!Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json([], { status: 200 });
       }
-      // Forzar a string[]
-      const safeIds: string[] = ids.filter(
-        (id): id is string => typeof id === 'string'
-      );
-      const records = await getTransactionsByIds(safeIds);
-      return NextResponse.json(records, { status: 200 });
-    } catch (_error) {
-      return NextResponse.json(
-        { error: 'Error fetching transactions by ids' },
-        { status: 500 }
-      );
+      try {
+        const records = await getTransactionsByIds(ids);
+        return NextResponse.json(records, { status: 200 });
+      } catch (error) {
+        console.error('Error in getTransactionsByIds:', error);
+        return NextResponse.json([], { status: 200 });
+      }
+    } catch (error) {
+      console.error('Error in /api/transactions/by-ids:', error);
+      return NextResponse.json([], { status: 200 });
     }
   }
   return NextResponse.json({ error: 'Not found' }, { status: 404 });

@@ -226,62 +226,31 @@ export async function updateRecords(
   try {
     await Promise.all(
       records.map(async (record) => {
-        // Obtén el registro actual de la base de datos
-        const [current] = await db
-          .select()
-          .from(transactions)
-          .where(eq(transactions.id, record.id));
-        if (!current) return;
-
-        // Lista de campos requeridos según tu schema
-        const requiredFields: (keyof TransactionRecord)[] = [
-          'fecha',
-          'tramite',
-          'pagado',
-          'boleta',
-          'boletasRegistradas',
-          'emitidoPor',
-          'placa',
-          'tipoDocumento',
-          'numeroDocumento',
-          'nombre',
-          'ciudad',
-          'asesor',
-          'precioNeto',
-          'comisionExtra',
-          'tarifaServicio',
-          'impuesto4x1000',
-          'gananciaBruta',
-          'rappi',
-        ];
-
-        // Construye el objeto de update asegurando que todos los campos requeridos estén presentes
+        if (!record.id || typeof record.id !== 'string') return;
         const fieldsToUpdate: Record<string, unknown> = {};
-        for (const key of Object.keys(current) as (keyof TransactionRecord)[]) {
-          if (key === 'id') continue;
-          let val = record[key] !== undefined ? record[key] : current[key];
-          // boletasRegistradas y campos monetarios deben ser string
-          if (
-            key === 'boletasRegistradas' ||
-            key === 'precioNeto' ||
-            key === 'tarifaServicio' ||
-            key === 'impuesto4x1000' ||
-            key === 'gananciaBruta'
-          ) {
-            val = val !== undefined && val !== null ? String(Number(val)) : '0';
+        Object.keys(record).forEach((key) => {
+          if (key === 'id') return;
+          let val = record[key as keyof TransactionRecord];
+          // Normaliza fecha: solo convierte si es string o number, nunca boolean
+          if (key === 'fecha') {
+            if (
+              val &&
+              (typeof val === 'string' ||
+                typeof val === 'number' ||
+                val instanceof Date)
+            ) {
+              if (!(val instanceof Date)) {
+                val = new Date(val);
+              }
+              if (!(val instanceof Date) || isNaN(val.getTime())) {
+                val = null;
+              }
+            } else {
+              val = null;
+            }
           }
-          // Si el campo es requerido y sigue vacío, no hagas el update
-          if (
-            requiredFields.includes(key) &&
-            (val === undefined || val === null || val === '')
-          ) {
-            return;
-          }
-          // Solo asigna si el valor es distinto de undefined y null
-          if (val !== undefined && val !== null) {
-            fieldsToUpdate[key] = val;
-          }
-        }
+          if (val !== undefined) fieldsToUpdate[key] = val;
+        });
         if (Object.keys(fieldsToUpdate).length === 0) return;
         await db
           .update(transactions)
