@@ -18,15 +18,19 @@ export function useDebouncedSave(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingDataRef = useRef<TransactionRecord[] | null>(null);
   const lastSavedDataRef = useRef<string>('');
-  // Nuevo: Mantén los edits locales hasta que el backend confirme el último guardado
+  // Mantén los edits locales hasta que el backend confirme el último guardado
   const latestEditRef = useRef<TransactionRecord[] | null>(null);
+  // Nuevo: bandera para saber si hay un guardado pendiente
+  const isSavingRef = useRef(false);
 
+  // Limpia el timeout al desmontar
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
+  // Mantén los edits locales en el cache SWR hasta que el backend confirme
   const debouncedSave = useCallback(
     (data: TransactionRecord[]) => {
       pendingDataRef.current = data;
@@ -55,26 +59,29 @@ export function useDebouncedSave(
 
       timeoutRef.current = setTimeout(async () => {
         if (lastSavedDataRef.current === dataString) return;
+        isSavingRef.current = true;
         try {
           const result = await saveFunction(pendingDataRef.current!);
           if (result.success) {
             lastSavedDataRef.current = dataString;
             onSuccess();
             // Revalida el cache SOLO después de éxito
-            mutate(CACHE_KEY, undefined, { revalidate: true });
+            await mutate(CACHE_KEY, undefined, { revalidate: true });
           } else {
-            mutate(CACHE_KEY, undefined, { revalidate: true });
+            await mutate(CACHE_KEY, undefined, { revalidate: true });
           }
         } catch (error) {
-          mutate(CACHE_KEY, undefined, { revalidate: true });
+          await mutate(CACHE_KEY, undefined, { revalidate: true });
           console.error('Error saving data:', error);
+        } finally {
+          isSavingRef.current = false;
         }
       }, delay);
     },
     [saveFunction, onSuccess, delay, mutate]
   );
 
-  // --- NUEVO: Forzar guardado inmediato al perder el foco de un input ---
+  // Forzar guardado inmediato al perder el foco de un input
   useEffect(() => {
     const handleBlur = () => {
       if (pendingDataRef.current) {
@@ -96,6 +103,9 @@ export function useDebouncedSave(
       window.removeEventListener('beforeunload', handleBlur);
     };
   }, [saveFunction, onSuccess]);
+
+  // --- NUEVO: Mantén los edits locales hasta que el backend refleje exactamente los cambios ---
+  // Esto se maneja en TransactionTableLogic, pero aquí puedes exponer helpers si lo necesitas
 
   return debouncedSave;
 }

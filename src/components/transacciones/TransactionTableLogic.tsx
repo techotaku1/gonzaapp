@@ -177,7 +177,6 @@ export function useTransactionTableLogic(props: {
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       isEditingRef.current = true;
-      // Marca el timestamp de la última edición
       lastEditTimestampRef.current = Date.now();
       // --- Soporta múltiples campos editándose a la vez ---
       if (editTimeoutRef.current[`${id}-${field}`]) {
@@ -260,7 +259,8 @@ export function useTransactionTableLogic(props: {
           [id]: { ...prevEdits, [field]: newValue, ...extra },
         };
         setIsActuallySaving(true);
-        // CORREGIDO: Siempre pasa el registro base + edits, no solo los edits
+        // --- SIEMPRE actualiza la ref para que la UI use los edits más recientes ---
+        editValuesRef.current = updated;
         debouncedSave(
           Object.entries(updated).map(([recordId, edits]) => {
             const baseRecord =
@@ -909,6 +909,7 @@ export function useTransactionTableLogic(props: {
           // Solo limpia si no hubo una edición nueva durante el delay
           if (lastEdit === lastEditTimestampRef.current) {
             setEditValues({});
+            editValuesRef.current = {};
             setIsActuallySaving(false);
           }
         }, 150);
