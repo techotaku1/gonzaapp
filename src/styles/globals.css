@@ -421,10 +421,10 @@ select.table-select-base option {
 @utility emitido-por-hh {
   background-color: color-mix(
     in oklch,
-    var(--color-brown-300) 100%,
+    var(--color-cyan-200) 100%,
     transparent
   );
-  color: var(--color-brown-800);
+  color: var(--color-cyan-900);
 }
 
 @utility emitido-por-no-emitir {

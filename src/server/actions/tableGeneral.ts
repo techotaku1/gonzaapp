@@ -137,18 +137,21 @@ export async function searchTransactions(
   return await _searchTransactions(query);
 }
 
-// Cache para asesores
-async function _getAllAsesores(): Promise<string[]> {
-  const results = await db.select().from(asesores);
-  return results
-    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-    .filter((a) => a.length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es'));
-}
+// Cache para asesores (ahora con unstable_cache para evitar GETs infinitos)
+const getAllAsesoresCached = unstable_cache(
+  async (): Promise<string[]> => {
+    const results = await db.select().from(asesores);
+    return results
+      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+      .filter((a) => a.length > 0)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  },
+  ['asesores-list'],
+  { tags: ['asesores'], revalidate: 3600 } // cache 1 hora, ajusta si necesitas menos
+);
 
-// No uses unstable_cache aquí, solo exporta la función async
 export async function getAllAsesores(): Promise<string[]> {
-  return await _getAllAsesores();
+  return await getAllAsesoresCached();
 }
 
 export async function createRecord(
@@ -248,6 +251,21 @@ export async function updateRecords(
             } else {
               val = null;
             }
+          }
+          // Corrige campos string NOT NULL: nunca null/undefined, siempre string
+          // Ajusta aquí según tu schema real
+          const notNullStringFields = [
+            'tramite',
+            'emitidoPor',
+            'placa',
+            'tipoDocumento',
+            'numeroDocumento',
+            'nombre',
+            'ciudad',
+            'asesor',
+          ];
+          if (notNullStringFields.includes(key)) {
+            val ??= '';
           }
           if (val !== undefined) fieldsToUpdate[key] = val;
         });
