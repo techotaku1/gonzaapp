@@ -226,49 +226,63 @@ export async function updateRecords(
   try {
     await Promise.all(
       records.map(async (record) => {
-        // Solo incluye campos definidos, no nulos y no vacíos si son requeridos
-        const fieldsToUpdate: Record<string, unknown> = {};
+        // Obtén el registro actual de la base de datos
+        const [current] = await db
+          .select()
+          .from(transactions)
+          .where(eq(transactions.id, record.id));
+        if (!current) return;
+
         // Lista de campos requeridos según tu schema
-        const requiredFields = [
+        const requiredFields: (keyof TransactionRecord)[] = [
+          'fecha',
+          'tramite',
+          'pagado',
+          'boleta',
+          'boletasRegistradas',
+          'emitidoPor',
           'placa',
           'tipoDocumento',
           'numeroDocumento',
           'nombre',
-          'emitidoPor',
           'ciudad',
           'asesor',
-          'tramite',
-          'fecha',
           'precioNeto',
+          'comisionExtra',
           'tarifaServicio',
           'impuesto4x1000',
           'gananciaBruta',
-          'boletasRegistradas',
+          'rappi',
         ];
-        let skipUpdate = false;
-        Object.keys(record).forEach((key) => {
-          if (key !== 'id') {
-            const val = record[key as keyof TransactionRecord];
-            // Si el campo es requerido y está vacío, marca para no actualizar
-            if (
-              requiredFields.includes(key) &&
-              (val === undefined || val === null || val === '')
-            ) {
-              skipUpdate = true;
-            }
-            // Solo asigna si el valor es distinto de undefined y null
-            if (val !== undefined && val !== null) {
-              if (key === 'boletasRegistradas') {
-                fieldsToUpdate[key] =
-                  typeof val === 'number' ? String(val) : val;
-              } else {
-                fieldsToUpdate[key] = val;
-              }
-            }
+
+        // Construye el objeto de update asegurando que todos los campos requeridos estén presentes
+        const fieldsToUpdate: Record<string, unknown> = {};
+        for (const key of Object.keys(current) as (keyof TransactionRecord)[]) {
+          if (key === 'id') continue;
+          let val = record[key] !== undefined ? record[key] : current[key];
+          // boletasRegistradas y campos monetarios deben ser string
+          if (
+            key === 'boletasRegistradas' ||
+            key === 'precioNeto' ||
+            key === 'tarifaServicio' ||
+            key === 'impuesto4x1000' ||
+            key === 'gananciaBruta'
+          ) {
+            val = val !== undefined && val !== null ? String(Number(val)) : '0';
           }
-        });
-        // Si falta algún campo requerido, no hagas el update para esta fila
-        if (skipUpdate || Object.keys(fieldsToUpdate).length === 0) return;
+          // Si el campo es requerido y sigue vacío, no hagas el update
+          if (
+            requiredFields.includes(key) &&
+            (val === undefined || val === null || val === '')
+          ) {
+            return;
+          }
+          // Solo asigna si el valor es distinto de undefined y null
+          if (val !== undefined && val !== null) {
+            fieldsToUpdate[key] = val;
+          }
+        }
+        if (Object.keys(fieldsToUpdate).length === 0) return;
         await db
           .update(transactions)
           .set(fieldsToUpdate)
