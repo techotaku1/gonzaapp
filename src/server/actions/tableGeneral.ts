@@ -226,11 +226,36 @@ export async function updateRecords(
   try {
     await Promise.all(
       records.map(async (record) => {
-        // Solo incluye campos definidos y no nulos
+        // Solo incluye campos definidos, no nulos y no vacíos si son requeridos
         const fieldsToUpdate: Record<string, unknown> = {};
+        // Lista de campos requeridos según tu schema
+        const requiredFields = [
+          'placa',
+          'tipoDocumento',
+          'numeroDocumento',
+          'nombre',
+          'emitidoPor',
+          'ciudad',
+          'asesor',
+          'tramite',
+          'fecha',
+          'precioNeto',
+          'tarifaServicio',
+          'impuesto4x1000',
+          'gananciaBruta',
+          'boletasRegistradas',
+        ];
+        let skipUpdate = false;
         Object.keys(record).forEach((key) => {
           if (key !== 'id') {
             const val = record[key as keyof TransactionRecord];
+            // Si el campo es requerido y está vacío, marca para no actualizar
+            if (
+              requiredFields.includes(key) &&
+              (val === undefined || val === null || val === '')
+            ) {
+              skipUpdate = true;
+            }
             // Solo asigna si el valor es distinto de undefined y null
             if (val !== undefined && val !== null) {
               if (key === 'boletasRegistradas') {
@@ -242,8 +267,8 @@ export async function updateRecords(
             }
           }
         });
-        // Si no hay campos para actualizar, no hagas el update
-        if (Object.keys(fieldsToUpdate).length === 0) return;
+        // Si falta algún campo requerido, no hagas el update para esta fila
+        if (skipUpdate || Object.keys(fieldsToUpdate).length === 0) return;
         await db
           .update(transactions)
           .set(fieldsToUpdate)
