@@ -83,42 +83,24 @@ export default function TransactionTotals({
     []
   );
 
-  // Filtrar transacciones por búsqueda y rango de fechas
-  const filteredTransactions = useMemo(() => {
-    let filtered = transactions;
-    if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter((t) =>
-        Object.entries(t).some(([key, value]) => {
-          if (key === 'fecha' || value === null) return false;
-          return String(value).toLowerCase().includes(search);
-        })
-      );
-    }
-    if (startDate && endDate) {
-      const start = startDate.setHours(0, 0, 0, 0);
-      const end = endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter((t) => {
-        const tDate = new Date(t.fecha).getTime();
-        return tDate >= start && tDate <= end;
-      });
-    }
-    return filtered;
-  }, [transactions, searchTerm, startDate, endDate]);
-
+  // --- CORREGIDO: Calcula los totales por fecha usando TODOS los registros recibidos ---
   const totals = useMemo(() => {
     const totalsByDate = new Map<string, TotalsByDate>();
     const COMISION_EXTRA = 30000;
 
-    filteredTransactions.forEach((transaction) => {
-      if (!(transaction.fecha instanceof Date)) return;
+    transactions.forEach((transaction) => {
+      // Asegura que la fecha sea válida
+      const fecha =
+        transaction.fecha instanceof Date
+          ? transaction.fecha
+          : new Date(transaction.fecha);
+      if (isNaN(fecha.getTime())) return;
 
-      const dateInColombia = new Date(
-        transaction.fecha.toLocaleString('en-US', {
-          timeZone: 'America/Bogota',
-        })
+      // Fecha en zona horaria de Colombia (solo la parte de la fecha)
+      const colombiaDate = new Date(
+        fecha.toLocaleString('en-US', { timeZone: 'America/Bogota' })
       );
-      const dateStr = dateInColombia.toISOString().split('T')[0];
+      const dateStr = colombiaDate.toISOString().split('T')[0];
       if (!dateStr) return;
 
       const current = totalsByDate.get(dateStr) ?? {
@@ -153,10 +135,11 @@ export default function TransactionTotals({
       totalsByDate.set(dateStr, updatedTotal);
     });
 
+    // Ordena por fecha descendente (más reciente primero)
     return Array.from(totalsByDate.values()).sort((a, b) =>
       b.date.localeCompare(a.date)
     );
-  }, [filteredTransactions]);
+  }, [transactions]);
 
   // Filtrar totales por búsqueda y rango de fechas de forma optimizada
   const filteredTotals = useMemo(() => {
@@ -200,7 +183,11 @@ export default function TransactionTotals({
     normalizeText,
   ]);
 
-  const totalPages = Math.ceil(filteredTotals.length / itemsPerPage);
+  // --- CORREGIDO: Paginación local sobre los totales por fecha ---
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredTotals.length / itemsPerPage)
+  );
   const paginatedTotals = filteredTotals.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
