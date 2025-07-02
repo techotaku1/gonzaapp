@@ -296,17 +296,17 @@ export function useTransactionTableLogic(props: {
     setTotalSelected(total);
   }, [selectedRows, props.initialData]);
   const handlePay = async () => {
-    const updatedData = props.initialData.map((record) => {
-      if (selectedRows.has(record.id)) {
-        return {
-          ...record,
-          pagado: true,
-          boletasRegistradas: totalSelected,
-        };
-      }
-      return record;
-    });
-    await props.onUpdateRecordAction(updatedData);
+    // Solo paga los seleccionados que están en la paginación actual
+    const updatedData = paginatedData
+      .filter((record) => selectedRows.has(record.id) && !record.pagado)
+      .map((record) => ({
+        ...record,
+        pagado: true,
+        // boletasRegistradas: totalSelected, // Si quieres sumar el total, pero normalmente es por boleta
+      }));
+    if (updatedData.length > 0) {
+      await props.onUpdateRecordAction(updatedData);
+    }
     setSelectedRows(new Set());
   };
   // Cuando agregas un nuevo registro, asegúrate de que la fecha sea la de hoy (Colombia) y que la paginación lo lleve a la página correcta
