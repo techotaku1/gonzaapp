@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
@@ -112,11 +112,45 @@ function DatePagination({
 
 export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
+  // Estado local para asesores
+  const [asesores, setAsesores] = useState<string[]>([]);
+  // Cargar asesores solo una vez
+  useEffect(() => {
+    fetch('/api/asesores')
+      .then(async (res) => {
+        const data: { asesores?: unknown } = await res.json();
+        if (Array.isArray(data.asesores)) {
+          setAsesores(
+            data.asesores.filter((a): a is string => typeof a === 'string')
+          );
+        }
+      })
+      .catch(() => setAsesores([]));
+  }, []);
+  // Handler para agregar asesor y actualizar la lista local
+  const handleAddAsesorAction = async (nombre: string) => {
+    const res = await fetch('/api/asesores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+    if (res.ok) {
+      setAsesores((prev) =>
+        prev.includes(nombre)
+          ? prev
+          : [...prev, nombre].sort((a, b) => a.localeCompare(b, 'es'))
+      );
+    } else {
+      alert('Error al agregar asesor.');
+    }
+  };
   const { renderInput } = useTransactionTableInputs({
     editValues: logic.editValues,
     handleInputChangeAction: logic.handleInputChange,
     formatCurrencyAction: logic.formatCurrency,
     parseNumberAction: logic.parseNumber,
+    asesores,
+    onAddAsesorAction: handleAddAsesorAction,
   });
   const router = useRouter();
 

@@ -1,44 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-import useSWR from 'swr';
-
-interface Props {
+export interface AsesorSelectProps {
   value: string;
   onChange: (newValue: string) => void;
+  asesores: string[];
+  onAddAsesorAction: (nombre: string) => Promise<void>;
   className?: string;
 }
 
-const AsesorSelect: React.FC<Props> = ({ value, onChange, className }) => {
-  // SWR para obtener asesores únicos
-  const { data: asesoresData, mutate } = useSWR<string[]>(
-    '/api/asesores',
-    async (url: string) => {
-      const res = await fetch(url);
-      const json: { asesores: string[] } = await res.json();
-      return json.asesores;
-    }
-  );
-  const [localAsesores] = useState<string[]>([]);
-  const asesoresList =
-    localAsesores.length > 0 ? localAsesores : (asesoresData ?? []);
-
+export const AsesorSelect: React.FC<AsesorSelectProps> = ({
+  value,
+  onChange,
+  asesores,
+  onAddAsesorAction,
+  className,
+}) => {
   // Handler para agregar nuevo asesor
   const handleAddAsesor = async () => {
     const nombre = prompt('Ingrese el nombre del nuevo asesor:');
     if (nombre && nombre.trim().length > 0) {
-      const nuevo = nombre.trim();
-      // POST a la API para agregar asesor
-      const res = await fetch('/api/asesores', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nuevo }),
-      });
-      if (res.ok) {
-        mutate(); // Refresca la lista desde la BD
-        onChange(nuevo);
-      } else {
-        alert('Error al agregar asesor.');
-      }
+      await onAddAsesorAction(nombre.trim());
+      onChange(nombre.trim()); // Selecciona automáticamente el nuevo asesor
     }
   };
 
@@ -60,7 +42,7 @@ const AsesorSelect: React.FC<Props> = ({ value, onChange, className }) => {
         <option value="" className="text-white">
           Seleccionar...
         </option>
-        {asesoresList.map((asesor) => (
+        {asesores.map((asesor) => (
           <option
             key={asesor}
             value={asesor}
@@ -76,5 +58,3 @@ const AsesorSelect: React.FC<Props> = ({ value, onChange, className }) => {
     </div>
   );
 };
-
-export default AsesorSelect;

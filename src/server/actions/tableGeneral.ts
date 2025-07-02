@@ -137,21 +137,13 @@ export async function searchTransactions(
   return await _searchTransactions(query);
 }
 
-// Cache para asesores (ahora con unstable_cache para evitar GETs infinitos)
-const getAllAsesoresCached = unstable_cache(
-  async (): Promise<string[]> => {
-    const results = await db.select().from(asesores);
-    return results
-      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-      .filter((a) => a.length > 0)
-      .sort((a, b) => a.localeCompare(b, 'es'));
-  },
-  ['asesores-list'],
-  { tags: ['asesores'], revalidate: 3600 } // cache 1 hora, ajusta si necesitas menos
-);
-
+// Elimina el cache para asesores, solo consulta directo
 export async function getAllAsesores(): Promise<string[]> {
-  return await getAllAsesoresCached();
+  const results = await db.select().from(asesores);
+  return results
+    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+    .filter((a) => a.length > 0)
+    .sort((a, b) => a.localeCompare(b, 'es'));
 }
 
 export async function createRecord(

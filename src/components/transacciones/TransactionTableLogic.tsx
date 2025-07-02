@@ -14,7 +14,7 @@ import { getColombiaDate, getDateKey, toColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
 import { calculateSoatPrice } from '~/utils/soatPricing';
 
-import AsesorSelect from './AsesorSelect';
+import { AsesorSelect } from './AsesorSelect';
 
 export const tramiteOptions = ['SOAT'] as const;
 export const tipoDocumentoOptions = ['CC', 'NIT', 'TI', 'CE', 'PAS'] as const;
@@ -50,6 +50,8 @@ export function useTransactionTableLogic(props: {
   showTotals: boolean;
   onToggleTotalsAction: () => void;
   searchTerm?: string;
+  asesores?: string[];
+  onAddAsesorAction?: (nombre: string) => Promise<void>;
 }) {
   // Desestructura solo lo necesario
   const {
@@ -708,6 +710,10 @@ export function useTransactionTableLogic(props: {
       return newSet;
     });
   }, []);
+  // Reemplaza emptyAsync por una función sync que arroja error (cumple require-await)
+  const emptyAsync = () => {
+    throw new Error('onAddAsesorAction no implementado');
+  };
   const renderAsesorSelect = useCallback(
     (row: TransactionRecord) => {
       if (!isAsesorSelectionMode) return null;
@@ -731,6 +737,8 @@ export function useTransactionTableLogic(props: {
               onChange={(newValue: string) =>
                 handleInputChange(row.id, 'asesor', newValue)
               }
+              asesores={props.asesores ?? []}
+              onAddAsesorAction={props.onAddAsesorAction ?? emptyAsync}
             />
           </div>
         </div>
@@ -741,6 +749,8 @@ export function useTransactionTableLogic(props: {
       selectedAsesores,
       handleAsesorSelection,
       handleInputChange,
+      props.asesores,
+      props.onAddAsesorAction,
     ]
   );
   // handleFilterData: sin dependencias externas

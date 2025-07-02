@@ -6,7 +6,7 @@ import { calculateFormulas } from '~/utils/formulas';
 import { formatCurrency } from '~/utils/numberFormat';
 import { type VehicleType, vehicleTypes } from '~/utils/soatPricing';
 
-import AsesorSelect from './AsesorSelect';
+import { AsesorSelect } from './AsesorSelect';
 import {
   novedadOptions,
   tipoDocumentoOptions,
@@ -110,6 +110,8 @@ export function useTransactionTableInputs({
   handleInputChangeAction,
   formatCurrencyAction: _formatCurrencyAction, // prefijo _ para evitar warning de unused
   parseNumberAction,
+  asesores,
+  onAddAsesorAction,
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -119,6 +121,8 @@ export function useTransactionTableInputs({
   ) => void;
   formatCurrencyAction: (v: number) => string;
   parseNumberAction: (v: string) => number;
+  asesores: string[];
+  onAddAsesorAction: (nombre: string) => Promise<void>;
 }) {
   const renderInput = (
     row: TransactionRecord,
@@ -398,9 +402,11 @@ export function useTransactionTableInputs({
       return (
         <AsesorSelect
           value={String(value ?? '')}
-          onChange={(newValue) =>
+          onChange={(newValue: string) =>
             handleInputChangeAction(row.id, 'asesor', newValue)
           }
+          asesores={asesores}
+          onAddAsesorAction={onAddAsesorAction}
         />
       );
     }
