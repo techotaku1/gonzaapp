@@ -108,7 +108,7 @@ export type EmitidoPorOption = (typeof emitidoPorOptions)[number];
 export function useTransactionTableInputs({
   editValues,
   handleInputChangeAction,
-  formatCurrencyAction: _formatCurrencyAction, // prefijo _ para evitar warning de unused
+  formatCurrencyAction: _formatCurrencyAction,
   parseNumberAction,
   asesores,
   onAddAsesorAction,
@@ -124,21 +124,33 @@ export function useTransactionTableInputs({
   asesores: string[];
   onAddAsesorAction: (nombre: string) => Promise<void>;
 }) {
+  // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
+  const getCellValue = (
+    row: TransactionRecord,
+    field: keyof TransactionRecord
+  ) => {
+    if (
+      editValues[row.id] &&
+      Object.prototype.hasOwnProperty.call(editValues[row.id], field)
+    ) {
+      return editValues[row.id][field];
+    }
+    return row[field];
+  };
+
   const renderInput = (
     row: TransactionRecord,
     field: keyof TransactionRecord,
     type: InputType = 'text'
   ) => {
-    const value =
-      editValues[row.id] && editValues[row.id][field] !== undefined
-        ? editValues[row.id][field]
-        : row[field];
+    // SIEMPRE usa el valor local editado si existe
+    const value = getCellValue(row, field);
     const isMoneyField = [
       'precioNeto',
       'tarifaServicio',
       'impuesto4x1000',
       'gananciaBruta',
-      'boletasRegistradas', // Añadido boletasRegistradas como campo monetario
+      'boletasRegistradas',
     ].includes(field as string);
 
     // Para mostrar valores ajustados en tiempo real
@@ -415,24 +427,13 @@ export function useTransactionTableInputs({
       <div className={`relative ${isMoneyField ? 'flex items-center' : ''}`}>
         <input
           // ...existing code...
-          value={
-            // --- SIEMPRE muestra el valor editado mientras existan edits locales, incluso tras guardar ---
-            editValues[row.id] &&
-            Object.keys(editValues[row.id]).includes(field)
-              ? (() => {
-                  const v = editValues[row.id][field];
-                  if (isMoneyField && typeof v === 'number') return v;
-                  if (typeof v === 'boolean') return v ? '1' : '';
-                  if (v === null || typeof v === 'undefined') return '';
-                  return v as string | number;
-                })()
-              : (() => {
-                  const v = row[field];
-                  if (typeof v === 'boolean') return v ? '1' : '';
-                  if (v === null || typeof v === 'undefined') return '';
-                  return v as string | number;
-                })()
-          }
+          value={(() => {
+            const v = getCellValue(row, field);
+            if (isMoneyField && typeof v === 'number') return v;
+            if (typeof v === 'boolean') return v ? '1' : '';
+            if (v === null || typeof v === 'undefined') return '';
+            return v as string | number;
+          })()}
           title={formatValue(value)} // Agregar tooltip a todos los inputs
           onChange={(e) => {
             let newValue: InputValue;

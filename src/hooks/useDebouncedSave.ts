@@ -29,7 +29,6 @@ export function useDebouncedSave(
 
   const debouncedSave = useCallback(
     (data: TransactionRecord[]) => {
-      // Siempre guarda la última edición pendiente
       pendingDataRef.current = data;
       latestEditRef.current = data;
       const dataString = JSON.stringify(
@@ -51,18 +50,18 @@ export function useDebouncedSave(
           );
           return Array.from(map.values());
         },
-        false // no revalidar aún
+        false // nunca revalidar aún
       );
 
-      // --- CORREGIDO: Siempre dispara un guardado al perder el foco o terminar de editar, no solo por debounce ---
       timeoutRef.current = setTimeout(async () => {
-        // Solo guarda si hay cambios respecto al último guardado
         if (lastSavedDataRef.current === dataString) return;
         try {
           const result = await saveFunction(pendingDataRef.current!);
           if (result.success) {
             lastSavedDataRef.current = dataString;
             onSuccess();
+            // Revalida el cache SOLO después de éxito
+            mutate(CACHE_KEY, undefined, { revalidate: true });
           } else {
             mutate(CACHE_KEY, undefined, { revalidate: true });
           }

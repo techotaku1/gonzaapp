@@ -152,7 +152,7 @@ export default function TransactionTable(props: TransactionTableProps) {
   };
 
   const { renderInput } = useTransactionTableInputs({
-    editValues: logic.editValues,
+    editValues: logic.editValues, // SIEMPRE pasa los edits locales actuales
     handleInputChangeAction: logic.handleInputChange,
     formatCurrencyAction: logic.formatCurrency,
     parseNumberAction: logic.parseNumber,

@@ -82,7 +82,8 @@ export function useTransactionTableLogic(props: {
   const [selectedAsesores, setSelectedAsesores] = useState<Set<string>>(
     new Set()
   );
-  const [_currentDateDisplay, setCurrentDateDisplay] = useState('');
+  // Estado para mostrar la fecha actual en la UI
+  const [currentDateDisplay, setCurrentDateDisplay] = useState('');
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
   const [searchTerm, setSearchTermAction] = useState<string>(
@@ -817,7 +818,7 @@ export function useTransactionTableLogic(props: {
         }
       }
     },
-    [setCurrentDateDisplay, paginatedData]
+    [paginatedData]
   );
 
   useEffect(() => {
@@ -875,22 +876,22 @@ export function useTransactionTableLogic(props: {
     debouncedSearchTerm,
   ]);
 
-  // --- NUEVO: Limpia editValues y el estado de guardado SOLO si los datos remotos reflejan los edits Y el usuario NO está editando (no hay timeouts activos) ---
+  // --- NUEVO: Limpia editValues SOLO si los datos remotos reflejan los edits Y no hay edits pendientes ---
+  // Añade un timeout para limpiar los edits después de un pequeño delay para evitar parpadeo
+  const clearEditsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
-    // Si hay edits y NO hay timeouts activos (usuario no está editando)
     const hasEdits = Object.keys(editValues).length > 0;
     const hasActiveTimeouts = Object.values(editTimeoutRef.current ?? {}).some(
       Boolean
     );
 
     if (hasEdits && !hasActiveTimeouts) {
-      // Solo limpia editValues si los datos remotos ya reflejan todos los cambios locales
       const allEditsAreInRemote = Object.entries(editValues).every(
         ([id, edits]) => {
           const remote = props.initialData.find((r) => r.id === id);
           if (!remote) return false;
           return Object.entries(edits).every(([field, value]) => {
-            // Compara usando JSON.stringify para soportar fechas y nulls
             return (
               JSON.stringify(remote[field as keyof typeof remote]) ===
               JSON.stringify(value)
@@ -899,12 +900,32 @@ export function useTransactionTableLogic(props: {
         }
       );
       if (allEditsAreInRemote) {
-        setEditValues({});
-        setIsActuallySaving(false);
+        // Si el usuario hace una nueva edición durante el delay, NO limpies los edits
+        if (clearEditsTimeoutRef.current) {
+          clearTimeout(clearEditsTimeoutRef.current);
+        }
+        const lastEdit = lastEditTimestampRef.current;
+        clearEditsTimeoutRef.current = setTimeout(() => {
+          // Solo limpia si no hubo una edición nueva durante el delay
+          if (lastEdit === lastEditTimestampRef.current) {
+            setEditValues({});
+            setIsActuallySaving(false);
+          }
+        }, 150);
+      } else {
+        // Si los edits no están reflejados, limpia cualquier timeout pendiente
+        if (clearEditsTimeoutRef.current) {
+          clearTimeout(clearEditsTimeoutRef.current);
+          clearEditsTimeoutRef.current = null;
+        }
+      }
+    } else {
+      // Si hay edits activos, cancela cualquier timeout pendiente
+      if (clearEditsTimeoutRef.current) {
+        clearTimeout(clearEditsTimeoutRef.current);
+        clearEditsTimeoutRef.current = null;
       }
     }
-    // Si hay timeouts activos, nunca limpies editValues (así se evita el parpadeo)
-    // Si el usuario sigue editando, los edits locales siempre se muestran
   }, [props.initialData, editValues]);
 
   // --- NUEVO: Si al cargar la página por primera vez no hay registros en el día actual, navega automáticamente al día anterior con registros ---
@@ -1004,8 +1025,8 @@ export function useTransactionTableLogic(props: {
     setIsAsesorSelectionMode,
     selectedAsesores,
     setSelectedAsesores,
-    _currentDateDisplay,
-    setCurrentDateDisplay,
+    currentDateDisplay, // <-- corregido aquí
+    setCurrentDateDisplay, // <-- corregido aquí
     isLoadingAsesorMode,
     setIsLoadingAsesorMode,
     isNavigatingToCuadre,
