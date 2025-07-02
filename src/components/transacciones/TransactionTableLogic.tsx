@@ -166,13 +166,18 @@ export function useTransactionTableLogic(props: {
     800
   );
   const [editValues, setEditValues] = useState<EditValues>({});
+  const editValuesRef = useRef<EditValues>({});
   const isEditingRef = useRef(false);
   const editTimeoutRef = useRef<Record<string, NodeJS.Timeout | null>>({});
+  // Nuevo: para evitar limpiar edits si el usuario editó hace poco
+  const lastEditTimestampRef = useRef<number>(0);
 
   // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       isEditingRef.current = true;
+      // Marca el timestamp de la última edición
+      lastEditTimestampRef.current = Date.now();
       // --- Soporta múltiples campos editándose a la vez ---
       if (editTimeoutRef.current[`${id}-${field}`]) {
         clearTimeout(editTimeoutRef.current[`${id}-${field}`]!);
@@ -466,7 +471,8 @@ export function useTransactionTableLogic(props: {
   // paginatedData: nunca debe depender de editValues ni de ningún estado de edición
   const paginatedDataFinal: TransactionRecord[] = useMemo(() => {
     // --- SIEMPRE prioriza los edits locales sobre los datos remotos ---
-    const edits = editValues;
+    // Usa la referencia para evitar parpadeos incluso si SWR revalida
+    const edits = editValuesRef.current;
     let baseData: TransactionRecord[] = [];
 
     if (debouncedSearchTerm || (dateFilter.startDate && dateFilter.endDate)) {
@@ -491,7 +497,7 @@ export function useTransactionTableLogic(props: {
     dateFilter,
     filteredData,
     debouncedSearchTerm,
-    editValues,
+    // NO dependas de editValues aquí, solo de la ref
   ]);
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('es-CO', {
@@ -865,9 +871,15 @@ export function useTransactionTableLogic(props: {
     debouncedSearchTerm,
   ]);
 
-  // --- NUEVO: Limpia editValues y el estado de guardado SOLO si los datos remotos reflejan los edits Y los valores remotos son realmente distintos a los edits previos ---
+  // --- NUEVO: Limpia editValues y el estado de guardado SOLO si los datos remotos reflejan los edits Y el usuario NO está editando (no hay timeouts activos) ---
   useEffect(() => {
-    if (!isEditingRef.current) {
+    // Si hay edits y NO hay timeouts activos (usuario no está editando)
+    const hasEdits = Object.keys(editValues).length > 0;
+    const hasActiveTimeouts = Object.values(editTimeoutRef.current ?? {}).some(
+      Boolean
+    );
+
+    if (hasEdits && !hasActiveTimeouts) {
       // Solo limpia editValues si los datos remotos ya reflejan todos los cambios locales
       const allEditsAreInRemote = Object.entries(editValues).every(
         ([id, edits]) => {
@@ -882,34 +894,13 @@ export function useTransactionTableLogic(props: {
           });
         }
       );
-      // --- ARREGLO FINAL: Solo limpia editValues si hay edits, el usuario NO está editando NINGÚN campo, y los valores remotos son realmente distintos a los edits previos ---
-      if (
-        allEditsAreInRemote &&
-        Object.keys(editValues).length > 0 &&
-        !Object.values(editTimeoutRef.current ?? {}).some(Boolean)
-      ) {
-        // Solo limpia si los valores remotos son IGUALES a los edits (no si solo existen los edits)
-        let shouldClear = true;
-        for (const [id, edits] of Object.entries(editValues)) {
-          const remote = props.initialData.find((r) => r.id === id);
-          if (!remote) continue;
-          for (const [field, value] of Object.entries(edits)) {
-            if (
-              JSON.stringify(remote[field as keyof typeof remote]) !==
-              JSON.stringify(value)
-            ) {
-              shouldClear = false;
-              break;
-            }
-          }
-          if (!shouldClear) break;
-        }
-        if (shouldClear) {
-          setEditValues({});
-          setIsActuallySaving(false);
-        }
+      if (allEditsAreInRemote) {
+        setEditValues({});
+        setIsActuallySaving(false);
       }
     }
+    // Si hay timeouts activos, nunca limpies editValues (así se evita el parpadeo)
+    // Si el usuario sigue editando, los edits locales siempre se muestran
   }, [props.initialData, editValues]);
 
   // --- NUEVO: Si al cargar la página por primera vez no hay registros en el día actual, navega automáticamente al día anterior con registros ---

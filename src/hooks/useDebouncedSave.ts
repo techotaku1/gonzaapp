@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+
 import { useSWRConfig } from 'swr';
 
 import type { TransactionRecord } from '~/types';
@@ -53,6 +54,7 @@ export function useDebouncedSave(
         false // no revalidar aún
       );
 
+      // --- CORREGIDO: Siempre dispara un guardado al perder el foco o terminar de editar, no solo por debounce ---
       timeoutRef.current = setTimeout(async () => {
         // Solo guarda si hay cambios respecto al último guardado
         if (lastSavedDataRef.current === dataString) return;
@@ -60,11 +62,8 @@ export function useDebouncedSave(
           const result = await saveFunction(pendingDataRef.current!);
           if (result.success) {
             lastSavedDataRef.current = dataString;
-            // Solo limpia los edits locales si el backend ya refleja todos los cambios
             onSuccess();
-            // Si quieres forzar una revalidación, hazlo después de limpiar los edits locales (en el efecto que limpia editValues)
           } else {
-            // Si falla, revalida para restaurar el cache real
             mutate(CACHE_KEY, undefined, { revalidate: true });
           }
         } catch (error) {
@@ -75,6 +74,29 @@ export function useDebouncedSave(
     },
     [saveFunction, onSuccess, delay, mutate]
   );
+
+  // --- NUEVO: Forzar guardado inmediato al perder el foco de un input ---
+  useEffect(() => {
+    const handleBlur = () => {
+      if (pendingDataRef.current) {
+        saveFunction(pendingDataRef.current).then((result) => {
+          if (result.success) {
+            lastSavedDataRef.current = JSON.stringify(
+              pendingDataRef.current!.map((r) => {
+                const { id, ...rest } = r;
+                return { id, ...rest };
+              })
+            );
+            onSuccess();
+          }
+        });
+      }
+    };
+    window.addEventListener('beforeunload', handleBlur);
+    return () => {
+      window.removeEventListener('beforeunload', handleBlur);
+    };
+  }, [saveFunction, onSuccess]);
 
   return debouncedSave;
 }

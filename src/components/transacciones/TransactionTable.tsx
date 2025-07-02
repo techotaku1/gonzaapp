@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react'; // Elimina useEffect y useState si no se usan directamente aquí;
 
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
+import useSWR from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { type TransactionRecord } from '~/types';
@@ -112,22 +113,30 @@ function DatePagination({
 
 export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
-  // Estado local para asesores
-  const [asesores, setAsesores] = useState<string[]>([]);
-  // Cargar asesores solo una vez
-  useEffect(() => {
-    fetch('/api/asesores')
-      .then(async (res) => {
-        const data: { asesores?: unknown } = await res.json();
-        if (Array.isArray(data.asesores)) {
-          setAsesores(
-            data.asesores.filter((a): a is string => typeof a === 'string')
-          );
-        }
-      })
-      .catch(() => setAsesores([]));
-  }, []);
-  // Handler para agregar asesor y actualizar la lista local
+
+  // Usa SWR para asesores con pooling cada 2 segundos
+  const { data: asesores = [], mutate: mutateAsesores } = useSWR<string[]>(
+    '/api/asesores',
+    async (url: string): Promise<string[]> => {
+      const res = await fetch(url);
+      // Tipar la respuesta para evitar acceso inseguro
+      const data: unknown = await res.json();
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'asesores' in data &&
+        Array.isArray((data as { asesores: unknown }).asesores)
+      ) {
+        return (data as { asesores: unknown[] }).asesores.filter(
+          (a): a is string => typeof a === 'string'
+        );
+      }
+      return [];
+    },
+    { refreshInterval: 2000, revalidateOnFocus: true }
+  );
+
+  // Handler para agregar asesor y actualizar la lista local y global
   const handleAddAsesorAction = async (nombre: string) => {
     const res = await fetch('/api/asesores', {
       method: 'POST',
@@ -135,15 +144,13 @@ export default function TransactionTable(props: TransactionTableProps) {
       body: JSON.stringify({ nombre }),
     });
     if (res.ok) {
-      setAsesores((prev) =>
-        prev.includes(nombre)
-          ? prev
-          : [...prev, nombre].sort((a, b) => a.localeCompare(b, 'es'))
-      );
+      // Revalida el cache global de asesores para todos los equipos
+      void mutateAsesores();
     } else {
       alert('Error al agregar asesor.');
     }
   };
+
   const { renderInput } = useTransactionTableInputs({
     editValues: logic.editValues,
     handleInputChangeAction: logic.handleInputChange,
