@@ -2,16 +2,21 @@
 
 import { SWRConfig } from 'swr';
 
-const swrConfig = {
-  revalidateOnFocus: true,
-  revalidateOnReconnect: true,
-  refreshInterval: 2000, // Polling cada 2 segundos
-  refreshWhenHidden: true,
-  refreshWhenOffline: true,
-  dedupingInterval: 1000, // Reduce deduplicación para que el polling sea más efectivo
-  keepPreviousData: true, // Mantén los datos previos mientras llegan nuevos
-};
-
-export function SWRProvider({ children }: { children: React.ReactNode }) {
+export function SWRProvider({
+  children,
+  active = true,
+}: {
+  children: React.ReactNode;
+  active?: boolean;
+}) {
+  const swrConfig = {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshInterval: active ? 2000 : 0, // Polling solo si activo
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
+    dedupingInterval: 1000,
+    keepPreviousData: true,
+  };
   return <SWRConfig value={swrConfig}>{children}</SWRConfig>;
 }

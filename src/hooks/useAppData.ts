@@ -52,7 +52,7 @@ const fetchByIds = async (ids: string[]): Promise<TransactionRecord[]> => {
   );
 };
 
-export function useAppData(initialData?: TransactionRecord[]) {
+export function useAppData(initialData?: TransactionRecord[], active = true) {
   const [data, setData] = useState<TransactionRecord[]>(initialData ?? []);
   const hashesRef = useRef<Map<string, string>>(new Map());
   const {
@@ -60,7 +60,7 @@ export function useAppData(initialData?: TransactionRecord[]) {
     error,
     mutate,
   } = useSWR('transactions-summary', fetchSummary, {
-    refreshInterval: 2000,
+    refreshInterval: active ? 2000 : 0,
     revalidateOnFocus: true,
   });
 
