@@ -226,44 +226,24 @@ export async function updateRecords(
   try {
     await Promise.all(
       records.map(async (record) => {
-        // Usa Record<string, unknown> para evitar any y problemas de tipo
+        // Solo incluye campos definidos y no nulos
         const fieldsToUpdate: Record<string, unknown> = {};
         Object.keys(record).forEach((key) => {
-          if (
-            key !== 'id' &&
-            record[key as keyof TransactionRecord] !== undefined
-          ) {
-            // Corrige boletasRegistradas para que sea string si corresponde
-            if (key === 'boletasRegistradas') {
-              const val = record[key as keyof TransactionRecord];
-              if (typeof val === 'number') {
-                fieldsToUpdate[key] = String(val);
-              } else if (typeof val === 'string') {
-                fieldsToUpdate[key] = val;
-              }
-              // Si es null o undefined, no lo asignes
-            } else if (
-              key === 'cilindraje' ||
-              key === 'tipoVehiculo' ||
-              key === 'celular' ||
-              key === 'novedad' ||
-              key === 'observaciones'
-            ) {
-              // Estos campos pueden ser string | number | boolean | Date | null | undefined
-              const val = record[key as keyof TransactionRecord];
-              // Solo asigna si no es undefined ni null
-              if (val !== undefined && val !== null) {
-                fieldsToUpdate[key] = val;
-              }
-            } else {
-              const val = record[key as keyof TransactionRecord];
-              // Solo asigna si no es undefined ni null
-              if (val !== undefined && val !== null) {
+          if (key !== 'id') {
+            const val = record[key as keyof TransactionRecord];
+            // Solo asigna si el valor es distinto de undefined y null
+            if (val !== undefined && val !== null) {
+              if (key === 'boletasRegistradas') {
+                fieldsToUpdate[key] =
+                  typeof val === 'number' ? String(val) : val;
+              } else {
                 fieldsToUpdate[key] = val;
               }
             }
           }
         });
+        // Si no hay campos para actualizar, no hagas el update
+        if (Object.keys(fieldsToUpdate).length === 0) return;
         await db
           .update(transactions)
           .set(fieldsToUpdate)
