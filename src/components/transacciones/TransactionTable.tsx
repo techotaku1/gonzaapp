@@ -136,6 +136,75 @@ export default function TransactionTable(props: TransactionTableProps) {
     { refreshInterval: 2000, revalidateOnFocus: true }
   );
 
+  const fetchTramites = async (url: string): Promise<string[]> => {
+    const res = await fetch(url);
+    const data: unknown = await res.json();
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'tramites' in data &&
+      Array.isArray((data as { tramites: unknown }).tramites)
+    ) {
+      return (data as { tramites: unknown[] }).tramites.filter(
+        (t): t is string => typeof t === 'string'
+      );
+    }
+    return [];
+  };
+
+  const fetchNovedades = async (url: string): Promise<string[]> => {
+    const res = await fetch(url);
+    const data: unknown = await res.json();
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'novedades' in data &&
+      Array.isArray((data as { novedades: unknown }).novedades)
+    ) {
+      return (data as { novedades: unknown[] }).novedades.filter(
+        (n): n is string => typeof n === 'string'
+      );
+    }
+    return [];
+  };
+
+  const fetchEmitidoPor = async (url: string): Promise<string[]> => {
+    const res = await fetch(url);
+    const data: unknown = await res.json();
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      'emitidoPor' in data &&
+      Array.isArray((data as { emitidoPor: unknown }).emitidoPor)
+    ) {
+      return (data as { emitidoPor: unknown[] }).emitidoPor.filter(
+        (e): e is string => typeof e === 'string'
+      );
+    }
+    return [];
+  };
+
+  const { data: tramiteOptions = [], mutate: mutateTramites } = useSWR<
+    string[]
+  >('/api/tramites', fetchTramites, {
+    refreshInterval: 2000,
+    revalidateOnFocus: true,
+  });
+
+  const { data: novedadOptions = [], mutate: mutateNovedades } = useSWR<
+    string[]
+  >('/api/novedades', fetchNovedades, {
+    refreshInterval: 2000,
+    revalidateOnFocus: true,
+  });
+
+  const { data: emitidoPorOptions = [], mutate: mutateEmitidoPor } = useSWR<
+    string[]
+  >('/api/emitidoPor', fetchEmitidoPor, {
+    refreshInterval: 2000,
+    revalidateOnFocus: true,
+  });
+
   // Handler para agregar asesor y actualizar la lista local y global
   const handleAddAsesorAction = async (nombre: string) => {
     const res = await fetch('/api/asesores', {
@@ -151,6 +220,33 @@ export default function TransactionTable(props: TransactionTableProps) {
     }
   };
 
+  const handleAddTramiteAction = async (nombre: string) => {
+    await fetch('/api/tramites', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+    await mutateTramites();
+  };
+
+  const handleAddNovedadAction = async (nombre: string) => {
+    await fetch('/api/novedades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+    await mutateNovedades();
+  };
+
+  const handleAddEmitidoPorAction = async (nombre: string) => {
+    await fetch('/api/emitidoPor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre }),
+    });
+    await mutateEmitidoPor();
+  };
+
   const { renderInput } = useTransactionTableInputs({
     editValues: logic.editValues, // SIEMPRE pasa los edits locales actuales
     handleInputChangeAction: logic.handleInputChange,
@@ -158,6 +254,12 @@ export default function TransactionTable(props: TransactionTableProps) {
     parseNumberAction: logic.parseNumber,
     asesores,
     onAddAsesorAction: handleAddAsesorAction,
+    onAddTramiteAction: handleAddTramiteAction,
+    onAddNovedadAction: handleAddNovedadAction,
+    onAddEmitidoPorAction: handleAddEmitidoPorAction,
+    tramiteOptions,
+    novedadOptions,
+    emitidoPorOptions,
   });
   const router = useRouter();
 

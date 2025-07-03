@@ -58,3 +58,18 @@ export interface AsesorRecord {
   nombre: string;
   createdAt: Date;
 }
+
+export interface TramiteRecord {
+  id: string;
+  nombre: string;
+}
+
+export interface NovedadRecord {
+  id: string;
+  nombre: string;
+}
+
+export interface EmitidoPorRecord {
+  id: string;
+  nombre: string;
+}

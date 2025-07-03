@@ -7,11 +7,6 @@ import { formatCurrency } from '~/utils/numberFormat';
 import { type VehicleType, vehicleTypes } from '~/utils/soatPricing';
 
 import { AsesorSelect } from './AsesorSelect';
-import {
-  novedadOptions,
-  tipoDocumentoOptions,
-  tramiteOptions,
-} from './TransactionTableLogic';
 
 import type { InputType, InputValue } from './TransactionTableRow';
 
@@ -81,30 +76,6 @@ export const getEmitidoPorClass = (value: string): string => {
   return '';
 };
 
-export const emitidoPorOptions = [
-  'Panel Juan',
-  'Panel Evelio',
-  'Panel William',
-  'Panel Gloria',
-  'Panel Sebas',
-  'Panel Yuli',
-  'Previ usuario',
-  'Previ pública',
-  'Previ Sonia',
-  'Bolivar suj',
-  'Axa Sebas',
-  'Axa Yuli',
-  'Axa gloria',
-  'Axa Maryuri',
-  'Mundial nave',
-  'Mundial fel',
-  'No Emitir',
-  'HH',
-] as const;
-
-export type EmitidoPorOption = (typeof emitidoPorOptions)[number];
-
-// Elimina la función global formatValue y muévela dentro de renderInput para que tenga acceso a field/isMoneyField
 export function useTransactionTableInputs({
   editValues,
   handleInputChangeAction,
@@ -112,6 +83,12 @@ export function useTransactionTableInputs({
   parseNumberAction,
   asesores,
   onAddAsesorAction,
+  onAddTramiteAction, // <-- NUEVO
+  onAddNovedadAction, // <-- NUEVO
+  onAddEmitidoPorAction, // <-- NUEVO
+  tramiteOptions,
+  novedadOptions,
+  emitidoPorOptions,
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -123,6 +100,12 @@ export function useTransactionTableInputs({
   parseNumberAction: (v: string) => number;
   asesores: string[];
   onAddAsesorAction: (nombre: string) => Promise<void>;
+  onAddTramiteAction?: (nombre: string) => Promise<void>; // <-- NUEVO
+  onAddNovedadAction?: (nombre: string) => Promise<void>; // <-- NUEVO
+  onAddEmitidoPorAction?: (nombre: string) => Promise<void>; // <-- NUEVO
+  tramiteOptions: string[];
+  novedadOptions: string[];
+  emitidoPorOptions: string[];
 }) {
   // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
   const getCellValue = (
@@ -210,14 +193,26 @@ export function useTransactionTableInputs({
       return (
         <select
           value={value as string}
-          onChange={(e) =>
-            handleInputChangeAction(row.id, field, e.target.value)
-          }
+          onChange={async (e) => {
+            if (e.target.value === '__add_new__') {
+              if (onAddEmitidoPorAction) {
+                const nombre = prompt(
+                  'Ingrese el nuevo valor para "Emitido Por":'
+                );
+                if (nombre && nombre.trim().length > 0) {
+                  await onAddEmitidoPorAction(nombre.trim());
+                  handleInputChangeAction(row.id, field, nombre.trim());
+                }
+              }
+            } else {
+              handleInputChangeAction(row.id, field, e.target.value);
+            }
+          }}
           className={`table-select-base w-[105px] rounded border ${getEmitidoPorClass(value as string)}`}
           title={value as string}
         >
           <option value="">Seleccionar...</option>
-          {emitidoPorOptions.map((option: EmitidoPorOption) => (
+          {emitidoPorOptions.map((option) => (
             <option
               key={option}
               value={option}
@@ -226,6 +221,9 @@ export function useTransactionTableInputs({
               {option}
             </option>
           ))}
+          <option value="__add_new__" className="font-bold text-blue-700">
+            Agregar nuevo emitido por... ➕
+          </option>
         </select>
       );
     }
@@ -296,7 +294,7 @@ export function useTransactionTableInputs({
           title={value as string}
         >
           <option value="">-</option>
-          {tipoDocumentoOptions.map((option) => (
+          {['CC', 'NIT', 'TI', 'CE', 'PAS'].map((option) => (
             <option key={option} value={option} className="text-center">
               {option}
             </option>
@@ -310,9 +308,19 @@ export function useTransactionTableInputs({
       return (
         <select
           value={value as string}
-          onChange={(e) =>
-            handleInputChangeAction(row.id, field, e.target.value)
-          }
+          onChange={async (e) => {
+            if (e.target.value === '__add_new__') {
+              if (onAddTramiteAction) {
+                const nombre = prompt('Ingrese el nuevo trámite:');
+                if (nombre && nombre.trim().length > 0) {
+                  await onAddTramiteAction(nombre.trim());
+                  handleInputChangeAction(row.id, field, nombre.trim());
+                }
+              }
+            } else {
+              handleInputChangeAction(row.id, field, e.target.value);
+            }
+          }}
           className="table-select-base w-[70px] rounded border border-gray-600"
           title={value as string}
         >
@@ -321,6 +329,9 @@ export function useTransactionTableInputs({
               {option}
             </option>
           ))}
+          <option value="__add_new__" className="font-bold text-blue-700">
+            Agregar nuevo trámite... ➕
+          </option>
         </select>
       );
     }
@@ -364,9 +375,19 @@ export function useTransactionTableInputs({
       return (
         <select
           value={(value as string) || ''}
-          onChange={(e) =>
-            handleInputChangeAction(row.id, field, e.target.value)
-          }
+          onChange={async (e) => {
+            if (e.target.value === '__add_new__') {
+              if (onAddNovedadAction) {
+                const nombre = prompt('Ingrese la nueva novedad:');
+                if (nombre && nombre.trim().length > 0) {
+                  await onAddNovedadAction(nombre.trim());
+                  handleInputChangeAction(row.id, field, nombre.trim());
+                }
+              }
+            } else {
+              handleInputChangeAction(row.id, field, e.target.value);
+            }
+          }}
           className="table-select-base w-[120px] rounded border border-gray-600"
           title={value as string} // El título mostrará el texto completo al hacer hover
         >
@@ -381,6 +402,9 @@ export function useTransactionTableInputs({
               {option}
             </option>
           ))}
+          <option value="__add_new__" className="font-bold text-blue-700">
+            Agregar nueva novedad... ➕
+          </option>
         </select>
       );
     }

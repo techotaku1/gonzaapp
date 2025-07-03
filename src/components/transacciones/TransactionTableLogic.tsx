@@ -16,17 +16,6 @@ import { calculateSoatPrice } from '~/utils/soatPricing';
 
 import { AsesorSelect } from './AsesorSelect';
 
-export const tramiteOptions = ['SOAT'] as const;
-export const tipoDocumentoOptions = ['CC', 'NIT', 'TI', 'CE', 'PAS'] as const;
-export const novedadOptions = [
-  'Inicial',
-  'Error Pasajero',
-  'Renovacion',
-  'Indeterminado',
-  'Sin Novedad',
-  'Cambio de Categoria',
-] as const;
-
 export interface SaveResult {
   success: boolean;
   error?: string;

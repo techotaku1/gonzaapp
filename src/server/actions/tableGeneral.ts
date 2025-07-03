@@ -6,7 +6,13 @@ import crypto, { randomUUID } from 'crypto';
 import { desc, eq, inArray, sql as _sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
-import { asesores, transactions } from '~/server/db/schema';
+import {
+  asesores,
+  emitidoPor,
+  novedades,
+  tramites,
+  transactions,
+} from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 
@@ -346,4 +352,84 @@ export async function getTransactionsByIds(
         ? String(record.celular)
         : null,
   }));
+}
+
+// Nuevas funciones para tramites, novedades y emitidoPor
+export async function getAllTramites(): Promise<string[]> {
+  const results = await db.select().from(tramites);
+  return results
+    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+    .filter((a) => a.length > 0)
+    .sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+export async function addTramite(
+  nombre: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(tramites).values({
+      id: randomUUID(),
+      nombre: nombre.trim(),
+    });
+    revalidateTag('tramites');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add tramite',
+    };
+  }
+}
+
+export async function getAllNovedades(): Promise<string[]> {
+  const results = await db.select().from(novedades);
+  return results
+    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+    .filter((a) => a.length > 0)
+    .sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+export async function addNovedad(
+  nombre: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(novedades).values({
+      id: randomUUID(),
+      nombre: nombre.trim(),
+    });
+    revalidateTag('novedades');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add novedad',
+    };
+  }
+}
+
+export async function getAllEmitidoPor(): Promise<string[]> {
+  const results = await db.select().from(emitidoPor);
+  return results
+    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+    .filter((a) => a.length > 0)
+    .sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+export async function addEmitidoPor(
+  nombre: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(emitidoPor).values({
+      id: randomUUID(),
+      nombre: nombre.trim(),
+    });
+    revalidateTag('emitidoPor');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to add emitidoPor',
+    };
+  }
 }

@@ -4,6 +4,7 @@ import {
   integer,
   pgTable,
   timestamp,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
 
@@ -66,4 +67,19 @@ export const asesores = pgTable('asesores', {
   id: varchar('id').primaryKey(),
   nombre: varchar('nombre').notNull().unique(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const tramites = pgTable('tramites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nombre: varchar('nombre', { length: 100 }).notNull().unique(),
+});
+
+export const novedades = pgTable('novedades', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nombre: varchar('nombre', { length: 100 }).notNull().unique(),
+});
+
+export const emitidoPor = pgTable('emitido_por', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nombre: varchar('nombre', { length: 100 }).notNull().unique(),
 });
