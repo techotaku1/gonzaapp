@@ -345,6 +345,21 @@ export default function TransactionTable(props: TransactionTableProps) {
     await mutateTramites();
   };
 
+  // Nueva función para actualizar el color de un trámite existente
+  const handleUpdateTramiteAction = async (nombre: string, color?: string) => {
+    try {
+      await fetch('/api/tramites', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, color }),
+      });
+      await mutateTramites();
+    } catch (error) {
+      console.error('Error updating tramite:', error);
+      alert('Error al actualizar el trámite.');
+    }
+  };
+
   const handleAddNovedadAction = async (nombre: string) => {
     await fetch('/api/novedades', {
       method: 'POST',
@@ -362,6 +377,25 @@ export default function TransactionTable(props: TransactionTableProps) {
     });
     await mutateEmitidoPor();
     await mutateEmitidoPorWithColors();
+  };
+
+  // Nueva función para actualizar el color de un emitidoPor existente
+  const handleUpdateEmitidoPorAction = async (
+    nombre: string,
+    color?: string
+  ) => {
+    try {
+      await fetch('/api/emitidoPor', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, color }),
+      });
+      await mutateEmitidoPor();
+      await mutateEmitidoPorWithColors();
+    } catch (error) {
+      console.error('Error updating emitidoPor:', error);
+      alert('Error al actualizar el emisor.');
+    }
   };
 
   const handleDeleteEmitidoPorAction = async (nombre: string) => {
@@ -1039,6 +1073,7 @@ export default function TransactionTable(props: TransactionTableProps) {
             }
             setIsColorPickerOpen(false);
           }}
+          onUpdate={handleUpdateTramiteAction} // Nueva prop
           onDelete={async (tramiteName: string) => {
             try {
               await fetch('/api/tramites', {
@@ -1075,6 +1110,7 @@ export default function TransactionTable(props: TransactionTableProps) {
             }
             setIsEmitidoPorColorPickerOpen(false);
           }}
+          onUpdate={handleUpdateEmitidoPorAction} // Nueva prop
           onDelete={handleDeleteEmitidoPorAction}
           coloresOptions={coloresOptions}
           existingEmitidoPor={emitidoPorWithColors}

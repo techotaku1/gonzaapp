@@ -54,25 +54,8 @@ function getWidth(field: keyof TransactionRecord) {
   }
 }
 
-export const getEmitidoPorClass = (value: string): string => {
-  if (value.includes('Panel Juan')) return 'emitido-por-panel-juan';
-  if (value.includes('Panel Evelio')) return 'emitido-por-panel-evelio';
-  if (value.includes('Panel William')) return 'emitido-por-panel-william';
-  if (value.includes('Panel Gloria')) return 'emitido-por-panel-gloria';
-  if (value.includes('Panel Sebas')) return 'emitido-por-panel-sebas';
-  if (value.includes('Panel Yuli')) return 'emitido-por-panel-yuli';
-  if (value.includes('Previ usuario')) return 'emitido-por-previ-usuario';
-  if (value.includes('Previ pública')) return 'emitido-por-previ-publica';
-  if (value.includes('Previ Sonia')) return 'emitido-por-previ-sonia';
-  if (value.includes('Bolivar')) return 'emitido-por-bolivar';
-  if (value.includes('Axa Sebas')) return 'emitido-por-axa-sebas';
-  if (value.includes('Axa Yuli')) return 'emitido-por-axa-yuli';
-  if (value.includes('Axa gloria')) return 'emitido-por-axa-gloria';
-  if (value.includes('Axa Maryuri')) return 'emitido-por-axa-maryuri';
-  if (value.includes('Mundial nave')) return 'emitido-por-mundial-nave';
-  if (value.includes('Mundial fel')) return 'emitido-por-mundial-fel';
-  if (value.includes('No Emitir')) return 'emitido-por-no-emitir';
-  if (value.includes('HH')) return 'emitido-por-hh';
+export const getEmitidoPorClass = (_value: string): string => {
+  // ELIMINAR TODA LA FUNCIÓN - Ya no se necesita porque los colores están en la BD
   return '';
 };
 
@@ -383,13 +366,31 @@ export function useTransactionTableInputs({
         coloresOptions
       );
 
+      // Función para obtener estilo de una opción específica
+      const getOptionStyle = (emitidoPorName: string) => {
+        const emitidoPorRecord = emitidoPorWithColors.find(
+          (e) => e.nombre === emitidoPorName
+        );
+        if (!emitidoPorRecord?.color) return {};
+
+        const colorRecord = coloresOptions.find(
+          (c) => c.nombre === emitidoPorRecord.color && c.intensidad === 300
+        );
+        if (!colorRecord) return {};
+
+        const opacity = 0.3;
+        return {
+          backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
+        };
+      };
+
       return (
         <select
           value={value as string}
           onChange={async (e) => {
             if (e.target.value === '__add_new__') {
               if (onOpenEmitidoPorColorPicker) {
-                onOpenEmitidoPorColorPicker(row.id); // Usar el nuevo modal
+                onOpenEmitidoPorColorPicker(row.id);
               } else if (onAddEmitidoPorAction) {
                 const nombre = prompt(
                   'Ingrese el nuevo valor para "Emitido Por":'
@@ -403,8 +404,8 @@ export function useTransactionTableInputs({
               handleInputChangeAction(row.id, field, e.target.value);
             }
           }}
-          className={`table-select-base w-[105px] rounded border ${getEmitidoPorClass(value as string)}`}
-          style={selectStyle} // Aplicar estilo dinámico al select
+          className={`table-select-base w-[105px] rounded border`}
+          style={selectStyle}
           title={value as string}
         >
           <option value="">Seleccionar...</option>
@@ -412,7 +413,8 @@ export function useTransactionTableInputs({
             <option
               key={option}
               value={option}
-              className={`text-center ${getEmitidoPorClass(option)}`}
+              className="text-center"
+              style={getOptionStyle(option)}
             >
               {option}
             </option>
@@ -501,13 +503,34 @@ export function useTransactionTableInputs({
 
     // Add this before the return statement:
     if (field === 'tramite') {
+      // Función para obtener estilo de una opción específica de trámite
+      const getTramiteOptionStyle = (tramiteName: string) => {
+        // Solo aplicar si NO es SOAT
+        if (tramiteName.toUpperCase() === 'SOAT') return {};
+
+        const tramiteRecord = tramiteOptions.find(
+          (t) => t.nombre === tramiteName
+        );
+        if (!tramiteRecord?.color) return {};
+
+        const colorRecord = coloresOptions.find(
+          (c) => c.nombre === tramiteRecord.color && c.intensidad === 500
+        );
+        if (!colorRecord) return {};
+
+        const opacity = Math.min(colorRecord.intensidad / 1000, 0.8);
+        return {
+          backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
+        };
+      };
+
       return (
         <select
           value={value as string}
           onChange={(e) => {
             if (e.target.value === '__add_new__') {
               if (onOpenColorPicker) {
-                onOpenColorPicker(row.id); // Pasar el rowId
+                onOpenColorPicker(row.id);
               }
             } else {
               handleInputChangeAction(row.id, field, e.target.value);
@@ -521,6 +544,9 @@ export function useTransactionTableInputs({
               key={typeof option === 'string' ? option : option.nombre}
               value={typeof option === 'string' ? option : option.nombre}
               className="text-center"
+              style={getTramiteOptionStyle(
+                typeof option === 'string' ? option : option.nombre
+              )}
             >
               {typeof option === 'string' ? option : option.nombre}
             </option>

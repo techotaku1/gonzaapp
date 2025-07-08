@@ -524,3 +524,45 @@ export async function addEmitidoPor(
     };
   }
 }
+
+// Nueva función para actualizar el color de un emitidoPor existente
+export async function updateEmitidoPor(
+  nombre: string,
+  color?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(emitidoPor)
+      .set({ color: color ?? null })
+      .where(eq(emitidoPor.nombre, nombre));
+    revalidateTag('emitidoPor');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to update emitidoPor',
+    };
+  }
+}
+
+// Nueva función para actualizar el color de un trámite existente
+export async function updateTramite(
+  nombre: string,
+  color?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(tramites)
+      .set({ color: color ?? null })
+      .where(eq(tramites.nombre, nombre));
+    revalidateTag('tramites');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to update tramite',
+    };
+  }
+}

@@ -73,6 +73,21 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           emitidoPorWithColors,
           coloresOptions
         );
+
+        // DEBUG: Verificar qué está pasando
+        console.log('SOAT Row Debug:', {
+          emitidoPor: row.emitidoPor,
+          pagado: row.pagado,
+          className,
+          style,
+          emitidoPorWithColors: emitidoPorWithColors.find(
+            (e) => e.nombre === row.emitidoPor
+          ),
+          hasColor: emitidoPorWithColors.some(
+            (e) => e.nombre === row.emitidoPor && e.color
+          ),
+        });
+
         return { className, style };
       }
 

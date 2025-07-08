@@ -4,6 +4,7 @@ import {
   addTramite,
   deleteTramite,
   getAllTramites,
+  updateTramite,
 } from '~/server/actions/tableGeneral';
 
 export async function GET() {
@@ -64,6 +65,35 @@ export async function DELETE(req: Request) {
   } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Error al eliminar tramite' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(req: Request) {
+  try {
+    const { nombre, color } = (await req.json()) as {
+      nombre: string;
+      color?: string;
+    };
+    if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Nombre requerido' },
+        { status: 400 }
+      );
+    }
+    const colorValue = typeof color === 'string' ? color : undefined;
+    const result = await updateTramite(nombre.trim(), colorValue);
+    if (result.success) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: result.error },
+      { status: 500 }
+    );
+  } catch (_error) {
+    return NextResponse.json(
+      { success: false, error: 'Error al actualizar tramite' },
       { status: 500 }
     );
   }

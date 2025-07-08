@@ -273,6 +273,7 @@ select.table-select-base option {
 }
 
 /* Actualización de colores con intensidad media para emitidoPor */
+/* 
 @utility emitido-por-panel {
   background-color: color-mix(
     in oklch,
@@ -435,6 +436,7 @@ select.table-select-base option {
   );
   color: var(--color-gray-800);
 }
+*/
 
 @layer components {
   /* Updated table header styles */
