@@ -144,7 +144,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   );
 
   return (
-    <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black p-4">
+    <div className="bg-opacity-40 fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
       <div className="max-h-[90vh] w-full max-w-7xl overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="max-h-[90vh] overflow-y-auto p-6">
           <h3 className="mb-6 text-xl font-semibold text-gray-900">
