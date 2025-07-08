@@ -410,7 +410,6 @@ export default function TransactionTable(props: TransactionTableProps) {
     onOpenColorPicker: handleOpenColorPicker,
     onOpenEmitidoPorColorPicker: handleOpenEmitidoPorColorPicker,
     emitidoPorWithColors, // Pasar los datos de emitidoPor con colores
-    coloresOptions, // Pasar las opciones de colores (duplicado pero necesario)
   });
   const router = useRouter();
 
