@@ -144,14 +144,13 @@ export const generateDynamicColorStyle = (
     return {};
   }
 
-  // Crear el estilo CSS dinámico
+  // Crear el estilo CSS dinámico SOLO para el background
   const opacity = Math.min(colorRecord.intensidad / 1000, 0.8); // Convertir intensidad a opacidad
 
   return {
     backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
-    color: colorRecord.valor.includes('#')
-      ? '#1a1a1a' // Color de texto oscuro para colores hex
-      : `var(--color-${colorRecord.valor}-900)`, // Color de texto para colores CSS
+    // ELIMINADO: No cambiar el color del texto ni otros estilos
+    // Solo aplicar el background color, manteniendo todos los demás estilos originales
   };
 };
 
