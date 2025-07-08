@@ -35,8 +35,11 @@ export const AsesorSelect: React.FC<AsesorSelectProps> = ({
             onChange(e.target.value);
           }
         }}
-        className={`table-select-base w-[120px] rounded border border-gray-300 bg-gray-400 px-2 py-1 text-[13px] font-semibold text-white focus:ring-2 focus:ring-blue-400 focus:outline-none ${className}`}
-        style={{ fontWeight: 600 }}
+        className={`table-select-base w-[120px] text-black rounded border bg-gray-400 px-2 py-1 text-[13px] font-semibold focus:ring-2 focus:ring-blue-400 focus:outline-none ${className}`}
+        style={{
+          fontWeight: 600,
+          borderColor: '#000000 !important', // Forzar borde negro
+        }}
         title={value}
       >
         <option value="" className="text-white">
