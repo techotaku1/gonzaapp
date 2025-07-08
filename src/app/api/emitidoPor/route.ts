@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 
-import { addEmitidoPor, getAllEmitidoPor } from '~/server/actions/tableGeneral';
+import {
+  addEmitidoPor,
+  deleteEmitidoPor,
+  getAllEmitidoPor,
+} from '~/server/actions/tableGeneral';
 
 export async function GET() {
   try {
@@ -16,14 +20,18 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { nombre } = await req.json();
+    const { nombre, color } = (await req.json()) as {
+      nombre: string;
+      color?: string;
+    };
     if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
       return NextResponse.json(
         { success: false, error: 'Nombre requerido' },
         { status: 400 }
       );
     }
-    const result = await addEmitidoPor(nombre);
+    const colorValue = typeof color === 'string' ? color : undefined;
+    const result = await addEmitidoPor(nombre.trim(), colorValue);
     if (result.success) {
       return NextResponse.json({ success: true });
     }
@@ -34,6 +42,31 @@ export async function POST(req: Request) {
   } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Error al agregar emitidoPor' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { nombre } = (await req.json()) as { nombre: string };
+    if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Nombre requerido' },
+        { status: 400 }
+      );
+    }
+    const result = await deleteEmitidoPor(nombre.trim());
+    if (result.success) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: result.error },
+      { status: 500 }
+    );
+  } catch (_error) {
+    return NextResponse.json(
+      { success: false, error: 'Error al eliminar emitidoPor' },
       { status: 500 }
     );
   }

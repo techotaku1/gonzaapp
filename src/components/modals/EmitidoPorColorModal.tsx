@@ -2,51 +2,48 @@
 
 import React, { useState } from 'react';
 
-interface ColorPickerModalProps {
+interface EmitidoPorColorModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (tramiteName: string, selectedColor?: string) => void;
-  onDelete?: (tramiteName: string) => void; // Nueva prop para eliminar
+  onConfirm: (nombre: string, selectedColor?: string) => void;
+  onDelete?: (nombre: string) => void;
   coloresOptions: { nombre: string; valor: string; intensidad: number }[];
-  existingTramites?: { nombre: string; color?: string }[]; // Nueva prop para mostrar trámites existentes
+  existingEmitidoPor?: { nombre: string; color?: string }[];
 }
 
-const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
+const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
   onDelete,
   coloresOptions,
-  existingTramites = [],
+  existingEmitidoPor = [],
 }) => {
-  const [tramiteName, setTramiteName] = useState('');
+  const [nombre, setNombre] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [showExisting, setShowExisting] = useState(false);
   const [justCreated, setJustCreated] = useState<string | null>(null); // Nuevo estado
 
   const handleConfirm = () => {
-    if (tramiteName.trim()) {
-      onConfirm(tramiteName.trim(), selectedColor || undefined);
-      setJustCreated(tramiteName.trim()); // Marcar como recién creado
+    if (nombre.trim()) {
+      onConfirm(nombre.trim(), selectedColor || undefined);
+      setJustCreated(nombre.trim()); // Marcar como recién creado
       setShowExisting(true); // Cambiar a vista de existentes
-      setTramiteName('');
+      setNombre('');
       setSelectedColor('');
       // NO cerrar el modal para mostrar la opción de eliminar
     }
   };
 
-  const handleDelete = (nombreTramite: string) => {
-    if (
-      onDelete &&
-      confirm(`¿Está seguro de eliminar el trámite "${nombreTramite}"?`)
-    ) {
-      onDelete(nombreTramite);
+  const handleDelete = (nombreItem: string) => {
+    if (onDelete && confirm(`¿Está seguro de eliminar "${nombreItem}"?`)) {
+      onDelete(nombreItem);
       setJustCreated(null); // Limpiar estado
     }
   };
 
   const handleCancel = () => {
-    setTramiteName('');
+    setNombre('');
     setSelectedColor('');
     setJustCreated(null); // Limpiar estado
     onClose();
@@ -54,12 +51,18 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Generar estilo de preview dinámico
+  // Filtrar solo colores con intensidad 300 para emitidoPor
+  const coloresFiltrados = coloresOptions.filter(
+    (color) => color.intensidad === 300
+  );
+
+  // Generar estilo de preview dinámico con intensidad 300
   const getPreviewStyle = (color: string) => {
-    const colorRecord = coloresOptions.find((c) => c.nombre === color);
+    const colorRecord = coloresFiltrados.find((c) => c.nombre === color);
     if (!colorRecord) return {};
 
-    const opacity = Math.min(colorRecord.intensidad / 1000, 0.8);
+    // Usar intensidad fija de 300 para emitidoPor
+    const opacity = 0.3; // 300/1000
     return {
       backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
       color: colorRecord.valor.includes('#')
@@ -68,16 +71,11 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
     };
   };
 
-  // Filtrar solo colores con intensidad 500 para trámites
-  const coloresFiltrados = coloresOptions.filter(
-    (color) => color.intensidad === 500
-  );
-
   return (
     <div className="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
       <div className="w-full max-w-6xl rounded-lg bg-white p-6 shadow-xl">
         <h3 className="mb-4 text-lg font-semibold text-gray-900">
-          Gestionar Trámites
+          Gestionar Emitido Por
         </h3>
 
         {/* Pestañas */}
@@ -86,7 +84,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
             onClick={() => setShowExisting(false)}
             className={`rounded-md px-4 py-2 font-medium transition-colors ${
               !showExisting
-                ? 'bg-blue-500 text-white'
+                ? 'bg-green-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -96,11 +94,11 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
             onClick={() => setShowExisting(true)}
             className={`rounded-md px-4 py-2 font-medium transition-colors ${
               showExisting
-                ? 'bg-blue-500 text-white'
+                ? 'bg-green-500 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
-            Trámites Existentes ({existingTramites.length})
+            Existentes ({existingEmitidoPor.length})
           </button>
         </div>
 
@@ -111,20 +109,20 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
             <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                  Nombre del trámite:
+                  Nombre del emisor:
                 </label>
                 <input
                   type="text"
-                  value={tramiteName}
-                  onChange={(e) => setTramiteName(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  placeholder="Ej: LICENCIA DE CONDUCIR"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none"
+                  placeholder="Ej: Panel Juan, Previ Sonia..."
                   autoFocus
                 />
               </div>
 
-              {/* Preview del trámite */}
-              {tramiteName && (
+              {/* Preview */}
+              {nombre && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
                     Vista previa:
@@ -133,7 +131,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                     className="rounded-md border p-4 text-center text-lg font-medium"
                     style={selectedColor ? getPreviewStyle(selectedColor) : {}}
                   >
-                    {tramiteName.toUpperCase()}
+                    {nombre.toUpperCase()}
                   </div>
                 </div>
               )}
@@ -150,21 +148,21 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   onClick={() => setSelectedColor('')}
                   className={`flex items-center justify-center rounded-md border-2 p-3 text-sm font-medium transition-all ${
                     selectedColor === ''
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-green-500 bg-green-50 text-green-700'
                       : 'border-gray-300 bg-gray-50 text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  Automático
+                  Sin Color
                 </button>
 
-                {/* Opciones de colores disponibles - SOLO intensidad 500 */}
+                {/* Opciones de colores disponibles - SOLO intensidad 300 */}
                 {coloresFiltrados.map((color) => (
                   <button
                     key={color.nombre}
                     onClick={() => setSelectedColor(color.nombre)}
                     className={`flex flex-col items-center justify-center rounded-md border-2 p-3 text-xs font-medium transition-all ${
                       selectedColor === color.nombre
-                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        ? 'border-green-500 ring-2 ring-green-200'
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                     style={getPreviewStyle(color.nombre)}
@@ -181,35 +179,35 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
             </div>
           </div>
         ) : (
-          /* Vista de trámites existentes */
+          /* Vista de existentes */
           <div className="max-h-96 overflow-y-auto">
             <div className="grid gap-3">
-              {existingTramites.map((tramite) => (
+              {existingEmitidoPor.map((item) => (
                 <div
-                  key={tramite.nombre}
+                  key={item.nombre}
                   className={`flex items-center justify-between rounded-lg border p-3 ${
-                    justCreated === tramite.nombre
-                      ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
+                    justCreated === item.nombre
+                      ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
                       : ''
                   }`}
-                  style={tramite.color ? getPreviewStyle(tramite.color) : {}}
+                  style={item.color ? getPreviewStyle(item.color) : {}}
                 >
                   <div className="flex-1">
                     <div className="font-medium">
-                      {tramite.nombre}
-                      {justCreated === tramite.nombre && (
-                        <span className="ml-2 text-sm font-bold text-blue-600">
+                      {item.nombre}
+                      {justCreated === item.nombre && (
+                        <span className="ml-2 text-sm font-bold text-green-600">
                           ✨ Recién creado
                         </span>
                       )}
                     </div>
                     <div className="text-sm opacity-75">
-                      Color: {tramite.color ?? 'Sin color'}
+                      Color: {item.color ?? 'Sin color'}
                     </div>
                   </div>
                   {onDelete && (
                     <button
-                      onClick={() => handleDelete(tramite.nombre)}
+                      onClick={() => handleDelete(item.nombre)}
                       className="ml-4 rounded-md bg-red-500 px-3 py-1 text-sm text-white transition-colors hover:bg-red-600"
                     >
                       Eliminar
@@ -217,9 +215,9 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
                   )}
                 </div>
               ))}
-              {existingTramites.length === 0 && (
+              {existingEmitidoPor.length === 0 && (
                 <div className="py-8 text-center text-gray-500">
-                  No hay trámites registrados
+                  No hay emisores registrados
                 </div>
               )}
             </div>
@@ -237,8 +235,8 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
           {!showExisting && (
             <button
               onClick={handleConfirm}
-              disabled={!tramiteName.trim()}
-              className="rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={!nombre.trim()}
+              className="rounded-md bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Agregar
             </button>
@@ -249,4 +247,4 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   );
 };
 
-export default ColorPickerModal;
+export default EmitidoPorColorModal;

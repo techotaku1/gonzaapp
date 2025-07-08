@@ -136,7 +136,7 @@ const TransactionSearchRemote: React.FC<Props> = ({
                         renderCheckbox={renderCheckbox}
                         renderAsesorSelect={renderAsesorSelect}
                         renderInput={renderInput}
-                        getEmitidoPorClass={getEmitidoPorClass}
+                        _getEmitidoPorClass={getEmitidoPorClass} // Prefijo _ para indicar que no se usa
                       />
                     )
                   )

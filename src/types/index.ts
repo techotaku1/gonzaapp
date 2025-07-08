@@ -73,6 +73,7 @@ export interface NovedadRecord {
 export interface EmitidoPorRecord {
   id: string;
   nombre: string;
+  color?: string; // Agregar campo color opcional
 }
 
 export interface ColorRecord {

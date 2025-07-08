@@ -422,21 +422,48 @@ export async function getAllEmitidoPor(): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b, 'es'));
 }
 
-export async function addEmitidoPor(
+// Nueva función para obtener emitidoPor con colores
+export async function getAllEmitidoPorWithColors(): Promise<
+  { nombre: string; color?: string }[]
+> {
+  const results = await db.select().from(emitidoPor);
+  return results
+    .map((row) => ({
+      nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
+      color: row.color ?? undefined,
+    }))
+    .filter((a) => a.nombre.length > 0)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+export async function deleteTramite(
   nombre: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await db.insert(emitidoPor).values({
-      id: randomUUID(),
-      nombre: nombre.trim(),
-    });
+    await db.delete(tramites).where(eq(tramites.nombre, nombre));
+    revalidateTag('tramites');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to delete tramite',
+    };
+  }
+}
+
+export async function deleteEmitidoPor(
+  nombre: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.delete(emitidoPor).where(eq(emitidoPor.nombre, nombre));
     revalidateTag('emitidoPor');
     return { success: true };
   } catch (error) {
     return {
       success: false,
       error:
-        error instanceof Error ? error.message : 'Failed to add emitidoPor',
+        error instanceof Error ? error.message : 'Failed to delete emitidoPor',
     };
   }
 }
@@ -473,6 +500,27 @@ export async function addColor(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to add color',
+    };
+  }
+}
+
+export async function addEmitidoPor(
+  nombre: string,
+  color?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(emitidoPor).values({
+      id: randomUUID(),
+      nombre: nombre.trim(),
+      color: color ?? null,
+    });
+    revalidateTag('emitidoPor');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to add emitidoPor',
     };
   }
 }

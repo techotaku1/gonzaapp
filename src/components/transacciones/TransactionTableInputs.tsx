@@ -154,6 +154,105 @@ export const generateDynamicColorStyle = (
   };
 };
 
+// Nueva función para generar estilos dinámicos de emitidoPor
+export const generateEmitidoPorDynamicColorStyle = (
+  emitidoPor: string,
+  pagado: boolean,
+  emitidoPorWithColors: { nombre: string; color?: string }[],
+  coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
+): React.CSSProperties => {
+  // Buscar si este emitidoPor tiene color en la BD
+  const emitidoPorRecord = emitidoPorWithColors.find(
+    (e) => e.nombre === emitidoPor
+  );
+  if (!emitidoPorRecord?.color) {
+    return {}; // Si no tiene color, usar el estático
+  }
+
+  const colorRecord = coloresOptions.find(
+    (c) => c.nombre === emitidoPorRecord.color && c.intensidad === 300
+  );
+  if (!colorRecord) {
+    return {};
+  }
+
+  // Crear el estilo CSS dinámico basado en si está pagado
+  if (pagado) {
+    // Si está pagado: pintar toda la fila (como los estáticos) - SE APLICA A LA FILA
+    const opacity = 0.3; // intensidad 300
+    return {
+      backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
+    };
+  } else {
+    // Si NO está pagado: RETORNAR VACÍO - el borde se aplicará solo a la celda
+    return {};
+  }
+};
+
+// Nueva función para generar estilos del SELECT interno de emitidoPor
+export const generateEmitidoPorSelectStyle = (
+  emitidoPor: string,
+  pagado: boolean,
+  emitidoPorWithColors: { nombre: string; color?: string }[],
+  coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
+): React.CSSProperties => {
+  // Solo aplicar si NO está pagado (si está pagado, el color va en toda la fila)
+  if (pagado) return {};
+
+  // Buscar si este emitidoPor tiene color en la BD
+  const emitidoPorRecord = emitidoPorWithColors.find(
+    (e) => e.nombre === emitidoPor
+  );
+  if (!emitidoPorRecord?.color) {
+    return {}; // Si no tiene color, usar el estático
+  }
+
+  const colorRecord = coloresOptions.find(
+    (c) => c.nombre === emitidoPorRecord.color && c.intensidad === 300
+  );
+  if (!colorRecord) {
+    return {};
+  }
+
+  // CAMBIO: Pintar el fondo del SELECT interno
+  const opacity = 0.3; // intensidad 300
+  return {
+    backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
+  };
+};
+
+// Actualizar la función para determinar si usar estilo estático o dinámico
+export const getEmitidoPorStyleAndClass = (
+  emitidoPor: string,
+  pagado: boolean,
+  emitidoPorWithColors: { nombre: string; color?: string }[],
+  coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
+): { className: string; style: React.CSSProperties } => {
+  // Verificar si tiene color en la BD (dinámico)
+  const hasDynamicColor = emitidoPorWithColors.some(
+    (e) => e.nombre === emitidoPor && e.color
+  );
+
+  if (hasDynamicColor) {
+    // Usar sistema dinámico - SOLO pintar fila si está pagado
+    return {
+      className: '',
+      style: generateEmitidoPorDynamicColorStyle(
+        emitidoPor,
+        pagado,
+        emitidoPorWithColors,
+        coloresOptions
+      ),
+    };
+  } else {
+    // Usar sistema estático (solo cuando está pagado)
+    return {
+      className: pagado ? getEmitidoPorClass(emitidoPor) : '',
+      style: {},
+    };
+  }
+};
+
 export function useTransactionTableInputs({
   editValues,
   handleInputChangeAction,
@@ -167,8 +266,10 @@ export function useTransactionTableInputs({
   tramiteOptions,
   novedadOptions,
   emitidoPorOptions,
-  coloresOptions: _coloresOptions = [],
+  coloresOptions = [],
   onOpenColorPicker,
+  onOpenEmitidoPorColorPicker, // Nueva prop
+  emitidoPorWithColors = [], // Nueva prop necesaria
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -187,7 +288,9 @@ export function useTransactionTableInputs({
   novedadOptions: string[];
   emitidoPorOptions: string[];
   coloresOptions?: { nombre: string; valor: string; intensidad: number }[];
-  onOpenColorPicker?: (rowId: string) => void; // Cambiar la firma para recibir rowId
+  onOpenColorPicker?: (rowId: string) => void;
+  onOpenEmitidoPorColorPicker?: (rowId: string) => void; // Nueva prop
+  emitidoPorWithColors?: { nombre: string; color?: string }[];
 }) {
   // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
   const getCellValue = (
@@ -272,12 +375,22 @@ export function useTransactionTableInputs({
 
     // En la sección donde se renderiza el select de emitidoPor:
     if (field === 'emitidoPor') {
+      // Generar estilo dinámico para el select interno
+      const selectStyle = generateEmitidoPorSelectStyle(
+        row.emitidoPor,
+        row.pagado,
+        emitidoPorWithColors,
+        coloresOptions
+      );
+
       return (
         <select
           value={value as string}
           onChange={async (e) => {
             if (e.target.value === '__add_new__') {
-              if (onAddEmitidoPorAction) {
+              if (onOpenEmitidoPorColorPicker) {
+                onOpenEmitidoPorColorPicker(row.id); // Usar el nuevo modal
+              } else if (onAddEmitidoPorAction) {
                 const nombre = prompt(
                   'Ingrese el nuevo valor para "Emitido Por":'
                 );
@@ -291,6 +404,7 @@ export function useTransactionTableInputs({
             }
           }}
           className={`table-select-base w-[105px] rounded border ${getEmitidoPorClass(value as string)}`}
+          style={selectStyle} // Aplicar estilo dinámico al select
           title={value as string}
         >
           <option value="">Seleccionar...</option>
@@ -303,7 +417,7 @@ export function useTransactionTableInputs({
               {option}
             </option>
           ))}
-          <option value="__add_new__" className="font-bold text-blue-700">
+          <option value="__add_new__" className="font-bold text-green-700">
             Agregar nuevo emitido por... ➕
           </option>
         </select>

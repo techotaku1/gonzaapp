@@ -15,6 +15,7 @@ import ExportDateRangeModal from '../ExportDateRangeModal';
 import SearchFilters from '../filters/SearchFilters';
 import { Icons } from '../icons';
 import ColorPickerModal from '../modals/ColorPickerModal';
+import EmitidoPorColorModal from '../modals/EmitidoPorColorModal';
 
 import HeaderTitles from './HeaderTitles';
 import TransactionSearchRemote from './TransactionSearchRemote';
@@ -117,9 +118,14 @@ function DatePagination({
 export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
 
-  // Estados para el modal de color picker
+  // Estados para los modales
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [pendingRowId, setPendingRowId] = useState<string | null>(null);
+  const [isEmitidoPorColorPickerOpen, setIsEmitidoPorColorPickerOpen] =
+    useState(false);
+  const [pendingEmitidoPorRowId, setPendingEmitidoPorRowId] = useState<
+    string | null
+  >(null);
 
   // Usa SWR para asesores con pooling cada 2 segundos
   const { data: asesores = [], mutate: mutateAsesores } = useSWR<string[]>(
@@ -240,6 +246,34 @@ export default function TransactionTable(props: TransactionTableProps) {
     }
   );
 
+  const {
+    data: emitidoPorWithColors = [],
+    mutate: mutateEmitidoPorWithColors,
+  } = useSWR<{ nombre: string; color?: string }[]>(
+    '/api/emitidoPorWithColors',
+    async (url: string) => {
+      const res = await fetch(url);
+      const data: unknown = await res.json();
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'emitidoPorWithColors' in data &&
+        Array.isArray(
+          (data as { emitidoPorWithColors: unknown }).emitidoPorWithColors
+        )
+      ) {
+        return (
+          data as { emitidoPorWithColors: { nombre: string; color?: string }[] }
+        ).emitidoPorWithColors;
+      }
+      return [];
+    },
+    {
+      refreshInterval: 2000,
+      revalidateOnFocus: true,
+    }
+  );
+
   // Handler para agregar asesor y actualizar la lista local y global
   const handleAddAsesorAction = async (nombre: string) => {
     const res = await fetch('/api/asesores', {
@@ -320,13 +354,29 @@ export default function TransactionTable(props: TransactionTableProps) {
     await mutateNovedades();
   };
 
-  const handleAddEmitidoPorAction = async (nombre: string) => {
+  const handleAddEmitidoPorAction = async (nombre: string, color?: string) => {
     await fetch('/api/emitidoPor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre }),
+      body: JSON.stringify({ nombre, color }),
     });
     await mutateEmitidoPor();
+    await mutateEmitidoPorWithColors();
+  };
+
+  const handleDeleteEmitidoPorAction = async (nombre: string) => {
+    try {
+      await fetch('/api/emitidoPor', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre }),
+      });
+      await mutateEmitidoPor();
+      await mutateEmitidoPorWithColors();
+    } catch (error) {
+      console.error('Error deleting emitidoPor:', error);
+      alert('Error al eliminar el emisor.');
+    }
   };
 
   const handleOpenColorPicker = (rowId?: string) => {
@@ -334,6 +384,13 @@ export default function TransactionTable(props: TransactionTableProps) {
       setPendingRowId(rowId);
     }
     setIsColorPickerOpen(true);
+  };
+
+  const handleOpenEmitidoPorColorPicker = (rowId?: string) => {
+    if (rowId) {
+      setPendingEmitidoPorRowId(rowId);
+    }
+    setIsEmitidoPorColorPickerOpen(true);
   };
 
   const { renderInput } = useTransactionTableInputs({
@@ -350,7 +407,10 @@ export default function TransactionTable(props: TransactionTableProps) {
     novedadOptions,
     emitidoPorOptions,
     coloresOptions,
-    onOpenColorPicker: handleOpenColorPicker, // Pasar la función directamente sin wrapper
+    onOpenColorPicker: handleOpenColorPicker,
+    onOpenEmitidoPorColorPicker: handleOpenEmitidoPorColorPicker,
+    emitidoPorWithColors, // Pasar los datos de emitidoPor con colores
+    coloresOptions, // Pasar las opciones de colores (duplicado pero necesario)
   });
   const router = useRouter();
 
@@ -965,7 +1025,7 @@ export default function TransactionTable(props: TransactionTableProps) {
           onExport={logic.handleExport}
         />
 
-        {/* Modal de color picker */}
+        {/* Modal de color picker para trámites */}
         <ColorPickerModal
           isOpen={isColorPickerOpen}
           onClose={() => {
@@ -973,19 +1033,52 @@ export default function TransactionTable(props: TransactionTableProps) {
             setPendingRowId(null);
           }}
           onConfirm={async (tramiteName: string, selectedColor?: string) => {
-            // Crear el trámite primero
             await handleAddTramiteAction(tramiteName, selectedColor);
-
-            // Si hay un rowId pendiente, seleccionar el trámite automáticamente
             if (pendingRowId) {
               logic.handleInputChange(pendingRowId, 'tramite', tramiteName);
               setPendingRowId(null);
             }
-
-            // Cerrar el modal
             setIsColorPickerOpen(false);
           }}
+          onDelete={async (tramiteName: string) => {
+            try {
+              await fetch('/api/tramites', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre: tramiteName }),
+              });
+              await mutateTramites();
+            } catch (error) {
+              console.error('Error deleting tramite:', error);
+              alert('Error al eliminar el trámite.');
+            }
+          }}
           coloresOptions={coloresOptions}
+          existingTramites={tramiteOptions}
+        />
+
+        {/* Modal de color picker para emitidoPor */}
+        <EmitidoPorColorModal
+          isOpen={isEmitidoPorColorPickerOpen}
+          onClose={() => {
+            setIsEmitidoPorColorPickerOpen(false);
+            setPendingEmitidoPorRowId(null);
+          }}
+          onConfirm={async (nombre: string, selectedColor?: string) => {
+            await handleAddEmitidoPorAction(nombre, selectedColor);
+            if (pendingEmitidoPorRowId) {
+              logic.handleInputChange(
+                pendingEmitidoPorRowId,
+                'emitidoPor',
+                nombre
+              );
+              setPendingEmitidoPorRowId(null);
+            }
+            setIsEmitidoPorColorPickerOpen(false);
+          }}
+          onDelete={handleDeleteEmitidoPorAction}
+          coloresOptions={coloresOptions}
+          existingEmitidoPor={emitidoPorWithColors}
         />
 
         {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
@@ -1075,10 +1168,11 @@ export default function TransactionTable(props: TransactionTableProps) {
                                 type?: InputType
                               ) => React.ReactNode
                             }
-                            getEmitidoPorClass={getEmitidoPorClass}
+                            _getEmitidoPorClass={getEmitidoPorClass} // Prefijo _ para indicar que no se usa
                             getTramiteColorClass={getTramiteColorClassForRow}
                             coloresOptions={coloresOptions}
                             tramiteOptions={tramiteOptions}
+                            emitidoPorWithColors={emitidoPorWithColors} // Nueva prop
                           />
                         );
                       }

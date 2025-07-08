@@ -83,6 +83,7 @@ export const novedades = pgTable('novedades', {
 export const emitidoPor = pgTable('emitido_por', {
   id: uuid('id').primaryKey().defaultRandom(),
   nombre: varchar('nombre', { length: 100 }).notNull().unique(),
+  color: varchar('color', { length: 32 }), // Agregar campo color
 });
 
 export const colores = pgTable('colores', {
