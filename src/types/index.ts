@@ -62,6 +62,7 @@ export interface AsesorRecord {
 export interface TramiteRecord {
   id: string;
   nombre: string;
+  color?: string; // Color en formato hex (#RRGGBB) o nombre de color CSS
 }
 
 export interface NovedadRecord {
@@ -72,4 +73,11 @@ export interface NovedadRecord {
 export interface EmitidoPorRecord {
   id: string;
   nombre: string;
+}
+
+export interface ColorRecord {
+  id: string;
+  nombre: string;
+  valor: string; // hex color o nombre CSS
+  intensidad: number; // 100, 200, 300, 400, 500, etc.
 }

@@ -16,14 +16,15 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { nombre } = await req.json();
+    const { nombre, color } = await req.json();
     if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
       return NextResponse.json(
         { success: false, error: 'Nombre requerido' },
         { status: 400 }
       );
     }
-    const result = await addTramite(nombre);
+    const colorValue = typeof color === 'string' ? color : undefined;
+    const result = await addTramite(nombre.trim(), colorValue);
     if (result.success) {
       return NextResponse.json({ success: true });
     }

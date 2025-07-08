@@ -120,7 +120,7 @@ const TransactionSearchRemote: React.FC<Props> = ({
               {/* Mostrar resultados si existen */}
               {results.length > 0
                 ? (results as TransactionRecord[]).map(
-                    (row: TransactionRecord, index: number) => (
+                    (row: TransactionRecord) => (
                       <TransactionTableRow
                         key={row.id}
                         row={row}
@@ -137,7 +137,6 @@ const TransactionSearchRemote: React.FC<Props> = ({
                         renderAsesorSelect={renderAsesorSelect}
                         renderInput={renderInput}
                         getEmitidoPorClass={getEmitidoPorClass}
-                        _index={index}
                       />
                     )
                   )

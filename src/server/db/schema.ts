@@ -72,6 +72,7 @@ export const asesores = pgTable('asesores', {
 export const tramites = pgTable('tramites', {
   id: uuid('id').primaryKey().defaultRandom(),
   nombre: varchar('nombre', { length: 100 }).notNull().unique(),
+  color: varchar('color', { length: 32 }),
 });
 
 export const novedades = pgTable('novedades', {
@@ -82,4 +83,11 @@ export const novedades = pgTable('novedades', {
 export const emitidoPor = pgTable('emitido_por', {
   id: uuid('id').primaryKey().defaultRandom(),
   nombre: varchar('nombre', { length: 100 }).notNull().unique(),
+});
+
+export const colores = pgTable('colores', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nombre: varchar('nombre', { length: 50 }).notNull().unique(),
+  valor: varchar('valor', { length: 32 }).notNull(), // hex color o nombre CSS
+  intensidad: integer('intensidad').notNull().default(500), // Cambiar de 400 a 500
 });

@@ -76,6 +76,85 @@ export const getEmitidoPorClass = (value: string): string => {
   return '';
 };
 
+// Nueva función para obtener clase de color por trámite - ACTUALIZADA
+export const getTramiteColorClass = (
+  tramite: string,
+  tramiteOptions: { nombre: string; color?: string }[],
+  coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
+): string => {
+  // Solo aplicar color si NO es SOAT (SOAT usa emitidoPor solo cuando está pagado)
+  if (tramite.toUpperCase() === 'SOAT') {
+    return '';
+  }
+
+  const tramiteRecord = tramiteOptions.find((t) => t.nombre === tramite);
+  if (!tramiteRecord?.color) {
+    return '';
+  }
+
+  // Buscar el color en la tabla de colores
+  const colorRecord = coloresOptions.find(
+    (c) => c.nombre === tramiteRecord.color
+  );
+
+  if (colorRecord) {
+    // Crear estilo dinámico basado en la tabla de colores
+    return `tramite-dynamic-color`;
+  }
+
+  // Fallback a los colores predefinidos
+  const colorMap: Record<string, string> = {
+    red: 'tramite-color-red',
+    blue: 'tramite-color-blue',
+    green: 'tramite-color-green',
+    yellow: 'tramite-color-yellow',
+    purple: 'tramite-color-purple',
+    orange: 'tramite-color-orange',
+    pink: 'tramite-color-pink',
+    gray: 'tramite-color-gray',
+    indigo: 'tramite-color-indigo',
+    teal: 'tramite-color-teal',
+    cyan: 'tramite-color-cyan',
+    lime: 'tramite-color-lime',
+  };
+
+  return colorMap[tramiteRecord.color.toLowerCase()] || '';
+};
+
+// Nueva función para generar estilos dinámicos - ACTUALIZADA
+export const generateDynamicColorStyle = (
+  tramite: string,
+  tramiteOptions: { nombre: string; color?: string }[],
+  coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
+): React.CSSProperties => {
+  // Solo aplicar color si NO es SOAT (SOAT usa emitidoPor solo cuando está pagado)
+  if (tramite.toUpperCase() === 'SOAT') {
+    return {};
+  }
+
+  const tramiteRecord = tramiteOptions.find((t) => t.nombre === tramite);
+  if (!tramiteRecord?.color) {
+    return {};
+  }
+
+  const colorRecord = coloresOptions.find(
+    (c) => c.nombre === tramiteRecord.color
+  );
+  if (!colorRecord) {
+    return {};
+  }
+
+  // Crear el estilo CSS dinámico
+  const opacity = Math.min(colorRecord.intensidad / 1000, 0.8); // Convertir intensidad a opacidad
+
+  return {
+    backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
+    color: colorRecord.valor.includes('#')
+      ? '#1a1a1a' // Color de texto oscuro para colores hex
+      : `var(--color-${colorRecord.valor}-900)`, // Color de texto para colores CSS
+  };
+};
+
 export function useTransactionTableInputs({
   editValues,
   handleInputChangeAction,
@@ -83,12 +162,14 @@ export function useTransactionTableInputs({
   parseNumberAction,
   asesores,
   onAddAsesorAction,
-  onAddTramiteAction, // <-- NUEVO
-  onAddNovedadAction, // <-- NUEVO
-  onAddEmitidoPorAction, // <-- NUEVO
+  onAddTramiteAction: _onAddTramiteAction,
+  onAddNovedadAction,
+  onAddEmitidoPorAction,
   tramiteOptions,
   novedadOptions,
   emitidoPorOptions,
+  coloresOptions: _coloresOptions = [],
+  onOpenColorPicker,
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -100,12 +181,14 @@ export function useTransactionTableInputs({
   parseNumberAction: (v: string) => number;
   asesores: string[];
   onAddAsesorAction: (nombre: string) => Promise<void>;
-  onAddTramiteAction?: (nombre: string) => Promise<void>; // <-- NUEVO
-  onAddNovedadAction?: (nombre: string) => Promise<void>; // <-- NUEVO
-  onAddEmitidoPorAction?: (nombre: string) => Promise<void>; // <-- NUEVO
-  tramiteOptions: string[];
+  onAddTramiteAction?: (nombre: string, color?: string) => Promise<void>;
+  onAddNovedadAction?: (nombre: string) => Promise<void>;
+  onAddEmitidoPorAction?: (nombre: string) => Promise<void>;
+  tramiteOptions: { nombre: string; color?: string }[];
   novedadOptions: string[];
   emitidoPorOptions: string[];
+  coloresOptions?: { nombre: string; valor: string; intensidad: number }[];
+  onOpenColorPicker?: (rowId: string) => void; // Cambiar la firma para recibir rowId
 }) {
   // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
   const getCellValue = (
@@ -308,14 +391,10 @@ export function useTransactionTableInputs({
       return (
         <select
           value={value as string}
-          onChange={async (e) => {
+          onChange={(e) => {
             if (e.target.value === '__add_new__') {
-              if (onAddTramiteAction) {
-                const nombre = prompt('Ingrese el nuevo trámite:');
-                if (nombre && nombre.trim().length > 0) {
-                  await onAddTramiteAction(nombre.trim());
-                  handleInputChangeAction(row.id, field, nombre.trim());
-                }
+              if (onOpenColorPicker) {
+                onOpenColorPicker(row.id); // Pasar el rowId
               }
             } else {
               handleInputChangeAction(row.id, field, e.target.value);
@@ -325,8 +404,12 @@ export function useTransactionTableInputs({
           title={value as string}
         >
           {tramiteOptions.map((option) => (
-            <option key={option} value={option} className="text-center">
-              {option}
+            <option
+              key={typeof option === 'string' ? option : option.nombre}
+              value={typeof option === 'string' ? option : option.nombre}
+              className="text-center"
+            >
+              {typeof option === 'string' ? option : option.nombre}
             </option>
           ))}
           <option value="__add_new__" className="font-bold text-blue-700">

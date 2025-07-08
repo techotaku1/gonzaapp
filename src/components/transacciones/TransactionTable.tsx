@@ -9,15 +9,18 @@ import useSWR from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { type TransactionRecord } from '~/types';
+import { suggestColorForTramite } from '~/utils/tramiteColors';
 
 import ExportDateRangeModal from '../ExportDateRangeModal';
 import SearchFilters from '../filters/SearchFilters';
 import { Icons } from '../icons';
+import ColorPickerModal from '../modals/ColorPickerModal';
 
 import HeaderTitles from './HeaderTitles';
 import TransactionSearchRemote from './TransactionSearchRemote';
 import {
   getEmitidoPorClass,
+  getTramiteColorClass,
   useTransactionTableInputs,
 } from './TransactionTableInputs';
 import { SaveResult, useTransactionTableLogic } from './TransactionTableLogic';
@@ -114,6 +117,10 @@ function DatePagination({
 export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
 
+  // Estados para el modal de color picker
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [pendingRowId, setPendingRowId] = useState<string | null>(null);
+
   // Usa SWR para asesores con pooling cada 2 segundos
   const { data: asesores = [], mutate: mutateAsesores } = useSWR<string[]>(
     '/api/asesores',
@@ -136,7 +143,9 @@ export default function TransactionTable(props: TransactionTableProps) {
     { refreshInterval: 2000, revalidateOnFocus: true }
   );
 
-  const fetchTramites = async (url: string): Promise<string[]> => {
+  const fetchTramites = async (
+    url: string
+  ): Promise<{ nombre: string; color?: string }[]> => {
     const res = await fetch(url);
     const data: unknown = await res.json();
     if (
@@ -145,9 +154,8 @@ export default function TransactionTable(props: TransactionTableProps) {
       'tramites' in data &&
       Array.isArray((data as { tramites: unknown }).tramites)
     ) {
-      return (data as { tramites: unknown[] }).tramites.filter(
-        (t): t is string => typeof t === 'string'
-      );
+      return (data as { tramites: { nombre: string; color?: string }[] })
+        .tramites;
     }
     return [];
   };
@@ -185,7 +193,7 @@ export default function TransactionTable(props: TransactionTableProps) {
   };
 
   const { data: tramiteOptions = [], mutate: mutateTramites } = useSWR<
-    string[]
+    { nombre: string; color?: string }[]
   >('/api/tramites', fetchTramites, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
@@ -205,6 +213,33 @@ export default function TransactionTable(props: TransactionTableProps) {
     revalidateOnFocus: true,
   });
 
+  const { data: coloresOptions = [], mutate: _mutateColores } = useSWR<
+    { nombre: string; valor: string; intensidad: number }[]
+  >(
+    '/api/colores',
+    async (url: string) => {
+      const res = await fetch(url);
+      const data: unknown = await res.json();
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'colores' in data &&
+        Array.isArray((data as { colores: unknown }).colores)
+      ) {
+        return (
+          data as {
+            colores: { nombre: string; valor: string; intensidad: number }[];
+          }
+        ).colores;
+      }
+      return [];
+    },
+    {
+      refreshInterval: 2000,
+      revalidateOnFocus: true,
+    }
+  );
+
   // Handler para agregar asesor y actualizar la lista local y global
   const handleAddAsesorAction = async (nombre: string) => {
     const res = await fetch('/api/asesores', {
@@ -220,11 +255,58 @@ export default function TransactionTable(props: TransactionTableProps) {
     }
   };
 
-  const handleAddTramiteAction = async (nombre: string) => {
+  const handleAddTramiteAction = async (nombre: string, color?: string) => {
+    // Si no se proporciona color, sugerir uno automáticamente usando la tabla de colores
+    const finalColor = color ?? suggestColorForTramite(nombre);
+
+    // Verificar si el color sugerido existe en la tabla de colores
+    const colorExists = coloresOptions.find((c) => c.nombre === finalColor);
+
+    // Si el color no existe en la tabla, crear el color automáticamente
+    if (!colorExists && finalColor !== 'gris') {
+      // Mapear colores básicos a sus valores CSS
+      const colorMap: Record<string, string> = {
+        azul: 'blue',
+        'verde-lima': 'lime',
+        purpura: 'purple',
+        naranja: 'orange',
+        'verde-azulado': 'teal',
+        rojo: 'red',
+        verde: 'green',
+        amarillo: 'yellow',
+        rosa: 'pink',
+        indigo: 'indigo',
+        cian: 'cyan',
+        gris: 'gray',
+      };
+
+      const colorValue = colorMap[finalColor] || finalColor;
+
+      // Crear el color en la base de datos con intensidad 500
+      try {
+        await fetch('/api/colores', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: finalColor,
+            valor: colorValue,
+            intensidad: 500, // Cambiar de 400 a 500
+          }),
+        });
+        // Actualizar el cache de colores
+        await _mutateColores();
+      } catch (error) {
+        console.warn(
+          `No se pudo crear el color automáticamente: ${finalColor}`,
+          error
+        );
+      }
+    }
+
     await fetch('/api/tramites', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre }),
+      body: JSON.stringify({ nombre, color: finalColor }),
     });
     await mutateTramites();
   };
@@ -247,8 +329,15 @@ export default function TransactionTable(props: TransactionTableProps) {
     await mutateEmitidoPor();
   };
 
+  const handleOpenColorPicker = (rowId?: string) => {
+    if (rowId) {
+      setPendingRowId(rowId);
+    }
+    setIsColorPickerOpen(true);
+  };
+
   const { renderInput } = useTransactionTableInputs({
-    editValues: logic.editValues, // SIEMPRE pasa los edits locales actuales
+    editValues: logic.editValues,
     handleInputChangeAction: logic.handleInputChange,
     formatCurrencyAction: logic.formatCurrency,
     parseNumberAction: logic.parseNumber,
@@ -260,6 +349,8 @@ export default function TransactionTable(props: TransactionTableProps) {
     tramiteOptions,
     novedadOptions,
     emitidoPorOptions,
+    coloresOptions,
+    onOpenColorPicker: handleOpenColorPicker, // Pasar la función directamente sin wrapper
   });
   const router = useRouter();
 
@@ -491,6 +582,11 @@ export default function TransactionTable(props: TransactionTableProps) {
     }
     // Para otros checks usa el render original
     return logic.renderCheckbox(id, field, value, disabled);
+  };
+
+  // Crear función para obtener clase de color de trámite
+  const getTramiteColorClassForRow = (tramite: string) => {
+    return getTramiteColorClass(tramite, tramiteOptions, coloresOptions);
   };
 
   return (
@@ -865,8 +961,31 @@ export default function TransactionTable(props: TransactionTableProps) {
         {/* Modal de exportación por rango de fechas */}
         <ExportDateRangeModal
           isOpen={logic.isExportModalOpen}
-          setIsOpen={logic.setIsExportModalOpen} // <-- corregido aquí
+          setIsOpen={logic.setIsExportModalOpen}
           onExport={logic.handleExport}
+        />
+
+        {/* Modal de color picker */}
+        <ColorPickerModal
+          isOpen={isColorPickerOpen}
+          onClose={() => {
+            setIsColorPickerOpen(false);
+            setPendingRowId(null);
+          }}
+          onConfirm={async (tramiteName: string, selectedColor?: string) => {
+            // Crear el trámite primero
+            await handleAddTramiteAction(tramiteName, selectedColor);
+
+            // Si hay un rowId pendiente, seleccionar el trámite automáticamente
+            if (pendingRowId) {
+              logic.handleInputChange(pendingRowId, 'tramite', tramiteName);
+              setPendingRowId(null);
+            }
+
+            // Cerrar el modal
+            setIsColorPickerOpen(false);
+          }}
+          coloresOptions={coloresOptions}
         />
 
         {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
@@ -935,7 +1054,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                   <HeaderTitles isDeleteMode={logic.isDeleteMode} />
                   <tbody>
                     {logic.paginatedData.map(
-                      (row: TransactionRecord, index: number) => {
+                      (row: TransactionRecord, _index: number) => {
                         return (
                           <TransactionTableRow
                             key={row.id}
@@ -947,7 +1066,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                             handleInputChange={logic.handleInputChange}
                             handleRowSelect={logic.handleRowSelect}
                             handleDeleteSelect={logic.handleDeleteSelect}
-                            renderCheckbox={renderCheckbox} // <-- usa el renderCheckbox personalizado
+                            renderCheckbox={renderCheckbox}
                             renderAsesorSelect={logic.renderAsesorSelect}
                             renderInput={
                               renderInput as (
@@ -957,7 +1076,9 @@ export default function TransactionTable(props: TransactionTableProps) {
                               ) => React.ReactNode
                             }
                             getEmitidoPorClass={getEmitidoPorClass}
-                            _index={index}
+                            getTramiteColorClass={getTramiteColorClassForRow}
+                            coloresOptions={coloresOptions}
+                            tramiteOptions={tramiteOptions}
                           />
                         );
                       }

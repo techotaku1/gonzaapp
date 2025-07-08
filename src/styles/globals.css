@@ -843,3 +843,96 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   line-height: 1;
   padding-left: 0.5rem;
 }
+
+/* Estilos para colores de trámites - DINÁMICOS */
+/* Estos se generarán dinámicamente basándose en la tabla colores */
+.tramite-dynamic-color {
+  opacity: 0.8;
+  transition: background-color 0.2s ease;
+}
+
+/* Mantener algunos colores base para fallback */
+@utility tramite-color-red {
+  background-color: color-mix(in oklch, var(--color-red-400) 60%, transparent);
+  color: var(--color-red-900);
+}
+
+@utility tramite-color-blue {
+  background-color: color-mix(in oklch, var(--color-blue-400) 60%, transparent);
+  color: var(--color-blue-900);
+}
+
+@utility tramite-color-green {
+  background-color: color-mix(
+    in oklch,
+    var(--color-green-400) 60%,
+    transparent
+  );
+  color: var(--color-green-900);
+}
+
+@utility tramite-color-yellow {
+  background-color: color-mix(
+    in oklch,
+    var(--color-yellow-400) 60%,
+    transparent
+  );
+  color: var(--color-yellow-900);
+}
+
+@utility tramite-color-purple {
+  background-color: color-mix(
+    in oklch,
+    var(--color-purple-400) 60%,
+    transparent
+  );
+  color: var(--color-purple-900);
+}
+
+@utility tramite-color-orange {
+  background-color: color-mix(
+    in oklch,
+    var(--color-orange-400) 60%,
+    transparent
+  );
+  color: var(--color-orange-900);
+}
+
+@utility tramite-color-pink {
+  background-color: color-mix(in oklch, var(--color-pink-400) 60%, transparent);
+  color: var(--color-pink-900);
+}
+
+@utility tramite-color-gray {
+  background-color: color-mix(in oklch, var(--color-gray-400) 60%, transparent);
+  color: var(--color-gray-900);
+}
+
+@utility tramite-color-indigo {
+  background-color: color-mix(
+    in oklch,
+    var(--color-indigo-400) 60%,
+    transparent
+  );
+  color: var(--color-indigo-900);
+}
+
+@utility tramite-color-teal {
+  background-color: color-mix(in oklch, var(--color-teal-400) 60%, transparent);
+  color: var(--color-teal-900);
+}
+
+@utility tramite-color-cyan {
+  background-color: color-mix(in oklch, var(--color-cyan-400) 60%, transparent);
+  color: var(--color-cyan-900);
+}
+
+@utility tramite-color-lime {
+  background-color: color-mix(in oklch, var(--color-lime-400) 60%, transparent);
+  color: var(--color-lime-900);
+}
+
+/* Clase base para colores de trámite personalizados */
+.tramite-custom-color {
+  opacity: 0.8;
+}

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import TransactionTableCell from './TransactionTableCell';
+import { generateDynamicColorStyle } from './TransactionTableInputs';
 
 import type { TransactionRecord } from '~/types';
 
@@ -35,7 +36,9 @@ interface TransactionTableRowProps {
     type?: InputType
   ) => React.ReactNode;
   getEmitidoPorClass: (emitidoPor: string) => string;
-  _index?: number; // prefijo _ para evitar warning de unused
+  getTramiteColorClass?: (tramite: string) => string;
+  coloresOptions?: { nombre: string; valor: string; intensidad: number }[]; // Nueva prop
+  tramiteOptions?: { nombre: string; color?: string }[]; // Nueva prop
 }
 
 const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
@@ -51,11 +54,45 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     renderAsesorSelect,
     renderInput,
     getEmitidoPorClass,
+    getTramiteColorClass,
+    coloresOptions = [],
+    tramiteOptions = [],
   }) => {
+    // Determinar qué clase y estilo aplicar basándose en el tipo de trámite
+    const getRowClassAndStyle = () => {
+      // Si es SOAT, usar el sistema de emitidoPor existente SOLO cuando está pagado
+      if (row.tramite.toUpperCase() === 'SOAT') {
+        if (row.pagado) {
+          return {
+            className: getEmitidoPorClass(row.emitidoPor),
+            style: {},
+          };
+        } else {
+          return { className: '', style: {} };
+        }
+      }
+
+      // Para otros trámites (NO SOAT), usar el nuevo sistema de colores dinámicos SIEMPRE
+      // (sin importar si está pagado o no)
+      const dynamicStyle = generateDynamicColorStyle(
+        row.tramite,
+        tramiteOptions,
+        coloresOptions
+      );
+      const className = getTramiteColorClass
+        ? getTramiteColorClass(row.tramite)
+        : '';
+
+      return {
+        className,
+        style: dynamicStyle,
+      };
+    };
+
+    const { className: rowClass, style: rowStyle } = getRowClassAndStyle();
+
     return (
-      <tr
-        className={`border-b hover:bg-gray-50 ${row.pagado ? getEmitidoPorClass(row.emitidoPor) : ''}`}
-      >
+      <tr className={`border-b hover:bg-gray-50 ${rowClass}`} style={rowStyle}>
         {isDeleteMode ? (
           <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
             <div className="flex h-full items-center justify-center">

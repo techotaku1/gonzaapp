@@ -8,13 +8,14 @@ import { desc, eq, inArray, sql as _sql } from 'drizzle-orm';
 import { db } from '~/server/db';
 import {
   asesores,
+  colores,
   emitidoPor,
   novedades,
   tramites,
   transactions,
 } from '~/server/db/schema';
 
-import type { TransactionRecord } from '~/types';
+import type { ColorRecord, TramiteRecord, TransactionRecord } from '~/types';
 
 // Función original de lectura
 export async function getTransactions(): Promise<TransactionRecord[]> {
@@ -355,21 +356,27 @@ export async function getTransactionsByIds(
 }
 
 // Nuevas funciones para tramites, novedades y emitidoPor
-export async function getAllTramites(): Promise<string[]> {
+export async function getAllTramites(): Promise<TramiteRecord[]> {
   const results = await db.select().from(tramites);
   return results
-    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-    .filter((a) => a.length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es'));
+    .map((row) => ({
+      id: row.id,
+      nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
+      color: row.color ?? undefined, // Cambiar || por ??
+    }))
+    .filter((a) => a.nombre.length > 0)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 }
 
 export async function addTramite(
-  nombre: string
+  nombre: string,
+  color?: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.insert(tramites).values({
       id: randomUUID(),
       nombre: nombre.trim(),
+      color: color ?? null, // Cambiar || por ??
     });
     revalidateTag('tramites');
     return { success: true };
@@ -430,6 +437,42 @@ export async function addEmitidoPor(
       success: false,
       error:
         error instanceof Error ? error.message : 'Failed to add emitidoPor',
+    };
+  }
+}
+
+// Nuevas funciones para colores
+export async function getAllColores(): Promise<ColorRecord[]> {
+  const results = await db.select().from(colores);
+  return results
+    .map((row) => ({
+      id: row.id,
+      nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
+      valor: typeof row.valor === 'string' ? row.valor.trim() : '',
+      intensidad: typeof row.intensidad === 'number' ? row.intensidad : 400,
+    }))
+    .filter((a) => a.nombre.length > 0)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+export async function addColor(
+  nombre: string,
+  valor: string,
+  intensidad = 500 // Cambiar de 400 a 500
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.insert(colores).values({
+      id: randomUUID(),
+      nombre: nombre.trim(),
+      valor: valor.trim(),
+      intensidad,
+    });
+    revalidateTag('colores');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add color',
     };
   }
 }
