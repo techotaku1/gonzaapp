@@ -131,10 +131,70 @@ async function _searchTransactions(
   query: string
 ): Promise<TransactionRecord[]> {
   if (!query || query.trim() === '') return [];
-  // Agrega un await para cumplir con la regla require-await
-  await Promise.resolve();
-  // ...puedes agregar lógica real aquí si lo necesitas...
-  return [];
+  // Limita el número de resultados y columnas para ahorrar egress
+  const search = query.trim().toLowerCase();
+  const results = await db
+    .select({
+      id: transactions.id,
+      fecha: transactions.fecha,
+      tramite: transactions.tramite,
+      pagado: transactions.pagado,
+      boleta: transactions.boleta, // <-- Añadir este campo
+      boletasRegistradas: transactions.boletasRegistradas,
+      emitidoPor: transactions.emitidoPor,
+      placa: transactions.placa,
+      tipoDocumento: transactions.tipoDocumento,
+      numeroDocumento: transactions.numeroDocumento,
+      nombre: transactions.nombre,
+      ciudad: transactions.ciudad,
+      asesor: transactions.asesor,
+      novedad: transactions.novedad,
+      precioNeto: transactions.precioNeto,
+      comisionExtra: transactions.comisionExtra,
+      tarifaServicio: transactions.tarifaServicio,
+      impuesto4x1000: transactions.impuesto4x1000,
+      gananciaBruta: transactions.gananciaBruta,
+      rappi: transactions.rappi,
+      observaciones: transactions.observaciones,
+      cilindraje: transactions.cilindraje,
+      tipoVehiculo: transactions.tipoVehiculo,
+      celular: transactions.celular,
+    })
+    .from(transactions)
+    .where(
+      _sql`
+        LOWER(${transactions.placa}) LIKE ${'%' + search + '%'}
+        OR LOWER(${transactions.nombre}) LIKE ${'%' + search + '%'}
+        OR LOWER(${transactions.numeroDocumento}) LIKE ${'%' + search + '%'}
+        OR LOWER(${transactions.ciudad}) LIKE ${'%' + search + '%'}
+      `
+    )
+    .orderBy(desc(transactions.fecha))
+    .limit(30); // Limita a 30 resultados
+
+  // Normaliza tipos
+  return results.map((record) => ({
+    ...record,
+    fecha: new Date(record.fecha),
+    boletasRegistradas: Number(record.boletasRegistradas),
+    precioNeto: Number(record.precioNeto),
+    tarifaServicio: Number(record.tarifaServicio),
+    impuesto4x1000: Number(record.impuesto4x1000),
+    gananciaBruta: Number(record.gananciaBruta),
+    cilindraje:
+      record.cilindraje !== null && record.cilindraje !== undefined
+        ? Number(record.cilindraje)
+        : null,
+    tipoVehiculo:
+      record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
+        ? String(record.tipoVehiculo)
+        : null,
+    celular:
+      record.celular !== null && record.celular !== undefined
+        ? String(record.celular)
+        : null,
+    boleta: record.boleta, // <-- Asegura que boleta esté presente
+  }));
 }
 
 // No uses unstable_cache aquí, solo exporta la función async

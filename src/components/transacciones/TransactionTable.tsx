@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react'; // Elimina useEffect y useState si no se usan directamente aquí;
+import React, { useEffect, useMemo, useRef, useState } from 'react'; // Elimina useEffect y useState si no se usan directamente aquí;
 
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
@@ -584,9 +584,12 @@ export default function TransactionTable(props: TransactionTableProps) {
   const selectedRowsArray = useMemo(
     () =>
       Array.from(logic.selectedRows)
-        .map((id) => logic.paginatedData.find((r) => r.id === id))
+        .map((id) =>
+          // Busca en todos los registros iniciales (de todos los días)
+          props.initialData.find((r) => r.id === id)
+        )
         .filter(Boolean) as TransactionRecord[],
-    [logic.selectedRows, logic.paginatedData]
+    [logic.selectedRows, props.initialData]
   );
 
   const totalSelected = useMemo(
@@ -681,6 +684,60 @@ export default function TransactionTable(props: TransactionTableProps) {
   const getTramiteColorClassForRow = (tramite: string) => {
     return getTramiteColorClass(tramite, tramiteOptions, coloresOptions);
   };
+
+  // --- NUEVO: Estado para posición del cuadro de pago (draggable) ---
+  const [payBoxPos, setPayBoxPos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const payBoxRef = useRef<HTMLDivElement>(null);
+
+  // Solo lee window/localStorage en el cliente
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('payBoxPos');
+      if (saved) {
+        try {
+          const { x, y } = JSON.parse(saved);
+          setPayBoxPos({ x, y });
+        } catch {
+          // ignore
+        }
+      } else {
+        setPayBoxPos({
+          x: window.innerWidth - 420,
+          y: window.innerHeight - 200,
+        });
+      }
+    }
+  }, []);
+
+  // Guardar posición en localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('payBoxPos', JSON.stringify(payBoxPos));
+    }
+  }, [payBoxPos]);
+
+  // Eventos de drag
+  useEffect(() => {
+    if (!dragging) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      setPayBoxPos((_prev) => ({
+        x: e.clientX - dragOffset.current.x,
+        y: e.clientY - dragOffset.current.y,
+      }));
+    };
+    const handleMouseUp = () => setDragging(false);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragging]);
 
   return (
     <div className="relative">
@@ -1226,7 +1283,43 @@ export default function TransactionTable(props: TransactionTableProps) {
 
         {/* Add the payment UI */}
         {logic.selectedRows.size > 0 && (
-          <div className="fixed right-4 bottom-4 flex w-[400px] flex-col gap-4 rounded-lg bg-white p-6 shadow-lg">
+          <div
+            ref={payBoxRef}
+            className="fixed z-[9999] flex w-[400px] cursor-move flex-col gap-4 rounded-lg bg-white p-6 shadow-lg select-none"
+            style={{
+              left: Math.max(0, Math.min(payBoxPos.x, window.innerWidth - 420)),
+              top: Math.max(0, Math.min(payBoxPos.y, window.innerHeight - 120)),
+              transition: dragging ? 'none' : 'box-shadow 0.2s',
+              boxShadow: dragging
+                ? '0 0 0 2px #3b82f6'
+                : '0 4px 24px 0 rgba(0,0,0,0.15)',
+              userSelect: dragging ? 'none' : 'auto',
+              cursor: dragging ? 'grabbing' : 'move',
+            }}
+            onMouseDown={(e) => {
+              // Solo inicia drag si hace click en la cabecera del cuadro
+              if (
+                payBoxRef.current &&
+                e.target instanceof HTMLElement &&
+                e.target.classList.contains('paybox-drag-handle')
+              ) {
+                setDragging(true);
+                const rect = payBoxRef.current.getBoundingClientRect();
+                dragOffset.current = {
+                  x: e.clientX - rect.left,
+                  y: e.clientY - rect.top,
+                };
+              }
+            }}
+          >
+            <div
+              className="paybox-drag-handle mb-2 flex cursor-move items-center justify-between rounded bg-gray-200 px-2 py-1 font-bold text-gray-700"
+              style={{ userSelect: 'none' }}
+              title="Arrastra para mover"
+            >
+              <span>Pago de Boletas</span>
+              <span className="text-xs text-gray-500">(Arrastra aquí)</span>
+            </div>
             <div className="text-center">
               <div className="mb-2 font-semibold">
                 Total Seleccionado: ${logic.formatCurrency(totalSelected)}
