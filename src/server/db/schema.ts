@@ -92,3 +92,13 @@ export const colores = pgTable('colores', {
   valor: varchar('valor', { length: 32 }).notNull(), // hex color o nombre CSS
   intensidad: integer('intensidad').notNull().default(500), // Cambiar de 400 a 500
 });
+
+export const egressStats = pgTable('egress_stats', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  endpoint: varchar('endpoint', { length: 255 }).notNull(),
+  method: varchar('method', { length: 10 }).notNull(),
+  responseSize: integer('response_size').notNull(),
+  timestamp: timestamp('timestamp').notNull().defaultNow(),
+  date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD
+  queryParams: varchar('query_params', { length: 1000 }),
+});

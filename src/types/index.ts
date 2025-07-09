@@ -82,3 +82,23 @@ export interface ColorRecord {
   valor: string; // hex color o nombre CSS
   intensidad: number; // 100, 200, 300, 400, 500, etc.
 }
+
+// Estadísticas de egress de la base de datos
+export interface EgressStat {
+  id: string;
+  endpoint: string;
+  method: string;
+  responseSize: number;
+  timestamp: Date;
+  date: string; // YYYY-MM-DD
+  queryParams?: string;
+}
+
+export interface EgressStatSummary {
+  date: string;
+  totalSizeBytes: number;
+  totalSizeKB: string;
+  totalSizeMB: string;
+  requestCount: number;
+  uniqueEndpoints: number;
+}

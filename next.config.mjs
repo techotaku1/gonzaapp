@@ -1,7 +1,16 @@
-import './src/env.js';
-import type { NextConfig } from 'next';
+// @ts-check
 
-const nextConfig: NextConfig = {
+import { createJiti } from 'jiti';
+import { fileURLToPath } from 'node:url';
+
+const jiti = createJiti(fileURLToPath(import.meta.url));
+
+jiti('./src/env.ts');
+
+/**
+ * @type {import('next').NextConfig}
+ */
+const nextConfig = {
   reactStrictMode: true,
   images: {
     dangerouslyAllowSVG: true,
