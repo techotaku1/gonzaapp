@@ -266,22 +266,29 @@ export function useTransactionTableLogic(props: {
   );
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
+    // CORREGIDO: Buscar en initialData (todos los registros) en lugar de solo la página actual
     const record = props.initialData.find((r) => r.id === id);
+
     if (newSelected.has(id)) {
       newSelected.delete(id);
       setSelectedPlates((prev) => prev.filter((p) => p !== record?.placa));
     } else {
-      newSelected.add(id);
-      if (record?.placa) {
-        setSelectedPlates((prev) => [...prev, record.placa.toUpperCase()]);
+      // CORREGIDO: Permitir selección si no está pagado (sin importar si boleta es true o false)
+      if (record && !record.pagado) {
+        newSelected.add(id);
+        if (record?.placa) {
+          setSelectedPlates((prev) => [...prev, record.placa.toUpperCase()]);
+        }
       }
     }
     setSelectedRows(newSelected);
   };
+
+  // CORREGIDO: Calcular total seleccionado de todos los registros seleccionados (sin filtrar por boleta)
   useEffect(() => {
     const total = Array.from(selectedRows).reduce((sum, id) => {
       const record = props.initialData.find((r) => r.id === id);
-      return sum + (record?.precioNeto ?? 0);
+      return sum + (record && !record.pagado ? (record?.precioNeto ?? 0) : 0);
     }, 0);
     setTotalSelected(total);
   }, [selectedRows, props.initialData]);
@@ -987,6 +994,22 @@ export function useTransactionTableLogic(props: {
     // No uses setState aquí, solo expón la función para el componente
     await props.onUpdateRecordAction([{ ...row, pagado: checked }]);
   };
+
+  // --- NUEVO: Limpia la selección de boletas pagadas automáticamente ---
+  useEffect(() => {
+    // Si algún registro seleccionado ya está pagado, quítalo de la selección
+    const toRemove = Array.from(selectedRows).filter((id) => {
+      const row = props.initialData.find((r) => r.id === id);
+      return row && row.pagado === true;
+    });
+    if (toRemove.length > 0) {
+      const newSelected = new Set(selectedRows);
+      toRemove.forEach((id) => newSelected.delete(id));
+      if (newSelected.size !== selectedRows.size) {
+        setSelectedRows(newSelected);
+      }
+    }
+  }, [selectedRows, props.initialData, setSelectedRows]);
 
   return {
     selectedRows,

@@ -613,13 +613,22 @@ export default function TransactionTable(props: TransactionTableProps) {
   const handlePayLocal = async () => {
     setIsPaying(true);
     logic.setIsActuallySaving(true); // <-- activa el estado de guardado
-    const toUpdate = selectedRowsArray
-      .filter((row) => !row.pagado)
-      .map((row) => ({
-        ...row,
-        pagado: true,
-        boletasRegistradas: totalSelected,
-      }));
+
+    // CORREGIDO: Procesar TODOS los registros seleccionados, no solo los que tienen boleta=true
+    const allSelectedRecords = Array.from(logic.selectedRows)
+      .map((id) => props.initialData.find((r) => r.id === id))
+      .filter(
+        (record): record is TransactionRecord =>
+          record !== undefined && !record.pagado
+      );
+
+    const toUpdate = allSelectedRecords.map((row) => ({
+      ...row,
+      pagado: true,
+      boleta: true, // <-- NUEVO: Marcar boleta como true al pagar
+      boletasRegistradas: totalSelected,
+    }));
+
     if (toUpdate.length > 0) {
       const updates: Record<string, boolean> = {};
       toUpdate.forEach((row) => {
@@ -1285,7 +1294,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         {logic.selectedRows.size > 0 && (
           <div
             ref={payBoxRef}
-            className="fixed z-[9999] flex w-[400px] cursor-move flex-col gap-4 rounded-lg bg-white p-6 shadow-lg select-none"
+            className="fixed z-[9999] flex w-[400px] flex-col gap-4 rounded-lg bg-white p-6 shadow-lg select-none"
             style={{
               left: Math.max(0, Math.min(payBoxPos.x, window.innerWidth - 420)),
               top: Math.max(0, Math.min(payBoxPos.y, window.innerHeight - 120)),
@@ -1294,17 +1303,17 @@ export default function TransactionTable(props: TransactionTableProps) {
                 ? '0 0 0 2px #3b82f6'
                 : '0 4px 24px 0 rgba(0,0,0,0.15)',
               userSelect: dragging ? 'none' : 'auto',
-              cursor: dragging ? 'grabbing' : 'move',
             }}
             onMouseDown={(e) => {
-              // Solo inicia drag si hace click en la cabecera del cuadro
+              // CORREGIDO: Solo inicia drag si hace click en la cabecera específica
               if (
-                payBoxRef.current &&
                 e.target instanceof HTMLElement &&
-                e.target.classList.contains('paybox-drag-handle')
+                (e.target.classList.contains('paybox-drag-handle') ||
+                  e.target.closest('.paybox-drag-handle'))
               ) {
+                e.preventDefault();
                 setDragging(true);
-                const rect = payBoxRef.current.getBoundingClientRect();
+                const rect = payBoxRef.current!.getBoundingClientRect();
                 dragOffset.current = {
                   x: e.clientX - rect.left,
                   y: e.clientY - rect.top,
@@ -1326,7 +1335,7 @@ export default function TransactionTable(props: TransactionTableProps) {
               </div>
               <div className="flex flex-col gap-2 text-base">
                 <div>
-                  Boletas:{' '}
+                  Registros a pagar:{' '}
                   {
                     selectedRowsArray.filter(
                       (row) => !row.pagado && !localPaid[row.id]
@@ -1340,8 +1349,23 @@ export default function TransactionTable(props: TransactionTableProps) {
             </div>
             <button
               onClick={handlePayLocal}
-              className="mt-2 flex w-full items-center justify-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
-              disabled={totalSelected === 0 || isPaying}
+              className="mt-2 flex w-full cursor-pointer items-center justify-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
+              disabled={
+                selectedRowsArray.filter(
+                  (row) => !row.pagado && !localPaid[row.id]
+                ).length === 0 || isPaying
+              }
+              style={{
+                pointerEvents: 'auto',
+                zIndex: 1000,
+                cursor:
+                  isPaying ||
+                  selectedRowsArray.filter(
+                    (row) => !row.pagado && !localPaid[row.id]
+                  ).length === 0
+                    ? 'not-allowed'
+                    : 'pointer',
+              }}
             >
               {isPaying ? (
                 <>
