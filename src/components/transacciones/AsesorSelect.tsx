@@ -5,7 +5,7 @@ export interface AsesorSelectProps {
   onChange: (newValue: string) => void;
   asesores: string[];
   onAddAsesorAction: (nombre: string) => Promise<void>;
-  className?: string;
+  className?: string; // Agregamos esta prop
 }
 
 export const AsesorSelect: React.FC<AsesorSelectProps> = ({
@@ -13,51 +13,35 @@ export const AsesorSelect: React.FC<AsesorSelectProps> = ({
   onChange,
   asesores,
   onAddAsesorAction,
-  className,
+  className = '', // Prop con valor predeterminado vacío
 }) => {
-  // Handler para agregar nuevo asesor
-  const handleAddAsesor = async () => {
-    const nombre = prompt('Ingrese el nombre del nuevo asesor:');
-    if (nombre && nombre.trim().length > 0) {
-      await onAddAsesorAction(nombre.trim());
-      onChange(nombre.trim()); // Selecciona automáticamente el nuevo asesor
-    }
-  };
-
   return (
-    <div className="relative flex items-center">
-      <select
-        value={value}
-        onChange={async (e) => {
-          if (e.target.value === '__add_new__') {
-            await handleAddAsesor();
-          } else {
-            onChange(e.target.value);
+    <select
+      value={value}
+      onChange={(e) => {
+        if (e.target.value === '__add_new__') {
+          const nombre = prompt('Ingrese el nombre del nuevo asesor:');
+          if (nombre && nombre.trim().length > 0) {
+            void onAddAsesorAction(nombre.trim()).then(() => {
+              onChange(nombre.trim());
+            });
           }
-        }}
-        className={`table-select-base w-[120px] text-black rounded border bg-gray-400 px-2 py-1 text-[13px] font-semibold focus:ring-2 focus:ring-blue-400 focus:outline-none ${className}`}
-        style={{
-          fontWeight: 600,
-          borderColor: '#000000 !important', // Forzar borde negro
-        }}
-        title={value}
-      >
-        <option value="" className="text-white">
-          Seleccionar...
+        } else {
+          onChange(e.target.value);
+        }
+      }}
+      className={`table-select-base w-[120px] rounded border ${className}`} // La clase className sobreescribirá la clase border-gray-600
+      title={value}
+    >
+      <option value="">Seleccionar...</option>
+      {asesores.map((option) => (
+        <option key={option} value={option} className="text-center">
+          {option}
         </option>
-        {asesores.map((asesor) => (
-          <option
-            key={asesor}
-            value={asesor}
-            className="font-semibold text-white"
-          >
-            {asesor}
-          </option>
-        ))}
-        <option value="__add_new__" className="font-bold text-white">
-          Agregar nuevo asesor... ➕
-        </option>
-      </select>
-    </div>
+      ))}
+      <option value="__add_new__" className="font-bold text-green-700">
+        Agregar nuevo asesor... ➕
+      </option>
+    </select>
   );
 };

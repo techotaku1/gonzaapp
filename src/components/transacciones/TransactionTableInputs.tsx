@@ -665,6 +665,7 @@ export function useTransactionTableInputs({
           }
           asesores={asesores}
           onAddAsesorAction={onAddAsesorAction}
+          className="border-purple-400 bg-purple-200 text-purple-700"
         />
       );
     }
