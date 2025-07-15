@@ -371,23 +371,29 @@ export function useTransactionTableInputs({
           )
         : { backgroundColor: '#6B7280', color: 'white' }; // Gris para NO APLICA
 
-      // Función para obtener estilo de una opción específica
+      // Fix: Only one getOptionStyle function with explicit white background for items without color
       const getOptionStyle = (emitidoPorName: string) => {
         // Si no es SOAT y es la opción NO APLICA, aplicar estilo gris
         if (!isSoat && emitidoPorName === 'NO APLICA') {
           return { backgroundColor: '#6B7280', color: 'white' };
         }
 
-        // Para las demás opciones, solo aplicar color si tiene uno asignado
-        const emitidoPorRecord = emitidoPorWithColors.find(
-          (e) => e.nombre === emitidoPorName
+        // Find the specific emitidoPor item by name
+        const emitidoPorItem = emitidoPorWithColors.find(
+          (item) => item.nombre === emitidoPorName
         );
-        if (!emitidoPorRecord?.color) return {};
 
+        // If item doesn't exist or doesn't have a color, explicitly set white background
+        if (!emitidoPorItem?.color) {
+          return { backgroundColor: 'white' };
+        }
+
+        // Find the color record for this specific item
         const colorRecord = coloresOptions.find(
-          (c) => c.nombre === emitidoPorRecord.color && c.intensidad === 300
+          (c) => c.nombre === emitidoPorItem.color && c.intensidad === 300
         );
-        if (!colorRecord) return {};
+
+        if (!colorRecord) return { backgroundColor: 'white' };
 
         const opacity = 0.3;
         return {
