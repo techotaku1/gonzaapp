@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import {
   addTramite,
@@ -7,10 +7,21 @@ import {
   updateTramite,
 } from '~/server/actions/tableGeneral';
 
-export async function GET() {
+export async function GET(_req: NextRequest) {
   try {
     const tramites = await getAllTramites();
-    return NextResponse.json({ tramites }, { status: 200 });
+
+    // This data rarely changes, so we can cache it for longer periods
+    return NextResponse.json(
+      { tramites },
+      {
+        status: 200,
+        headers: {
+          // Cache for 5 minutes on CDN, allow reuse for up to 1 hour while revalidating
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+        },
+      }
+    );
   } catch (_error) {
     return NextResponse.json(
       { tramites: [], error: 'Error fetching tramites' },

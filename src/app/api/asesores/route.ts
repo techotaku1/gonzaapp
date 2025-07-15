@@ -1,16 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { addAsesor, getAllAsesores } from '~/server/actions/tableGeneral';
 
-export async function GET() {
+export async function GET(_req: NextRequest) {
   try {
     const asesores = await getAllAsesores();
+
+    // Already using cache headers, but let's optimize them further
     return NextResponse.json(
       { asesores },
       {
         status: 200,
         headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=10',
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
         },
       }
     );

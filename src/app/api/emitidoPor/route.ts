@@ -1,16 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import {
   addEmitidoPor,
   deleteEmitidoPor,
   getAllEmitidoPor,
-  updateEmitidoPor, // Nueva función
+  updateEmitidoPor,
 } from '~/server/actions/tableGeneral';
 
-export async function GET() {
+export async function GET(_req: NextRequest) {
   try {
     const emitidoPor = await getAllEmitidoPor();
-    return NextResponse.json({ emitidoPor }, { status: 200 });
+
+    // This data rarely changes, so we can cache it for longer periods
+    return NextResponse.json(
+      { emitidoPor },
+      {
+        status: 200,
+        headers: {
+          // Cache for 5 minutes on CDN, allow reuse for up to 1 hour while revalidating
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+        },
+      }
+    );
   } catch (_error) {
     return NextResponse.json(
       { emitidoPor: [], error: 'Error fetching emitidoPor' },

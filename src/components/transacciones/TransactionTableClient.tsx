@@ -21,33 +21,79 @@ export default function TransactionTableClient({
 
   // --- NUEVO: Estado para controlar si la tabla está activa ---
   const [isActive, setIsActive] = useState(true);
+  const [userInteracted, setUserInteracted] = useState(false);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleFocus = () => setIsActive(true);
-    const handleBlur = () => setIsActive(false);
-    const handleVisibility = () =>
-      setIsActive(document.visibilityState === 'visible');
+    const handleBlur = () => {
+      // Don't immediately deactivate on blur
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      inactivityTimerRef.current = setTimeout(() => {
+        if (!userInteracted) {
+          setIsActive(false);
+        }
+      }, 60000); // Wait a minute before disabling if user hasn't interacted
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setIsActive(true);
+      } else {
+        handleBlur(); // Use the same logic as blur
+      }
+    };
+
+    const handleUserInteraction = () => {
+      setUserInteracted(true);
+      setIsActive(true);
+
+      // Reset after a period of inactivity
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+
+      inactivityTimerRef.current = setTimeout(() => {
+        setUserInteracted(false);
+      }, 300000); // 5 minutes of inactivity resets interaction state
+    };
+
     window.addEventListener('focus', handleFocus);
     window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibility);
+
+    // Track user interactions to keep the tab active
+    document.addEventListener('mousemove', handleUserInteraction);
+    document.addEventListener('keydown', handleUserInteraction);
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('scroll', handleUserInteraction);
 
     // Opcional: mouseover/mouseleave sobre la tabla
     const node = containerRef.current;
     if (node) {
       node.addEventListener('mouseenter', () => setIsActive(true));
-      node.addEventListener('mouseleave', () => setIsActive(false));
     }
+
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('mousemove', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('scroll', handleUserInteraction);
+
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
       if (node) {
         node.removeEventListener('mouseenter', () => setIsActive(true));
-        node.removeEventListener('mouseleave', () => setIsActive(false));
       }
     };
-  }, []);
+  }, [userInteracted]);
 
   // Usa useAppData para obtener los datos optimizados y actualizados
   const { data, mutate, isLoading } = useAppData(initialData, isActive);

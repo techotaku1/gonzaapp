@@ -22,6 +22,8 @@ export function useDebouncedSave(
   const latestEditRef = useRef<TransactionRecord[] | null>(null);
   // Nuevo: bandera para saber si hay un guardado pendiente
   const isSavingRef = useRef(false);
+  // Nuevo: contador para limitar mutaciones
+  const mutationCountRef = useRef(0);
 
   // Limpia el timeout al desmontar
   useEffect(() => {
@@ -43,19 +45,24 @@ export function useDebouncedSave(
       );
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-      // OPTIMISTIC UPDATE: Mantén los edits locales en el cache hasta que el backend confirme
-      mutate(
-        CACHE_KEY,
-        (current: TransactionRecord[] | undefined) => {
-          if (!current) return data;
-          const map = new Map(current.map((r) => [r.id, r]));
-          data.forEach((edit) =>
-            map.set(edit.id, { ...map.get(edit.id), ...edit })
-          );
-          return Array.from(map.values());
-        },
-        false // nunca revalidar aún
-      );
+      // OPTIMISTIC UPDATE: Limitar frecuencia de mutaciones
+      // Solo hacer mutate optimista cada 3 ediciones para reducir procesamiento
+      mutationCountRef.current += 1;
+      if (mutationCountRef.current >= 3 || lastSavedDataRef.current === '') {
+        mutate(
+          CACHE_KEY,
+          (current: TransactionRecord[] | undefined) => {
+            if (!current) return data;
+            const map = new Map(current.map((r) => [r.id, r]));
+            data.forEach((edit) =>
+              map.set(edit.id, { ...map.get(edit.id), ...edit })
+            );
+            return Array.from(map.values());
+          },
+          false // nunca revalidar aún
+        );
+        mutationCountRef.current = 0;
+      }
 
       timeoutRef.current = setTimeout(async () => {
         if (lastSavedDataRef.current === dataString) return;

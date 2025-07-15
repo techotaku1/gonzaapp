@@ -12,7 +12,21 @@ export async function GET(req: NextRequest) {
   if (pathname.endsWith('/summary')) {
     try {
       const summary = await getTransactionsSummary();
-      return NextResponse.json(summary, { status: 200 });
+
+      const response = NextResponse.json(summary, { status: 200 });
+
+      // Check if client wants cached response
+      const useCache = req.headers.get('x-use-cache') === '1';
+      if (useCache) {
+        response.headers.set(
+          'Cache-Control',
+          's-maxage=5, stale-while-revalidate=30'
+        );
+      } else {
+        response.headers.set('Cache-Control', 'no-cache');
+      }
+
+      return response;
     } catch (_error) {
       return NextResponse.json(
         { error: 'Error fetching transactions summary' },
@@ -38,10 +52,18 @@ export async function GET(req: NextRequest) {
     const result = await getTransactionsPaginated(date, limit, offset);
 
     // Asegura que result tenga data y total
-    return NextResponse.json(
+    const response = NextResponse.json(
       { data: result?.data ?? [], total: result?.total ?? 0 },
       { status: 200 }
     );
+
+    // Add short-lived cache for this data
+    response.headers.set(
+      'Cache-Control',
+      's-maxage=10, stale-while-revalidate=30'
+    );
+
+    return response;
   } catch (_error) {
     return NextResponse.json(
       { error: 'Error fetching transactions' },

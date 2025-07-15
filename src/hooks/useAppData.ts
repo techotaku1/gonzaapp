@@ -25,7 +25,12 @@ function isTransactionSummary(item: unknown): item is TransactionSummary {
 
 // Fetch summaries (ids + hash)
 const fetchSummary = async (): Promise<TransactionSummary[]> => {
-  const res = await fetch('/api/transactions/summary');
+  const res = await fetch('/api/transactions/summary', {
+    // Agregar headers para Cache-Control
+    headers: {
+      'x-use-cache': '1',
+    },
+  });
   if (!res.ok) throw new Error('Error fetching summary');
   const data = (await res.json()) as unknown;
   if (!Array.isArray(data)) return [];
@@ -55,13 +60,33 @@ const fetchByIds = async (ids: string[]): Promise<TransactionRecord[]> => {
 export function useAppData(initialData?: TransactionRecord[], active = true) {
   const [data, setData] = useState<TransactionRecord[]>(initialData ?? []);
   const hashesRef = useRef<Map<string, string>>(new Map());
+  const lastChangeRef = useRef<number>(Date.now());
+
+  // Determine polling frequency based on activity
+  const getPollingInterval = () => {
+    if (!active) return 0;
+
+    const timeSinceLastChange = Date.now() - lastChangeRef.current;
+
+    // If there was a change in the last minute, poll more frequently
+    if (timeSinceLastChange < 60000) return 2000; // 2 seconds
+
+    // If there was a change in the last 5 minutes, poll less frequently
+    if (timeSinceLastChange < 300000) return 5000; // 5 seconds
+
+    // Otherwise, poll very infrequently
+    return 15000; // 15 seconds
+  };
+
   const {
     data: summary,
     error,
     mutate,
   } = useSWR('transactions-summary', fetchSummary, {
-    refreshInterval: active ? 2000 : 0,
+    refreshInterval: getPollingInterval(),
     revalidateOnFocus: true,
+    dedupingInterval: 2000, // Dedupe identical requests within 2 seconds
+    focusThrottleInterval: 5000, // Only revalidate once per 5 seconds on focus
   });
 
   useEffect(() => {
@@ -77,6 +102,12 @@ export function useAppData(initialData?: TransactionRecord[], active = true) {
     const deletedIds = Array.from(prevHashes.keys()).filter(
       (id) => !summaryMap.has(id)
     );
+
+    if (changedIds.length > 0 || deletedIds.length > 0) {
+      // Record that a change was detected
+      lastChangeRef.current = Date.now();
+    }
+
     if (changedIds.length > 0) {
       fetchByIds(changedIds).then((changedRecords) => {
         setData((prev) => {
@@ -106,6 +137,7 @@ export function useAppData(initialData?: TransactionRecord[], active = true) {
     isLoading: !summary && !data.length,
     isError: error !== undefined,
     mutate: async () => {
+      lastChangeRef.current = Date.now(); // Reset activity timer on manual mutate
       await mutate();
       return data;
     },

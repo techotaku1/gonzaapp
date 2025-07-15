@@ -1,11 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { addColor, getAllColores } from '~/server/actions/tableGeneral';
 
-export async function GET() {
+export async function GET(_req: NextRequest) {
   try {
     const colores = await getAllColores();
-    return NextResponse.json({ colores }, { status: 200 });
+
+    // This data rarely changes, so we can cache it for longer periods
+    return NextResponse.json(
+      { colores },
+      {
+        status: 200,
+        headers: {
+          // Cache for 10 minutes on CDN, allow reuse for up to 1 hour while revalidating
+          'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600',
+        },
+      }
+    );
   } catch (_error) {
     return NextResponse.json(
       { colores: [], error: 'Error fetching colores' },
