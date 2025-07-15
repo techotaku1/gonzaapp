@@ -358,16 +358,27 @@ export function useTransactionTableInputs({
 
     // En la sección donde se renderiza el select de emitidoPor:
     if (field === 'emitidoPor') {
+      // Verificar si el trámite es SOAT
+      const isSoat = row.tramite?.toUpperCase() === 'SOAT';
+
       // Generar estilo dinámico para el select interno
-      const selectStyle = generateEmitidoPorSelectStyle(
-        row.emitidoPor,
-        row.pagado,
-        emitidoPorWithColors,
-        coloresOptions
-      );
+      const selectStyle = isSoat
+        ? generateEmitidoPorSelectStyle(
+            row.emitidoPor,
+            row.pagado,
+            emitidoPorWithColors,
+            coloresOptions
+          )
+        : { backgroundColor: '#6B7280', color: 'white' }; // Gris para NO APLICA
 
       // Función para obtener estilo de una opción específica
       const getOptionStyle = (emitidoPorName: string) => {
+        // Si no es SOAT y es la opción NO APLICA, aplicar estilo gris
+        if (!isSoat && emitidoPorName === 'NO APLICA') {
+          return { backgroundColor: '#6B7280', color: 'white' };
+        }
+
+        // Para las demás opciones, solo aplicar color si tiene uno asignado
         const emitidoPorRecord = emitidoPorWithColors.find(
           (e) => e.nombre === emitidoPorName
         );
@@ -384,9 +395,17 @@ export function useTransactionTableInputs({
         };
       };
 
+      // Si el trámite no es SOAT, forzar el valor a "NO APLICA"
+      if (!isSoat && value !== 'NO APLICA') {
+        // Esto actualiza automáticamente el valor en el backend
+        setTimeout(() => {
+          handleInputChangeAction(row.id, field, 'NO APLICA');
+        }, 0);
+      }
+
       return (
         <select
-          value={value as string}
+          value={!isSoat ? 'NO APLICA' : (value as string)}
           onChange={async (e) => {
             if (e.target.value === '__add_new__') {
               if (onOpenEmitidoPorColorPicker) {
@@ -406,7 +425,8 @@ export function useTransactionTableInputs({
           }}
           className={`table-select-base w-[105px] rounded border`}
           style={selectStyle}
-          title={value as string}
+          title={isSoat ? (value as string) : 'NO APLICA'}
+          disabled={!isSoat}
         >
           <option value="">Seleccionar...</option>
           {emitidoPorOptions.map((option) => (
@@ -419,9 +439,11 @@ export function useTransactionTableInputs({
               {option}
             </option>
           ))}
-          <option value="__add_new__" className="font-bold text-green-700">
-            Agregar nuevo emitido por... ➕
-          </option>
+          {isSoat && (
+            <option value="__add_new__" className="font-bold text-green-700">
+              Agregar nuevo emitido por... ➕
+            </option>
+          )}
         </select>
       );
     }

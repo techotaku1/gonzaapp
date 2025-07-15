@@ -845,3 +845,36 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   line-height: 1;
   padding-left: 0.5rem;
 }
+
+/* Estilo para el emitido por cuando no es SOAT */
+.no-aplica-select {
+  background-color: #6b7280 !important;
+  color: white !important;
+  opacity: 0.9;
+  cursor: not-allowed;
+}
+
+.no-aplica-select option {
+  background-color: white;
+  color: black;
+}
+
+.no-aplica-select option[value='NO APLICA'] {
+  background-color: #6b7280;
+  color: white;
+}
+
+/* Ajustes para el fondo de tabla */
+.table-date-field {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  cursor: pointer;
+  text-align: center;
+  width: 150px;
+  font-family: var(--font-table-text);
+  font-size: 0.65rem;
+  line-height: 1;
+  padding-left: 0.5rem;
+}
