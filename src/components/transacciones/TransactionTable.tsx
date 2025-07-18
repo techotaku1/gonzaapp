@@ -1138,8 +1138,9 @@ export default function TransactionTable(props: TransactionTableProps) {
               setPendingRowId(null);
             }
             setIsColorPickerOpen(false);
+            await mutateTramites(); // Refresca tramites después de agregar
           }}
-          onUpdate={handleUpdateTramiteAction} // Nueva prop
+          onUpdate={handleUpdateTramiteAction}
           onDelete={async (tramiteName: string) => {
             try {
               await fetch('/api/tramites', {
@@ -1155,6 +1156,7 @@ export default function TransactionTable(props: TransactionTableProps) {
           }}
           coloresOptions={coloresOptions}
           existingTramites={tramiteOptions}
+          mutateTramites={mutateTramites} // NUEVO
         />
 
         {/* Modal de color picker para emitidoPor */}
@@ -1175,11 +1177,17 @@ export default function TransactionTable(props: TransactionTableProps) {
               setPendingEmitidoPorRowId(null);
             }
             setIsEmitidoPorColorPickerOpen(false);
+            await mutateEmitidoPor(); // Refresca emitidoPor después de agregar
+            await mutateEmitidoPorWithColors();
           }}
-          onUpdate={handleUpdateEmitidoPorAction} // Nueva prop
+          onUpdate={handleUpdateEmitidoPorAction}
           onDelete={handleDeleteEmitidoPorAction}
           coloresOptions={coloresOptions}
           existingEmitidoPor={emitidoPorWithColors}
+          mutateEmitidoPor={async () => {
+            await mutateEmitidoPor();
+            await mutateEmitidoPorWithColors();
+          }} // NUEVO
         />
 
         {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}

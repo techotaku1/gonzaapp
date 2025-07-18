@@ -412,7 +412,7 @@ export function useTransactionTableInputs({
       return (
         <select
           value={!isSoat ? 'NO APLICA' : (value as string)}
-          onChange={async (e) => {
+          onChange={(e) => {
             if (e.target.value === '__add_new__') {
               if (onOpenEmitidoPorColorPicker) {
                 onOpenEmitidoPorColorPicker(row.id);
@@ -421,8 +421,9 @@ export function useTransactionTableInputs({
                   'Ingrese el nuevo valor para "Emitido Por":'
                 );
                 if (nombre && nombre.trim().length > 0) {
-                  await onAddEmitidoPorAction(nombre.trim());
-                  handleInputChangeAction(row.id, field, nombre.trim());
+                  onAddEmitidoPorAction(nombre.trim()).then(() => {
+                    handleInputChangeAction(row.id, field, nombre.trim());
+                  });
                 }
               }
             } else {
@@ -688,9 +689,18 @@ export function useTransactionTableInputs({
       return (
         <AsesorSelect
           value={String(value ?? '')}
-          onChange={(newValue: string) =>
-            handleInputChangeAction(row.id, 'asesor', newValue)
-          }
+          onChange={(newValue: string) => {
+            if (newValue === '__add_new__') {
+              const nombre = prompt('Ingrese el nuevo asesor:');
+              if (nombre && nombre.trim().length > 0) {
+                onAddAsesorAction(nombre.trim()).then(() => {
+                  handleInputChangeAction(row.id, 'asesor', nombre.trim());
+                });
+              }
+            } else {
+              handleInputChangeAction(row.id, 'asesor', newValue);
+            }
+          }}
           asesores={asesores}
           onAddAsesorAction={onAddAsesorAction}
           className="border-purple-400 bg-purple-200 text-purple-700"

@@ -10,6 +10,7 @@ interface ColorPickerModalProps {
   onUpdate?: (tramiteName: string, newColor?: string) => void; // Nueva prop para actualizar
   coloresOptions: { nombre: string; valor: string; intensidad: number }[];
   existingTramites?: { nombre: string; color?: string }[];
+  mutateTramites?: () => void; // NUEVO
 }
 
 const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
@@ -20,6 +21,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
   onUpdate, // Nueva prop
   coloresOptions,
   existingTramites = [],
+  mutateTramites,
 }) => {
   const [tramiteName, setTramiteName] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -35,6 +37,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
       setShowExisting(true);
       setTramiteName('');
       setSelectedColor('');
+      if (mutateTramites) mutateTramites();
     }
   };
 
@@ -45,6 +48,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
     ) {
       onDelete(nombreTramite);
       setJustCreated(null);
+      if (mutateTramites) mutateTramites();
     }
   };
 
@@ -75,6 +79,7 @@ const ColorPickerModal: React.FC<ColorPickerModalProps> = ({
       onUpdate(itemName, editingColor || undefined);
       setEditingItem(null);
       setEditingColor('');
+      if (mutateTramites) mutateTramites();
     }
   };
 

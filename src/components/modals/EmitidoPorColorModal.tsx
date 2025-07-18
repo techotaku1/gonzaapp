@@ -7,9 +7,10 @@ interface EmitidoPorColorModalProps {
   onClose: () => void;
   onConfirm: (nombre: string, selectedColor?: string) => void;
   onDelete?: (nombre: string) => void;
-  onUpdate?: (nombre: string, newColor?: string) => void; // Nueva prop para actualizar
+  onUpdate?: (nombre: string, newColor?: string) => void;
   coloresOptions: { nombre: string; valor: string; intensidad: number }[];
   existingEmitidoPor?: { nombre: string; color?: string }[];
+  mutateEmitidoPor?: () => void;
 }
 
 const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
@@ -17,16 +18,17 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
   onClose,
   onConfirm,
   onDelete,
-  onUpdate, // Nueva prop
+  onUpdate,
   coloresOptions,
   existingEmitidoPor = [],
+  mutateEmitidoPor,
 }) => {
   const [nombre, setNombre] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [showExisting, setShowExisting] = useState(false);
   const [justCreated, setJustCreated] = useState<string | null>(null);
-  const [editingItem, setEditingItem] = useState<string | null>(null); // Estado de edición
-  const [editingColor, setEditingColor] = useState<string>(''); // Color en edición
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editingColor, setEditingColor] = useState<string>('');
 
   const handleConfirm = () => {
     if (nombre.trim()) {
@@ -35,6 +37,7 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
       setShowExisting(true);
       setNombre('');
       setSelectedColor('');
+      if (mutateEmitidoPor) mutateEmitidoPor();
     }
   };
 
@@ -42,6 +45,7 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
     if (onDelete && confirm(`¿Está seguro de eliminar "${nombreItem}"?`)) {
       onDelete(nombreItem);
       setJustCreated(null);
+      if (mutateEmitidoPor) mutateEmitidoPor();
     }
   };
 
@@ -54,41 +58,35 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
     onClose();
   };
 
-  // Iniciar edición
   const startEditing = (itemName: string, currentColor?: string) => {
     setEditingItem(itemName);
     setEditingColor(currentColor ?? '');
   };
 
-  // Cancelar edición
   const cancelEditing = () => {
     setEditingItem(null);
     setEditingColor('');
   };
 
-  // Guardar cambios de edición
   const saveEdit = (itemName: string) => {
     if (onUpdate) {
       onUpdate(itemName, editingColor || undefined);
       setEditingItem(null);
       setEditingColor('');
+      if (mutateEmitidoPor) mutateEmitidoPor();
     }
   };
 
   if (!isOpen) return null;
 
-  // Filtrar solo colores con intensidad 300 para emitidoPor
   const coloresFiltrados = coloresOptions.filter(
     (color) => color.intensidad === 300
   );
 
-  // Generar estilo de preview dinámico con intensidad 300
   const getPreviewStyle = (color: string) => {
     const colorRecord = coloresFiltrados.find((c) => c.nombre === color);
     if (!colorRecord) return {};
-
-    // Usar intensidad fija de 300 para emitidoPor
-    const opacity = 0.3; // 300/1000
+    const opacity = 0.3;
     return {
       backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
       color: colorRecord.valor.includes('#')
@@ -97,7 +95,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
     };
   };
 
-  // Selector de colores reutilizable
   const ColorSelector = ({
     value,
     onChange,
@@ -112,7 +109,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
         {label}
       </label>
       <div className="grid grid-cols-3 gap-4 xl:grid-cols-4">
-        {/* Opción sin color */}
         <button
           onClick={() => onChange('')}
           className={`flex items-center justify-center rounded-md border-2 p-4 text-sm font-medium transition-all ${
@@ -123,8 +119,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
         >
           Sin color
         </button>
-
-        {/* Opciones de colores disponibles */}
         {coloresFiltrados.map((color) => (
           <button
             key={color.nombre}
@@ -151,8 +145,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
           <h3 className="mb-6 text-xl font-semibold text-gray-900">
             Gestionar Emitido Por
           </h3>
-
-          {/* Pestañas */}
           <div className="mb-6 flex gap-2">
             <button
               onClick={() => setShowExisting(false)}
@@ -175,11 +167,8 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
               Existentes ({existingEmitidoPor.length})
             </button>
           </div>
-
           {!showExisting ? (
-            /* Vista de agregar nuevo */
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-              {/* Columna izquierda: Input */}
               <div className="space-y-6">
                 <div>
                   <label className="mb-3 block text-sm font-medium text-gray-700">
@@ -194,8 +183,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
                     autoFocus
                   />
                 </div>
-
-                {/* Preview del emisor */}
                 {nombre && (
                   <div>
                     <label className="mb-3 block text-sm font-medium text-gray-700">
@@ -212,8 +199,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
                   </div>
                 )}
               </div>
-
-              {/* Columna derecha: Selector de colores */}
               <div className="lg:col-span-2">
                 <ColorSelector
                   value={selectedColor}
@@ -223,13 +208,11 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
               </div>
             </div>
           ) : (
-            /* Vista de existentes en columnas de 3 */
             <div className="max-h-96 overflow-y-auto">
               {editingItem ? (
-                /* Modo edición */
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                     <h4 className="text-lg font-bold">
+                    <h4 className="text-lg font-bold">
                       Editando: {editingItem}
                     </h4>
                     <div className="flex gap-2">
@@ -247,14 +230,11 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
                       </button>
                     </div>
                   </div>
-                  
-                  <ColorSelector 
+                  <ColorSelector
                     value={editingColor}
                     onChange={setEditingColor}
                     label="Seleccionar nuevo color:"
                   />
-
-                  {/* Vista previa del cambio */}
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Vista previa:
@@ -268,7 +248,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
                   </div>
                 </div>
               ) : (
-                /* Vista normal en grid de 3 columnas */
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {existingEmitidoPor.map((item) => (
                     <div
@@ -280,8 +259,8 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
                       }`}
                       style={item.color ? getPreviewStyle(item.color) : {}}
                     >
-                      <div className="flex-1 min-w-0 mb-3">
-                        <div className="font-medium truncate">
+                      <div className="mb-3 min-w-0 flex-1">
+                        <div className="truncate font-medium">
                           {item.nombre}
                           {justCreated === item.nombre && (
                             <span className="ml-2 text-sm font-bold text-green-600">
@@ -289,7 +268,7 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
                             </span>
                           )}
                         </div>
-                        <div className="text-sm opacity-75 truncate">
+                        <div className="truncate text-sm opacity-75">
                           Color: {item.color ?? 'Sin color'}
                         </div>
                       </div>
@@ -320,8 +299,6 @@ const EmitidoPorColorModal: React.FC<EmitidoPorColorModalProps> = ({
               )}
             </div>
           )}
-
-          {/* Botones */}
           <div className="mt-8 flex justify-end gap-4 border-t pt-6">
             <button
               onClick={handleCancel}
