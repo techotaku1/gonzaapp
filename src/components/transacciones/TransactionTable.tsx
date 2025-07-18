@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react'; // Elimina useEffect y useState si no se usan directamente aquí;
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
@@ -16,6 +16,7 @@ import SearchFilters from '../filters/SearchFilters';
 import { Icons } from '../icons';
 import ColorPickerModal from '../modals/ColorPickerModal';
 import EmitidoPorColorModal from '../modals/EmitidoPorColorModal';
+import StickyHorizontalScroll from '../ui/StickyHorizontalScroll';
 
 import HeaderTitles from './HeaderTitles';
 import TransactionSearchRemote from './TransactionSearchRemote';
@@ -117,6 +118,8 @@ function DatePagination({
 
 export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
+  // Crear una referencia para el contenedor de scroll de la tabla
+  const tableScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Estados para los modales
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -1221,7 +1224,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         ) : null}
         {!props.showTotals && !props.searchTerm ? (
           <div
-            className="table-container"
+            className="enhanced-table-container"
             style={{
               backgroundImage: 'url("/background-table.jpg")',
               backgroundSize: 'cover',
@@ -1242,7 +1245,8 @@ export default function TransactionTable(props: TransactionTableProps) {
               </div>
             ) : (
               <div
-                className="table-scroll-container"
+                ref={tableScrollContainerRef}
+                className="enhanced-table-scroll"
                 style={{
                   transform: `scale(${logic.zoom})`,
                   transformOrigin: 'left top',
@@ -1277,11 +1281,11 @@ export default function TransactionTable(props: TransactionTableProps) {
                                 type?: InputType
                               ) => React.ReactNode
                             }
-                            _getEmitidoPorClass={getEmitidoPorClass} // Prefijo _ para indicar que no se usa
+                            _getEmitidoPorClass={getEmitidoPorClass}
                             getTramiteColorClass={getTramiteColorClassForRow}
                             coloresOptions={coloresOptions}
                             tramiteOptions={tramiteOptions}
-                            emitidoPorWithColors={emitidoPorWithColors} // Nueva prop
+                            emitidoPorWithColors={emitidoPorWithColors}
                           />
                         );
                       }
@@ -1289,6 +1293,20 @@ export default function TransactionTable(props: TransactionTableProps) {
                   </tbody>
                 </table>
               </div>
+            )}
+
+            {/* Añadir el componente de scroll horizontal fijo cuando hay datos */}
+            {logic.paginatedData.length > 0 && (
+              <StickyHorizontalScroll
+                targetRef={
+                  tableScrollContainerRef as React.RefObject<
+                    HTMLElement | HTMLDivElement
+                  >
+                }
+                height={12}
+                zIndex={50}
+                className="mx-1"
+              />
             )}
           </div>
         ) : null}

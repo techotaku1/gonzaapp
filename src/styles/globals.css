@@ -846,35 +846,36 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
   padding-left: 0.5rem;
 }
 
-/* Estilo para el emitido por cuando no es SOAT */
-.no-aplica-select {
-  background-color: #6b7280 !important;
-  color: white !important;
-  opacity: 0.9;
-  cursor: not-allowed;
-}
-
-.no-aplica-select option {
-  background-color: white;
-  color: black;
-}
-
-.no-aplica-select option[value='NO APLICA'] {
-  background-color: #6b7280;
-  color: white;
-}
-
-/* Ajustes para el fondo de tabla */
-.table-date-field {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+/* Estilos para el contenedor de tabla con scroll mejorado */
+.enhanced-table-container {
   position: relative;
-  cursor: pointer;
-  text-align: center;
-  width: 150px;
-  font-family: var(--font-table-text);
-  font-size: 0.65rem;
-  line-height: 1;
-  padding-left: 0.5rem;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  height: calc(92vh - 20px);
+  /* Añadir padding inferior para dejar espacio para la barra de desplazamiento fija */
+  padding-bottom: 12px;
+}
+
+.enhanced-table-scroll {
+  overflow: auto;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  /* Ocultar la barra de desplazamiento horizontal nativa pero permitir el scroll */
+  scrollbar-width: thin;
+}
+
+/* Ocultar la barra de desplazamiento horizontal mientras mantenemos la funcionalidad */
+.enhanced-table-scroll::-webkit-scrollbar-track:horizontal {
+  visibility: hidden;
+}
+
+.enhanced-table-scroll::-webkit-scrollbar:horizontal {
+  height: 0;
+  visibility: hidden;
+}
+
+.enhanced-table-scroll::-webkit-scrollbar-thumb:horizontal {
+  visibility: hidden;
 }
