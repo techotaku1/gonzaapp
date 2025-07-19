@@ -513,6 +513,40 @@ select.table-select-base option {
   .table-scroll-container::-webkit-scrollbar-thumb {
     @apply rounded bg-gray-400 hover:bg-gray-500;
   }
+
+  /* Estilos para el contenedor de tabla con scroll mejorado */
+  .enhanced-table-container {
+    position: relative;
+    overflow: visible; /* Quitar scroll interno */
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    height: auto; /* Ocupa toda la altura disponible */
+    min-height: 100vh;
+    padding-bottom: 12px;
+  }
+
+  .enhanced-table-scroll {
+    overflow-x: auto; /* Cambia de visible a auto para permitir scroll horizontal */
+    overflow-y: visible;
+    height: auto;
+    width: 100%;
+    position: relative;
+    scrollbar-width: thin;
+  }
+
+  /* Elimina o comenta estas reglas para no ocultar la barra de scroll horizontal */
+  /*
+  .enhanced-table-scroll::-webkit-scrollbar-track:horizontal {
+    visibility: hidden;
+  }
+  .enhanced-table-scroll::-webkit-scrollbar:horizontal {
+    height: 0;
+    visibility: hidden;
+  }
+  .enhanced-table-scroll::-webkit-scrollbar-thumb:horizontal {
+    visibility: hidden;
+  }
+  */
 }
 
 .check-label {
@@ -860,14 +894,16 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 }
 
 .enhanced-table-scroll {
-  overflow: visible; /* Quitar scroll vertical interno */
+  overflow-x: auto; /* Cambia de visible a auto para permitir scroll horizontal */
+  overflow-y: visible;
   height: auto;
   width: 100%;
   position: relative;
-  scrollbar-width: none; /* Oculta barra nativa */
+  scrollbar-width: thin;
 }
 
-/* Ocultar la barra de desplazamiento horizontal mientras mantenemos la funcionalidad */
+/* Elimina o comenta estas reglas para no ocultar la barra de scroll horizontal */
+/*
 .enhanced-table-scroll::-webkit-scrollbar-track:horizontal {
   visibility: hidden;
 }
@@ -880,6 +916,7 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 .enhanced-table-scroll::-webkit-scrollbar-thumb:horizontal {
   visibility: hidden;
 }
+*/
 
 /* Eliminar la barra de scroll vertical interna de la tabla */
 .table-scroll-container::-webkit-scrollbar,

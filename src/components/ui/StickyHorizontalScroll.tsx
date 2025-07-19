@@ -57,6 +57,12 @@ const StickyHorizontalScroll = ({
       }
     };
 
+    // --- NUEVO: Observa cambios en el DOM del target (por ejemplo, cuando cambia de día) ---
+    const mutationObserver = new MutationObserver(() => {
+      updateScrollInfo();
+    });
+    mutationObserver.observe(target, { childList: true, subtree: true });
+
     const resizeObserver = new ResizeObserver(updateScrollInfo);
     resizeObserver.observe(target);
     target.addEventListener('scroll', handleTargetScroll);
@@ -66,10 +72,11 @@ const StickyHorizontalScroll = ({
     return () => {
       resizeObserver.unobserve(target);
       target.removeEventListener('scroll', handleTargetScroll);
+      mutationObserver.disconnect();
     };
   }, [targetRef]);
 
-  // Posiciona la barra FIJA al fondo de la ventana, alineada horizontalmente con la tabla
+  // --- NUEVO: Forzar actualización de la barra cuando cambian scrollWidth/clientWidth ---
   useEffect(() => {
     const target = targetRef.current;
     if (!target || !scrollbarRef.current) return;
@@ -102,10 +109,17 @@ const StickyHorizontalScroll = ({
     const resizeObserver = new ResizeObserver(updateBarPosition);
     resizeObserver.observe(target);
 
+    // --- NUEVO: Observa cambios en el DOM del target para actualizar la posición de la barra ---
+    const mutationObserver = new MutationObserver(() => {
+      updateBarPosition();
+    });
+    mutationObserver.observe(target, { childList: true, subtree: true });
+
     return () => {
       window.removeEventListener('resize', updateBarPosition);
       window.removeEventListener('scroll', updateBarPosition);
       resizeObserver.disconnect();
+      mutationObserver.disconnect();
     };
   }, [targetRef, height, zIndex, clientWidth, scrollWidth]);
 
@@ -122,12 +136,12 @@ const StickyHorizontalScroll = ({
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current || !targetRef.current) return;
       const dx = e.clientX - startXRef.current;
-      // Sensibilidad: mueve más rápido el scroll (ajusta el factor si quieres)
       const scrollRatio =
         scrollWidth > clientWidth && clientWidth - thumbWidth !== 0
           ? (scrollWidth - clientWidth) / (clientWidth - thumbWidth)
           : 1;
       const newScrollLeft = startScrollLeftRef.current + dx * scrollRatio;
+      // --- CORREGIDO: Forzar el scroll horizontal del contenedor real ---
       targetRef.current.scrollLeft = Math.max(
         0,
         Math.min(newScrollLeft, scrollWidth - clientWidth)
@@ -150,6 +164,19 @@ const StickyHorizontalScroll = ({
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [clientWidth, scrollWidth, targetRef, thumbWidth]);
+
+  // --- NUEVO: Sincroniza el scroll de la barra cuando el usuario hace scroll en el contenedor ---
+  useEffect(() => {
+    const target = targetRef.current;
+    if (!target) return;
+    const handleScroll = () => {
+      setScrollLeft(target.scrollLeft);
+    };
+    target.addEventListener('scroll', handleScroll);
+    return () => {
+      target.removeEventListener('scroll', handleScroll);
+    };
+  }, [targetRef]);
 
   // Click en la barra para mover a la derecha/izquierda (solo si no es drag)
   const handleBarClick = (e: React.MouseEvent) => {
