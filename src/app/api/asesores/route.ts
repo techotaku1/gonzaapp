@@ -37,6 +37,13 @@ export async function POST(req: Request) {
     if (result.success) {
       return NextResponse.json({ success: true });
     }
+    // Si el error es por duplicado, retorna 409
+    if (result.error === 'El asesor ya existe.') {
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: result.error },
       { status: 500 }

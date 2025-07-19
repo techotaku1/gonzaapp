@@ -20,6 +20,7 @@ const StickyHorizontalScroll = ({
   const [scrollWidth, setScrollWidth] = useState(0);
   const [clientWidth, setClientWidth] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [barStyle, setBarStyle] = useState<React.CSSProperties>({});
   const isDraggingRef = useRef(false);
   const startXRef = useRef(0);
   const startScrollLeftRef = useRef(0);
@@ -67,6 +68,35 @@ const StickyHorizontalScroll = ({
     };
   }, [targetRef]);
 
+  // Posiciona la barra justo debajo del contenedor de scroll
+  useEffect(() => {
+    const target = targetRef.current;
+    if (!target || !scrollbarRef.current) return;
+
+    const updateBarPosition = () => {
+      setBarStyle({
+        position: 'absolute',
+        left: 0,
+        top: target.offsetHeight - height,
+        width: '100%',
+        height: `${height}px`,
+        zIndex,
+        cursor: 'pointer',
+        pointerEvents: 'auto',
+      });
+    };
+
+    updateBarPosition();
+
+    // Observa cambios de tamaño del contenedor
+    const resizeObserver = new ResizeObserver(updateBarPosition);
+    resizeObserver.observe(target);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [targetRef, height, zIndex, clientWidth, scrollWidth]);
+
   // Drag en toda la barra, no solo el thumb
   const handleBarMouseDown = (e: React.MouseEvent) => {
     if (!scrollbarRef.current || !targetRef.current) return;
@@ -113,8 +143,8 @@ const StickyHorizontalScroll = ({
   const handleBarClick = (e: React.MouseEvent) => {
     if (isDraggingRef.current) return; // Si está drag, ignora el click
     if (!scrollbarRef.current || !targetRef.current) return;
-    const rect = scrollbarRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
+    const clickX =
+      e.clientX - scrollbarRef.current.getBoundingClientRect().left;
 
     if (clickX >= thumbLeft && clickX <= thumbLeft + thumbWidth) {
       return;
@@ -135,12 +165,8 @@ const StickyHorizontalScroll = ({
 
   return (
     <div
-      className={`fixed right-0 bottom-0 left-0 bg-gray-200 shadow-md ${className}`}
-      style={{
-        height: `${height}px`,
-        zIndex,
-        cursor: 'pointer',
-      }}
+      className={`bg-gray-200 shadow-md ${className}`}
+      style={barStyle}
       ref={scrollbarRef}
       onMouseDown={handleBarMouseDown}
       onClick={handleBarClick}

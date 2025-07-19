@@ -131,7 +131,7 @@ export default function TransactionTable(props: TransactionTableProps) {
   >(null);
 
   // Usa SWR para asesores con pooling cada 2 segundos
-  const { data: asesores = [], mutate: mutateAsesores } = useSWR<string[]>(
+  const { data: asesores = [] } = useSWR<string[]>(
     '/api/asesores',
     async (url: string): Promise<string[]> => {
       const res = await fetch(url);
@@ -285,10 +285,15 @@ export default function TransactionTable(props: TransactionTableProps) {
       body: JSON.stringify({ nombre }),
     });
     if (res.ok) {
-      // Revalida el cache global de asesores para todos los equipos
-      void mutateAsesores();
+      // Ya no es necesario llamar a mutateAsesores(); SWR polling lo hará automáticamente
+      // void mutateAsesores();
     } else {
-      alert('Error al agregar asesor.');
+      // Si el error es por duplicado (409), muestra mensaje específico
+      if (res.status === 409) {
+        alert('El asesor ya existe.');
+      } else {
+        alert('Error al agregar asesor.');
+      }
     }
   };
 
@@ -1232,6 +1237,8 @@ export default function TransactionTable(props: TransactionTableProps) {
               backgroundRepeat: 'no-repeat',
               borderRadius: '8px',
               padding: '1rem',
+              position: 'relative', // <-- Asegura que la barra se posicione respecto a este contenedor
+              // paddingBottom: '12px', // Puedes quitar esto si la barra personalizada ya no es fija abajo
             }}
           >
             {isLoadingPage || isPaginating ? (

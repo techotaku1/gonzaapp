@@ -375,6 +375,18 @@ export async function addAsesor(
     revalidateTag('asesores'); // Invalida solo el cache de asesores
     return { success: true };
   } catch (error) {
+    // Manejo específico para error de duplicado (Postgres code 23505)
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      String((error as { code?: unknown }).code) === '23505'
+    ) {
+      return {
+        success: false,
+        error: 'El asesor ya existe.',
+      };
+    }
     console.error('Error adding asesor:', error);
     return {
       success: false,
