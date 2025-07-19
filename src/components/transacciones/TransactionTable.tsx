@@ -119,36 +119,8 @@ export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
   // Crear una referencia para el contenedor de scroll de la tabla
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // --- NUEVO: referencia para el scroll superior ---
-  const topScrollRef = useRef<HTMLDivElement>(null);
-
-  // --- NUEVO: Sincroniza el scroll horizontal de arriba y abajo ---
-  useEffect(() => {
-    const top = topScrollRef.current;
-    const table = tableScrollContainerRef.current;
-    if (!top || !table) return;
-
-    // Handler para sincronizar ambos scrolls
-    const handleTopScroll = () => {
-      if (table.scrollLeft !== top.scrollLeft) {
-        table.scrollLeft = top.scrollLeft;
-      }
-    };
-    const handleTableScroll = () => {
-      if (top.scrollLeft !== table.scrollLeft) {
-        top.scrollLeft = table.scrollLeft;
-      }
-    };
-
-    top.addEventListener('scroll', handleTopScroll);
-    table.addEventListener('scroll', handleTableScroll);
-
-    return () => {
-      top.removeEventListener('scroll', handleTopScroll);
-      table.removeEventListener('scroll', handleTableScroll);
-    };
-  }, [logic.zoom]);
+  // NUEVO: referencia para la barra de scroll superior
+  const topScrollBarRef = useRef<HTMLDivElement>(null);
 
   // Estados para los modales
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -1269,29 +1241,35 @@ export default function TransactionTable(props: TransactionTableProps) {
               position: 'relative',
             }}
           >
-            {/* --- NUEVO: Barra de scroll horizontal superior --- */}
-            {logic.paginatedData.length > 0 && (
+            {/* --- NUEVO: Barra de scroll horizontal superior sincronizada --- */}
+            <div
+              ref={topScrollBarRef}
+              className="enhanced-table-scroll enhanced-table-scroll-top"
+              style={{
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                height: 12,
+                marginBottom: 2,
+                // background: '#f3f4f6', // opcional: color de fondo
+              }}
+              onScroll={(e) => {
+                const real = tableScrollContainerRef.current;
+                if (real && e.currentTarget.scrollLeft !== real.scrollLeft) {
+                  real.scrollLeft = e.currentTarget.scrollLeft;
+                }
+              }}
+            >
+              {/* Dummy para forzar el ancho igual al de la tabla */}
               <div
-                ref={topScrollRef}
                 style={{
-                  overflowX: 'auto',
-                  overflowY: 'hidden',
-                  width: '100%',
-                  height: 12,
-                  marginBottom: 2,
+                  width: tableScrollContainerRef.current
+                    ? tableScrollContainerRef.current.scrollWidth
+                    : '100%',
+                  height: 1,
                 }}
-                className="enhanced-table-scroll"
-              >
-                {/* Dummy table para que la barra tenga el mismo ancho que la tabla real */}
-                <div
-                  style={{
-                    width:
-                      tableScrollContainerRef.current?.scrollWidth ?? '2000px',
-                    height: 1,
-                  }}
-                />
-              </div>
-            )}
+              />
+            </div>
+            {/* --- FIN NUEVO --- */}
             {isLoadingPage || isPaginating ? (
               <div className="flex items-center justify-center gap-2 py-8 text-lg font-bold text-blue-700">
                 <Icons.spinner className="h-6 w-6" />
@@ -1302,6 +1280,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                 Este día no tiene registros
               </div>
             ) : (
+              // --- NUEVO: Envuelve la tabla y header en un contenedor con scroll horizontal ---
               <div
                 ref={tableScrollContainerRef}
                 id="enhanced-table-scroll"
@@ -1313,6 +1292,12 @@ export default function TransactionTable(props: TransactionTableProps) {
                   height: `${(1 / logic.zoom) * 100}%`,
                   overflowX: logic.zoom === 1 ? 'auto' : 'scroll',
                   overflowY: 'auto',
+                }}
+                onScroll={(e) => {
+                  const top = topScrollBarRef.current;
+                  if (top && e.currentTarget.scrollLeft !== top.scrollLeft) {
+                    top.scrollLeft = e.currentTarget.scrollLeft;
+                  }
                 }}
               >
                 <table className="w-full text-left text-sm text-gray-600">
@@ -1354,9 +1339,18 @@ export default function TransactionTable(props: TransactionTableProps) {
               </div>
             )}
 
-            {/* Barra de scroll horizontal inferior (ya existente, sigue como null o implementa si tienes StickyHorizontalScroll) */}
+            {/* Añadir el componente de scroll horizontal fijo cuando hay datos */}
             {logic.paginatedData.length > 0 &&
-              // <StickyHorizontalScroll ... />
+              // <StickyHorizontalScroll
+              //   targetRef={
+              //     tableScrollContainerRef as React.RefObject<
+              //       HTMLElement | HTMLDivElement
+              //     >
+              //   }
+              //   height={12}
+              //   zIndex={50}
+              //   className="mx-1"
+              // />
               null}
           </div>
         ) : null}
