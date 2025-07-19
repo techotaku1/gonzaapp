@@ -68,31 +68,42 @@ const StickyHorizontalScroll = ({
     };
   }, [targetRef]);
 
-  // Posiciona la barra justo debajo del contenedor de scroll
+  // Posiciona la barra FIJA al fondo de la ventana, alineada horizontalmente con la tabla
   useEffect(() => {
     const target = targetRef.current;
     if (!target || !scrollbarRef.current) return;
 
     const updateBarPosition = () => {
+      // Obtén la posición y ancho de la tabla respecto al viewport
+      const rect = target.getBoundingClientRect();
       setBarStyle({
-        position: 'absolute',
-        left: 0,
-        top: target.offsetHeight - height,
-        width: '100%',
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        bottom: 0,
         height: `${height}px`,
         zIndex,
         cursor: 'pointer',
         pointerEvents: 'auto',
+        // Opcional: sombra para que se vea sobre la tabla
+        boxShadow: '0 -2px 6px rgba(0,0,0,0.08)',
+        background: 'rgba(243,244,246,0.95)', // tailwind gray-100
       });
     };
 
     updateBarPosition();
+
+    // Observa cambios de tamaño y scroll de la ventana
+    window.addEventListener('resize', updateBarPosition);
+    window.addEventListener('scroll', updateBarPosition);
 
     // Observa cambios de tamaño del contenedor
     const resizeObserver = new ResizeObserver(updateBarPosition);
     resizeObserver.observe(target);
 
     return () => {
+      window.removeEventListener('resize', updateBarPosition);
+      window.removeEventListener('scroll', updateBarPosition);
       resizeObserver.disconnect();
     };
   }, [targetRef, height, zIndex, clientWidth, scrollWidth]);

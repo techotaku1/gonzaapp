@@ -29,7 +29,7 @@ Si deseas aplicar estilos a un rango específico de pantalla, Tailwind CSS 4 per
 ```html
 <!-- Aplicar flex solo entre md y xl -->
 <div class="md:max-xl:flex">
-<!-- ... -->
+  <!-- ... -->
 </div>
 ```
 
@@ -205,3 +205,10 @@ Verificar la Ruta de NODE y fnm :
 3. `fnm use (version)` : elegir la version de node que quieres usar
 4. `fnm alias (version) default` : configurar la version predeterminada de nose
 5. `eval "$(fnm env)"` : Proteger tu entorno
+
+---
+
+Cdonfigurar usuario local por proyecto
+
+git config user.name "techotaku1"
+`git config user.email "jsdg1818@gmail.com"`
