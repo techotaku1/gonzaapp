@@ -16,7 +16,6 @@ import SearchFilters from '../filters/SearchFilters';
 import { Icons } from '../icons';
 import ColorPickerModal from '../modals/ColorPickerModal';
 import EmitidoPorColorModal from '../modals/EmitidoPorColorModal';
-import StickyHorizontalScroll from '../ui/StickyHorizontalScroll';
 
 import HeaderTitles from './HeaderTitles';
 import TransactionSearchRemote from './TransactionSearchRemote';
@@ -1304,18 +1303,18 @@ export default function TransactionTable(props: TransactionTableProps) {
             )}
 
             {/* Añadir el componente de scroll horizontal fijo cuando hay datos */}
-            {logic.paginatedData.length > 0 && (
-              <StickyHorizontalScroll
-                targetRef={
-                  tableScrollContainerRef as React.RefObject<
-                    HTMLElement | HTMLDivElement
-                  >
-                }
-                height={12}
-                zIndex={50}
-                className="mx-1"
-              />
-            )}
+            {logic.paginatedData.length > 0 &&
+              // <StickyHorizontalScroll
+              //   targetRef={
+              //     tableScrollContainerRef as React.RefObject<
+              //       HTMLElement | HTMLDivElement
+              //     >
+              //   }
+              //   height={12}
+              //   zIndex={50}
+              //   className="mx-1"
+              // />
+              null}
           </div>
         ) : null}
 
