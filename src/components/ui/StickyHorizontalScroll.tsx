@@ -47,7 +47,8 @@ const StickyHorizontalScroll = ({
       setScrollWidth(scrollWidth);
       setClientWidth(clientWidth);
       setScrollLeft(scrollLeft);
-      setIsVisible(scrollWidth > clientWidth + 1);
+      // Mostrar la barra SIEMPRE que el ancho de la tabla sea mayor al contenedor
+      setIsVisible(scrollWidth > clientWidth);
     };
 
     const handleTargetScroll = () => {

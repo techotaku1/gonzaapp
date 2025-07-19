@@ -111,7 +111,14 @@ export default function TransactionTableClient({
       <div ref={containerRef} className="fixed top-0 left-0 z-50 w-full">
         {/* <Header /> */}
       </div>
-      <main className="container mx-auto min-h-screen px-4 pt-32">
+      <main
+        className="container mx-auto min-h-screen px-4 pt-32"
+        style={{
+          height: 'auto',
+          minHeight: '100vh',
+          overflow: 'visible',
+        }}
+      >
         <TransactionTable
           initialData={data ?? []}
           onUpdateRecordAction={handleUpdateRecords}

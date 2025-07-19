@@ -152,15 +152,16 @@
 /* Contenedor de tabla con scroll */
 @utility table-container {
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Quitar scroll interno */
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-  height: calc(92vh - 20px); /* +100px respecto a antes */
+  height: auto; /* Ocupa toda la altura disponible */
+  min-height: 100vh;
 }
 
 @utility table-scroll-container {
-  overflow: auto;
-  height: 100%;
+  overflow: visible; /* Quitar scroll vertical interno */
+  height: auto;
   width: 100%;
   position: relative;
 }
@@ -461,13 +462,14 @@ select.table-select-base option {
   /* Updated table container styles */
   .table-container {
     @apply relative rounded-lg shadow-md;
-    height: calc(92vh - 20px);
-    overflow: hidden;
+    height: auto; /* Ocupa toda la altura disponible */
+    min-height: 100vh;
+    overflow: visible; /* Quitar scroll interno */
   }
 
   .table-scroll-container {
     @apply relative h-full w-full;
-    overflow: auto;
+    overflow: visible; /* Quitar scroll vertical interno */
     will-change: transform;
   }
 
@@ -849,21 +851,20 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 /* Estilos para el contenedor de tabla con scroll mejorado */
 .enhanced-table-container {
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Quitar scroll interno */
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-  height: calc(92vh - 20px);
-  /* Añadir padding inferior para dejar espacio para la barra de desplazamiento fija */
+  height: auto; /* Ocupa toda la altura disponible */
+  min-height: 100vh;
   padding-bottom: 12px;
 }
 
 .enhanced-table-scroll {
-  overflow: auto;
-  height: 100%;
+  overflow: visible; /* Quitar scroll vertical interno */
+  height: auto;
   width: 100%;
   position: relative;
-  /* Ocultar la barra de desplazamiento horizontal nativa pero permitir el scroll */
-  scrollbar-width: thin;
+  scrollbar-width: none; /* Oculta barra nativa */
 }
 
 /* Ocultar la barra de desplazamiento horizontal mientras mantenemos la funcionalidad */
@@ -878,4 +879,12 @@ input[type='datetime-local']::-webkit-calendar-picker-indicator {
 
 .enhanced-table-scroll::-webkit-scrollbar-thumb:horizontal {
   visibility: hidden;
+}
+
+/* Eliminar la barra de scroll vertical interna de la tabla */
+.table-scroll-container::-webkit-scrollbar,
+.enhanced-table-scroll::-webkit-scrollbar {
+  width: 0 !important;
+  background: transparent !important;
+  display: none !important;
 }

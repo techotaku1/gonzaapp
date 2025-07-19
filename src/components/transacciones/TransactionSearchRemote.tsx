@@ -72,11 +72,17 @@ const TransactionSearchRemote: React.FC<Props> = ({
       )}
       <div
         className="table-container"
-        style={{ borderRadius: '8px', padding: '1rem' }}
+        style={{
+          borderRadius: '8px',
+          padding: '1rem',
+          height: 'auto',
+          minHeight: '100vh',
+          overflow: 'visible',
+        }}
       >
         <div
           className="table-scroll-container"
-          style={{ overflowX: 'auto', overflowY: 'auto' }}
+          style={{ overflow: 'visible', height: 'auto' }}
         >
           <table className="w-full text-left text-sm text-white">
             <HeaderTitles isDeleteMode={isDeleteMode} />
