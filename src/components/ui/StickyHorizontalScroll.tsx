@@ -2,12 +2,17 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 
+// NUEVO: Importa scroller de react-scroll
+import { scroller } from 'react-scroll';
+
 interface StickyHorizontalScrollProps {
   targetRef: React.RefObject<HTMLElement | HTMLDivElement>;
   className?: string;
   height?: number;
   zIndex?: number;
 }
+
+const SCROLL_CONTAINER_ID = 'enhanced-table-scroll';
 
 const StickyHorizontalScroll = ({
   targetRef,
@@ -123,8 +128,9 @@ const StickyHorizontalScroll = ({
     };
   }, [targetRef, height, zIndex, clientWidth, scrollWidth]);
 
-  // Drag en toda la barra, no solo el thumb
-  const handleBarMouseDown = (e: React.MouseEvent) => {
+  // Drag SOLO en el thumb, no en toda la barra
+  const handleThumbMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (!scrollbarRef.current || !targetRef.current) return;
     isDraggingRef.current = true;
     startXRef.current = e.clientX;
@@ -141,7 +147,6 @@ const StickyHorizontalScroll = ({
           ? (scrollWidth - clientWidth) / (clientWidth - thumbWidth)
           : 1;
       const newScrollLeft = startScrollLeftRef.current + dx * scrollRatio;
-      // --- CORREGIDO: Forzar el scroll horizontal del contenedor real ---
       targetRef.current.scrollLeft = Math.max(
         0,
         Math.min(newScrollLeft, scrollWidth - clientWidth)
@@ -180,23 +185,51 @@ const StickyHorizontalScroll = ({
 
   // Click en la barra para mover a la derecha/izquierda (solo si no es drag)
   const handleBarClick = (e: React.MouseEvent) => {
-    if (isDraggingRef.current) return; // Si está drag, ignora el click
+    if (isDraggingRef.current) return;
     if (!scrollbarRef.current || !targetRef.current) return;
     const clickX =
       e.clientX - scrollbarRef.current.getBoundingClientRect().left;
 
+    // Calcula thumbWidth y thumbLeft igual que antes
+    const thumbWidth =
+      clientWidth > 0 && scrollWidth > 0
+        ? Math.max(16, (clientWidth / scrollWidth) * clientWidth)
+        : 0;
+    const thumbLeft =
+      scrollWidth > clientWidth
+        ? (scrollLeft / (scrollWidth - clientWidth)) *
+          (clientWidth - thumbWidth)
+        : 0;
+
     if (clickX >= thumbLeft && clickX <= thumbLeft + thumbWidth) {
       return;
     }
+
+    // NUEVO: Usa react-scroll para animar el scroll horizontal
+    let newScrollLeft = scrollLeft;
     if (clickX > thumbLeft + thumbWidth) {
-      targetRef.current.scrollLeft = Math.min(
+      newScrollLeft = Math.min(
         scrollLeft + clientWidth,
         scrollWidth - clientWidth
       );
-      setScrollLeft(targetRef.current.scrollLeft);
     } else if (clickX < thumbLeft) {
-      targetRef.current.scrollLeft = Math.max(scrollLeft - clientWidth, 0);
-      setScrollLeft(targetRef.current.scrollLeft);
+      newScrollLeft = Math.max(scrollLeft - clientWidth, 0);
+    }
+
+    // Usa react-scroll para animar el scroll horizontal
+    scroller.scrollTo(SCROLL_CONTAINER_ID, {
+      containerId: SCROLL_CONTAINER_ID,
+      horizontal: true,
+      duration: 400,
+      smooth: true,
+      offset: newScrollLeft,
+      // El scroll horizontal se logra con offset y horizontal:true
+    });
+
+    // También actualiza el scrollLeft localmente para mantener el thumb sincronizado
+    setScrollLeft(newScrollLeft);
+    if (targetRef.current) {
+      targetRef.current.scrollLeft = newScrollLeft;
     }
   };
 
@@ -207,7 +240,6 @@ const StickyHorizontalScroll = ({
       className={`bg-gray-200 shadow-md ${className}`}
       style={barStyle}
       ref={scrollbarRef}
-      onMouseDown={handleBarMouseDown}
       onClick={handleBarClick}
     >
       <div className="relative h-full w-full bg-gray-300">
@@ -219,6 +251,7 @@ const StickyHorizontalScroll = ({
             minWidth: '16px',
             height: '100%',
           }}
+          onMouseDown={handleThumbMouseDown}
         />
       </div>
     </div>

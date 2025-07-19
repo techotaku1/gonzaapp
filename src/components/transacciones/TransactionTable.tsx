@@ -1253,6 +1253,7 @@ export default function TransactionTable(props: TransactionTableProps) {
             ) : (
               <div
                 ref={tableScrollContainerRef}
+                id="enhanced-table-scroll" // <-- NUEVO: id requerido por react-scroll
                 className="enhanced-table-scroll"
                 style={{
                   transform: `scale(${logic.zoom})`,
