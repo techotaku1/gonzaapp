@@ -120,6 +120,36 @@ export default function TransactionTable(props: TransactionTableProps) {
   // Crear una referencia para el contenedor de scroll de la tabla
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // --- NUEVO: referencia para el scroll superior ---
+  const topScrollRef = useRef<HTMLDivElement>(null);
+
+  // --- NUEVO: Sincroniza el scroll horizontal de arriba y abajo ---
+  useEffect(() => {
+    const top = topScrollRef.current;
+    const table = tableScrollContainerRef.current;
+    if (!top || !table) return;
+
+    // Handler para sincronizar ambos scrolls
+    const handleTopScroll = () => {
+      if (table.scrollLeft !== top.scrollLeft) {
+        table.scrollLeft = top.scrollLeft;
+      }
+    };
+    const handleTableScroll = () => {
+      if (top.scrollLeft !== table.scrollLeft) {
+        top.scrollLeft = table.scrollLeft;
+      }
+    };
+
+    top.addEventListener('scroll', handleTopScroll);
+    table.addEventListener('scroll', handleTableScroll);
+
+    return () => {
+      top.removeEventListener('scroll', handleTopScroll);
+      table.removeEventListener('scroll', handleTableScroll);
+    };
+  }, [logic.zoom]);
+
   // Estados para los modales
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
   const [pendingRowId, setPendingRowId] = useState<string | null>(null);
@@ -1236,10 +1266,32 @@ export default function TransactionTable(props: TransactionTableProps) {
               backgroundRepeat: 'no-repeat',
               borderRadius: '8px',
               padding: '1rem',
-              position: 'relative', // <-- Asegura que la barra se posicione respecto a este contenedor
-              // paddingBottom: '12px', // Puedes quitar esto si la barra personalizada ya no es fija abajo
+              position: 'relative',
             }}
           >
+            {/* --- NUEVO: Barra de scroll horizontal superior --- */}
+            {logic.paginatedData.length > 0 && (
+              <div
+                ref={topScrollRef}
+                style={{
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  width: '100%',
+                  height: 12,
+                  marginBottom: 2,
+                }}
+                className="enhanced-table-scroll"
+              >
+                {/* Dummy table para que la barra tenga el mismo ancho que la tabla real */}
+                <div
+                  style={{
+                    width:
+                      tableScrollContainerRef.current?.scrollWidth ?? '2000px',
+                    height: 1,
+                  }}
+                />
+              </div>
+            )}
             {isLoadingPage || isPaginating ? (
               <div className="flex items-center justify-center gap-2 py-8 text-lg font-bold text-blue-700">
                 <Icons.spinner className="h-6 w-6" />
@@ -1252,7 +1304,7 @@ export default function TransactionTable(props: TransactionTableProps) {
             ) : (
               <div
                 ref={tableScrollContainerRef}
-                id="enhanced-table-scroll" // <-- NUEVO: id requerido por react-scroll
+                id="enhanced-table-scroll"
                 className="enhanced-table-scroll"
                 style={{
                   transform: `scale(${logic.zoom})`,
@@ -1302,18 +1354,9 @@ export default function TransactionTable(props: TransactionTableProps) {
               </div>
             )}
 
-            {/* Añadir el componente de scroll horizontal fijo cuando hay datos */}
+            {/* Barra de scroll horizontal inferior (ya existente, sigue como null o implementa si tienes StickyHorizontalScroll) */}
             {logic.paginatedData.length > 0 &&
-              // <StickyHorizontalScroll
-              //   targetRef={
-              //     tableScrollContainerRef as React.RefObject<
-              //       HTMLElement | HTMLDivElement
-              //     >
-              //   }
-              //   height={12}
-              //   zIndex={50}
-              //   className="mx-1"
-              // />
+              // <StickyHorizontalScroll ... />
               null}
           </div>
         ) : null}
