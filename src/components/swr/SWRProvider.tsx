@@ -12,7 +12,7 @@ export function SWRProvider({
   const swrConfig = {
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    refreshInterval: active ? 2000 : 0, // Polling solo si activo
+    refreshInterval: active ? 2000 : 0, // Pooling solo si activo
     refreshWhenHidden: false,
     refreshWhenOffline: false,
     dedupingInterval: 1000,

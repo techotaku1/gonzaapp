@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
 import { type TransactionRecord } from '~/types';
@@ -209,7 +209,7 @@ export default function TransactionTable(props: TransactionTableProps) {
     revalidateOnFocus: true,
   });
 
-  const { data: novedadOptions = [], mutate: mutateNovedades } = useSWR<
+  const { data: novedadOptions = [], mutate: _mutateNovedades } = useSWR<
     string[]
   >('/api/novedades', fetchNovedades, {
     refreshInterval: 2000,
@@ -278,6 +278,8 @@ export default function TransactionTable(props: TransactionTableProps) {
     }
   );
 
+  const { mutate: globalMutate } = useSWRConfig(); // <-- para mutate global
+
   // Handler para agregar asesor y actualizar la lista local y global
   const handleAddAsesorAction = async (nombre: string) => {
     const res = await fetch('/api/asesores', {
@@ -286,8 +288,7 @@ export default function TransactionTable(props: TransactionTableProps) {
       body: JSON.stringify({ nombre }),
     });
     if (res.ok) {
-      // Ya no es necesario llamar a mutateAsesores(); SWR polling lo hará automáticamente
-      // void mutateAsesores();
+      await globalMutate('/api/asesores', undefined, { revalidate: true }); // <-- fuerza refresco inmediato y deshabilita cache temporalmente
     } else {
       // Si el error es por duplicado (409), muestra mensaje específico
       if (res.status === 409) {
@@ -351,7 +352,7 @@ export default function TransactionTable(props: TransactionTableProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, color: finalColor }),
     });
-    await mutateTramites();
+    await globalMutate('/api/tramites', undefined, { revalidate: true }); // <-- refresca y deshabilita cache temporalmente
   };
 
   // Nueva función para actualizar el color de un trámite existente
@@ -375,7 +376,7 @@ export default function TransactionTable(props: TransactionTableProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre }),
     });
-    await mutateNovedades();
+    await globalMutate('/api/novedades', undefined, { revalidate: true }); // <-- refresca y deshabilita cache temporalmente
   };
 
   const handleAddEmitidoPorAction = async (nombre: string, color?: string) => {
@@ -384,8 +385,10 @@ export default function TransactionTable(props: TransactionTableProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, color }),
     });
-    await mutateEmitidoPor();
-    await mutateEmitidoPorWithColors();
+    await globalMutate('/api/emitidoPor', undefined, { revalidate: true }); // <-- refresca y deshabilita cache temporalmente
+    await globalMutate('/api/emitidoPorWithColors', undefined, {
+      revalidate: true,
+    });
   };
 
   // Nueva función para actualizar el color de un emitidoPor existente

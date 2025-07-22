@@ -85,8 +85,8 @@ export function useAppData(initialData?: TransactionRecord[], active = true) {
   } = useSWR('transactions-summary', fetchSummary, {
     refreshInterval: getPollingInterval(),
     revalidateOnFocus: true,
-    dedupingInterval: 2000, // Dedupe identical requests within 2 seconds
-    focusThrottleInterval: 5000, // Only revalidate once per 5 seconds on focus
+    dedupingInterval: 2000,
+    focusThrottleInterval: 5000,
   });
 
   useEffect(() => {
