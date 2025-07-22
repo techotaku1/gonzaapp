@@ -345,6 +345,7 @@ export function useTransactionTableLogic(props: {
         if (typeof window !== 'undefined') {
           const { mutate } = await import('swr');
           const dateKey = getDateKey(fechaColombia);
+
           // Mutate optimista: agrega la fila localmente al instante
           mutate(
             `/api/transactions?date=${dateKey}&limit=50&offset=0`,
@@ -362,16 +363,23 @@ export function useTransactionTableLogic(props: {
             },
             false // No revalidar aún
           );
-          // Luego revalida para sincronizar con otros dispositivos
+
+          // --- ESPERA LA REVALIDACIÓN ANTES DE DETENER LA BARRA ---
           await mutate(
             `/api/transactions?date=${dateKey}&limit=50&offset=0`,
             undefined,
             { revalidate: true }
           );
-          // --- Fuerza refresco global de datos para que initialData incluya la nueva fila ---
-          await mutate('transactions');
+          await mutate('transactions', undefined, { revalidate: true });
+
+          // --- SOLO DETÉN LA BARRA CUANDO SWR YA REVALIDÓ Y LA FILA ESTÁ EN initialData ---
+          // Espera hasta que la nueva fila esté en initialData (máx 2 segundos)
+          let attempts = 0;
+          while (!initialData.some((r) => r.id === newRowId) && attempts < 20) {
+            await new Promise((res) => setTimeout(res, 100));
+            attempts++;
+          }
         }
-        // --- SIEMPRE navega al día de hoy después de agregar ---
         setDateFilter({ startDate: new Date(), endDate: null });
         setCurrentPage(1);
       } else {
