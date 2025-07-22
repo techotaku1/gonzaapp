@@ -193,9 +193,9 @@ export default function TransactionTotals({
     currentPage * itemsPerPage
   );
 
-  // Calcular totales generales
+  // Calcular totales generales SOLO del rango filtrado
   const grandTotals = useMemo(() => {
-    return totals.reduce(
+    return filteredTotals.reduce(
       (acc, curr) => ({
         precioNetoTotal: acc.precioNetoTotal + curr.precioNetoTotal,
         tarifaServicioTotal: acc.tarifaServicioTotal + curr.tarifaServicioTotal,
@@ -211,7 +211,7 @@ export default function TransactionTotals({
         transactionCount: 0,
       }
     );
-  }, [totals]);
+  }, [filteredTotals]);
 
   return (
     <div className="font-display container mx-auto px-6">
