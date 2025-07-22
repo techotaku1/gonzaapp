@@ -6,14 +6,13 @@ export async function GET(_req: NextRequest) {
   try {
     const emitidoPorWithColors = await getAllEmitidoPorWithColors();
 
-    // This data rarely changes, so we can cache it for longer periods
+    // Elimina el cache prolongado, fuerza datos frescos siempre
     return NextResponse.json(
       { emitidoPorWithColors },
       {
         status: 200,
         headers: {
-          // Cache for 5 minutes on CDN, allow reuse for up to 1 hour while revalidating
-          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=3600',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       }
     );
