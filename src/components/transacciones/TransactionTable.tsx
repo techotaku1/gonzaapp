@@ -133,7 +133,7 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   // Usa SWR para asesores con pooling cada 2 segundos
   const { data: asesores = [] } = useSWR<string[]>(
-    `/api/asesores?ts=${Date.now()}`, // <-- bustea el cache en cada render
+    '/api/asesores',
     async (url: string): Promise<string[]> => {
       const res = await fetch(url, { cache: 'no-store' }); // <-- fuerza no-cache en fetch
       // Tipar la respuesta para evitar acceso inseguro
@@ -204,57 +204,30 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   const { data: tramiteOptions = [], mutate: mutateTramites } = useSWR<
     { nombre: string; color?: string }[]
-  >(`/api/tramites?ts=${Date.now()}`, fetchTramites, {
+  >('/api/tramites', fetchTramites, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
   });
 
   const { data: novedadOptions = [], mutate: _mutateNovedades } = useSWR<
     string[]
-  >(`/api/novedades?ts=${Date.now()}`, fetchNovedades, {
+  >('/api/novedades', fetchNovedades, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
   });
 
   const { data: emitidoPorOptions = [], mutate: mutateEmitidoPor } = useSWR<
     string[]
-  >(`/api/emitidoPor?ts=${Date.now()}`, fetchEmitidoPor, {
+  >('/api/emitidoPor', fetchEmitidoPor, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
   });
-
-  const { data: coloresOptions = [], mutate: _mutateColores } = useSWR<
-    { nombre: string; valor: string; intensidad: number }[]
-  >(
-    '/api/colores',
-    async (url: string) => {
-      const res = await fetch(url);
-      const data: unknown = await res.json();
-      if (
-        typeof data === 'object' &&
-        data !== null &&
-        'colores' in data &&
-        Array.isArray((data as { colores: unknown }).colores)
-      ) {
-        return (
-          data as {
-            colores: { nombre: string; valor: string; intensidad: number }[];
-          }
-        ).colores;
-      }
-      return [];
-    },
-    {
-      refreshInterval: 2000,
-      revalidateOnFocus: true,
-    }
-  );
 
   const {
     data: emitidoPorWithColors = [],
     mutate: mutateEmitidoPorWithColors,
   } = useSWR<{ nombre: string; color?: string }[]>(
-    `/api/emitidoPorWithColors?ts=${Date.now()}`,
+    '/api/emitidoPorWithColors',
     async (url: string) => {
       const res = await fetch(url, { cache: 'no-store' });
       const data: unknown = await res.json();
@@ -269,6 +242,36 @@ export default function TransactionTable(props: TransactionTableProps) {
         return (
           data as { emitidoPorWithColors: { nombre: string; color?: string }[] }
         ).emitidoPorWithColors;
+      }
+      return [];
+    },
+    {
+      refreshInterval: 2000,
+      revalidateOnFocus: true,
+    }
+  );
+
+  // SWR para colores (debe estar antes de su uso)
+  const { data: coloresOptions = [], mutate: _mutateColores } = useSWR<
+    { nombre: string; valor: string; intensidad: number }[]
+  >(
+    '/api/colores',
+    async (
+      url: string
+    ): Promise<{ nombre: string; valor: string; intensidad: number }[]> => {
+      const res = await fetch(url);
+      const data: unknown = await res.json();
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'colores' in data &&
+        Array.isArray((data as { colores: unknown }).colores)
+      ) {
+        return (
+          data as {
+            colores: { nombre: string; valor: string; intensidad: number }[];
+          }
+        ).colores;
       }
       return [];
     },
@@ -304,7 +307,9 @@ export default function TransactionTable(props: TransactionTableProps) {
     const finalColor = color ?? suggestColorForTramite(nombre);
 
     // Verificar si el color sugerido existe en la tabla de colores
-    const colorExists = coloresOptions.find((c) => c.nombre === finalColor);
+    const colorExists = coloresOptions.find(
+      (c: { nombre: string }) => c.nombre === finalColor
+    );
 
     // Si el color no existe en la tabla, crear el color automáticamente
     if (!colorExists && finalColor !== 'gris') {
@@ -452,7 +457,7 @@ export default function TransactionTable(props: TransactionTableProps) {
     tramiteOptions,
     novedadOptions,
     emitidoPorOptions,
-    coloresOptions,
+    coloresOptions, // <-- asegúrate de pasar coloresOptions aquí
     onOpenColorPicker: handleOpenColorPicker,
     onOpenEmitidoPorColorPicker: handleOpenEmitidoPorColorPicker,
     emitidoPorWithColors, // Pasar los datos de emitidoPor con colores
