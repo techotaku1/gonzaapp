@@ -133,9 +133,9 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   // Usa SWR para asesores con pooling cada 2 segundos
   const { data: asesores = [] } = useSWR<string[]>(
-    '/api/asesores',
+    `/api/asesores?ts=${Date.now()}`, // <-- bustea el cache en cada render
     async (url: string): Promise<string[]> => {
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' }); // <-- fuerza no-cache en fetch
       // Tipar la respuesta para evitar acceso inseguro
       const data: unknown = await res.json();
       if (
@@ -204,21 +204,21 @@ export default function TransactionTable(props: TransactionTableProps) {
 
   const { data: tramiteOptions = [], mutate: mutateTramites } = useSWR<
     { nombre: string; color?: string }[]
-  >('/api/tramites', fetchTramites, {
+  >(`/api/tramites?ts=${Date.now()}`, fetchTramites, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
   });
 
   const { data: novedadOptions = [], mutate: _mutateNovedades } = useSWR<
     string[]
-  >('/api/novedades', fetchNovedades, {
+  >(`/api/novedades?ts=${Date.now()}`, fetchNovedades, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
   });
 
   const { data: emitidoPorOptions = [], mutate: mutateEmitidoPor } = useSWR<
     string[]
-  >('/api/emitidoPor', fetchEmitidoPor, {
+  >(`/api/emitidoPor?ts=${Date.now()}`, fetchEmitidoPor, {
     refreshInterval: 2000,
     revalidateOnFocus: true,
   });
@@ -254,9 +254,9 @@ export default function TransactionTable(props: TransactionTableProps) {
     data: emitidoPorWithColors = [],
     mutate: mutateEmitidoPorWithColors,
   } = useSWR<{ nombre: string; color?: string }[]>(
-    '/api/emitidoPorWithColors',
+    `/api/emitidoPorWithColors?ts=${Date.now()}`,
     async (url: string) => {
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       const data: unknown = await res.json();
       if (
         typeof data === 'object' &&
