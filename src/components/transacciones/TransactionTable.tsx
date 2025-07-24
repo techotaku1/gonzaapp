@@ -131,7 +131,7 @@ export default function TransactionTable(props: TransactionTableProps) {
     string | null
   >(null);
 
-  // Usa SWR para asesores con pooling cada 2 segundos
+  // Usa SWR para asesores con pooling cada 60 segundos (antes 2 segundos)
   const { data: asesores = [] } = useSWR<string[]>(
     '/api/asesores',
     async (url: string): Promise<string[]> => {
@@ -150,7 +150,7 @@ export default function TransactionTable(props: TransactionTableProps) {
       }
       return [];
     },
-    { refreshInterval: 2000, revalidateOnFocus: true }
+    { refreshInterval: 60000, revalidateOnFocus: true } // 60s
   );
 
   const fetchTramites = async (
@@ -205,21 +205,21 @@ export default function TransactionTable(props: TransactionTableProps) {
   const { data: tramiteOptions = [], mutate: mutateTramites } = useSWR<
     { nombre: string; color?: string }[]
   >('/api/tramites', fetchTramites, {
-    refreshInterval: 2000,
+    refreshInterval: 60000, // 60s
     revalidateOnFocus: true,
   });
 
   const { data: novedadOptions = [], mutate: _mutateNovedades } = useSWR<
     string[]
   >('/api/novedades', fetchNovedades, {
-    refreshInterval: 2000,
+    refreshInterval: 60000, // 60s
     revalidateOnFocus: true,
   });
 
   const { data: emitidoPorOptions = [], mutate: mutateEmitidoPor } = useSWR<
     string[]
   >('/api/emitidoPor', fetchEmitidoPor, {
-    refreshInterval: 2000,
+    refreshInterval: 60000, // 60s
     revalidateOnFocus: true,
   });
 
@@ -246,7 +246,7 @@ export default function TransactionTable(props: TransactionTableProps) {
       return [];
     },
     {
-      refreshInterval: 2000,
+      refreshInterval: 60000, // 60s
       revalidateOnFocus: true,
     }
   );
@@ -276,7 +276,7 @@ export default function TransactionTable(props: TransactionTableProps) {
       return [];
     },
     {
-      refreshInterval: 2000,
+      refreshInterval: 60000, // 60s
       revalidateOnFocus: true,
     }
   );
@@ -458,8 +458,8 @@ export default function TransactionTable(props: TransactionTableProps) {
     novedadOptions,
     emitidoPorOptions,
     coloresOptions, // <-- asegúrate de pasar coloresOptions aquí
-    onOpenColorPicker: handleOpenColorPicker,
-    onOpenEmitidoPorColorPicker: handleOpenEmitidoPorColorPicker,
+    onOpenColorPickerAction: handleOpenColorPicker,
+    onOpenEmitidoPorColorPickerAction: handleOpenEmitidoPorColorPicker,
     emitidoPorWithColors, // Pasar los datos de emitidoPor con colores
   });
   const router = useRouter();

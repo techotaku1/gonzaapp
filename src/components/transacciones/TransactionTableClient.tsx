@@ -95,8 +95,23 @@ export default function TransactionTableClient({
     };
   }, [userInteracted]);
 
-  // Usa useAppData para obtener los datos optimizados y actualizados
-  const { data, mutate, isLoading } = useAppData(initialData, isActive);
+  // Obtener la fecha de la primera fila (día actual de la página)
+  const currentDate =
+    initialData.length > 0
+      ? (initialData[0].fecha instanceof Date
+          ? initialData[0].fecha
+          : new Date(initialData[0].fecha)
+        )
+          .toISOString()
+          .slice(0, 10)
+      : undefined;
+
+  // Usa useAppData para obtener los datos optimizados y actualizados SOLO para la fecha actual
+  const { data, mutate, isLoading } = useAppData(
+    initialData,
+    isActive,
+    currentDate
+  );
 
   const handleUpdateRecords = async (records: TransactionRecord[]) => {
     const result = await onUpdateRecordAction(records);

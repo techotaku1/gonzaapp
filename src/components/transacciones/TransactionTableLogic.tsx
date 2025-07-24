@@ -157,7 +157,6 @@ export function useTransactionTableLogic(props: {
   );
   const [editValues, setEditValues] = useState<EditValues>({});
   const editValuesRef = useRef<EditValues>({});
-  const isEditingRef = useRef(false);
   const editTimeoutRef = useRef<Record<string, NodeJS.Timeout | null>>({});
   // Nuevo: para evitar limpiar edits si el usuario editó hace poco
   const lastEditTimestampRef = useRef<number>(0);
@@ -165,20 +164,7 @@ export function useTransactionTableLogic(props: {
   // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
-      isEditingRef.current = true;
-      lastEditTimestampRef.current = Date.now();
-      // --- Soporta múltiples campos editándose a la vez ---
-      if (editTimeoutRef.current[`${id}-${field}`]) {
-        clearTimeout(editTimeoutRef.current[`${id}-${field}`]!);
-      }
-      editTimeoutRef.current[`${id}-${field}`] = setTimeout(() => {
-        // Cuando expira el timeout de este campo, verifica si quedan otros editando
-        delete editTimeoutRef.current[`${id}-${field}`];
-        if (Object.keys(editTimeoutRef.current).length === 0) {
-          isEditingRef.current = false;
-        }
-      }, 1200);
-
+      // ...existing code...
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
@@ -258,9 +244,26 @@ export function useTransactionTableLogic(props: {
             return { ...baseRecord, ...edits } as TransactionRecord;
           })
         );
+        // --- SOLO muta la fila editada y la página actual ---
+        // Si usas SWR, puedes mutar la clave de la página actual aquí
+        if (typeof window !== 'undefined') {
+          import('swr').then(({ mutate }) => {
+            // Mutar solo la clave de la página actual (por fecha)
+            const dateKey =
+              initialData.find((r) => r.id === id)?.fecha instanceof Date
+                ? initialData
+                    .find((r) => r.id === id)!
+                    .fecha.toISOString()
+                    .slice(0, 10)
+                : undefined;
+            if (dateKey) {
+              mutate(`/api/transactions?date=${dateKey}&limit=50&offset=0`);
+            }
+          });
+        }
         return updated;
       });
-      // Cambio de página si cambia la fecha (ya no hay groupedByDate, así que omite esta lógica)
+      // ...existing code...
     },
     [initialData, debouncedSave, setIsActuallySaving]
   );

@@ -57,7 +57,11 @@ const fetchByIds = async (ids: string[]): Promise<TransactionRecord[]> => {
   );
 };
 
-export function useAppData(initialData?: TransactionRecord[], active = true) {
+export function useAppData(
+  initialData?: TransactionRecord[],
+  active = true,
+  date?: string
+) {
   const [data, setData] = useState<TransactionRecord[]>(initialData ?? []);
   const hashesRef = useRef<Map<string, string>>(new Map());
   const lastChangeRef = useRef<number>(Date.now());
@@ -78,11 +82,14 @@ export function useAppData(initialData?: TransactionRecord[], active = true) {
     return 15000; // 15 seconds
   };
 
+  // Cambia la clave de SWR para incluir la fecha (paginación por día)
+  const swrKey = date ? `transactions-summary-${date}` : 'transactions-summary';
+
   const {
     data: summary,
     error,
     mutate,
-  } = useSWR('transactions-summary', fetchSummary, {
+  } = useSWR(swrKey, fetchSummary, {
     refreshInterval: getPollingInterval(),
     revalidateOnFocus: true,
     dedupingInterval: 2000,

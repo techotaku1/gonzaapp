@@ -250,9 +250,9 @@ export function useTransactionTableInputs({
   novedadOptions,
   emitidoPorOptions,
   coloresOptions = [],
-  onOpenColorPicker,
-  onOpenEmitidoPorColorPicker, // Nueva prop
-  emitidoPorWithColors = [], // Nueva prop necesaria
+  onOpenColorPickerAction,
+  onOpenEmitidoPorColorPickerAction,
+  emitidoPorWithColors = [],
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -271,8 +271,8 @@ export function useTransactionTableInputs({
   novedadOptions: string[];
   emitidoPorOptions: string[];
   coloresOptions?: { nombre: string; valor: string; intensidad: number }[];
-  onOpenColorPicker?: (rowId: string) => void;
-  onOpenEmitidoPorColorPicker?: (rowId: string) => void; // Nueva prop
+  onOpenColorPickerAction?: (rowId: string) => void;
+  onOpenEmitidoPorColorPickerAction?: (rowId: string) => void;
   emitidoPorWithColors?: { nombre: string; color?: string }[];
 }) {
   // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
@@ -414,8 +414,8 @@ export function useTransactionTableInputs({
           value={!isSoat ? 'NO APLICA' : (value as string)}
           onChange={(e) => {
             if (e.target.value === '__add_new__') {
-              if (onOpenEmitidoPorColorPicker) {
-                onOpenEmitidoPorColorPicker(row.id);
+              if (onOpenEmitidoPorColorPickerAction) {
+                onOpenEmitidoPorColorPickerAction(row.id);
               } else if (onAddEmitidoPorAction) {
                 const nombre = prompt(
                   'Ingrese el nuevo valor para "Emitido Por":'
@@ -558,8 +558,8 @@ export function useTransactionTableInputs({
           value={value as string}
           onChange={(e) => {
             if (e.target.value === '__add_new__') {
-              if (onOpenColorPicker) {
-                onOpenColorPicker(row.id);
+              if (onOpenColorPickerAction) {
+                onOpenColorPickerAction(row.id);
               }
             } else {
               handleInputChangeAction(row.id, field, e.target.value);
