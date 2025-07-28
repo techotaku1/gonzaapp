@@ -119,8 +119,32 @@ export default function TransactionTable(props: TransactionTableProps) {
   const logic = useTransactionTableLogic(props);
   // Crear una referencia para el contenedor de scroll de la tabla
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
-  // NUEVO: referencia para la barra de scroll superior
   const topScrollBarRef = useRef<HTMLDivElement>(null);
+
+
+  // --- NUEVO: Estado para ancho de la tabla para el scroll superior ---
+  const [tableScrollWidth, setTableScrollWidth] = useState<number>(0);
+
+  // --- NUEVO: Actualiza el ancho del scroll superior cada vez que cambian los datos, zoom o paginación ---
+  useEffect(() => {
+    const updateScrollWidth = () => {
+      if (tableScrollContainerRef.current) {
+        setTableScrollWidth(tableScrollContainerRef.current.scrollWidth);
+      }
+    };
+    // Actualiza al montar y cuando cambian los datos relevantes
+    updateScrollWidth();
+    // También actualiza cuando la ventana cambia de tamaño
+    window.addEventListener('resize', updateScrollWidth);
+    return () => {
+      window.removeEventListener('resize', updateScrollWidth);
+    };
+  }, [
+    logic.paginatedData,
+    logic.zoom,
+    logic.selectedDate,
+    props.showTotals,
+  ]);
 
   // Estados para los modales
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -1054,7 +1078,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                 </button>
               </>
             )}
-            {/* Controles de auto-guardado y zoom solo en la vista de registros */}
+            {/* Controles de auto-guardado and zoom solo en la vista de registros */}
             {!props.showTotals && (
               <div className="flex items-center gap-4">
                 {/* Indicador de auto-guardado */}
@@ -1249,7 +1273,7 @@ export default function TransactionTable(props: TransactionTableProps) {
               position: 'relative',
             }}
           >
-            {/* --- NUEVO: Barra de scroll horizontal superior sincronizada --- */}
+            {/* --- SIEMPRE visible: Barra de scroll horizontal superior sincronizada --- */}
             <div
               ref={topScrollBarRef}
               className="enhanced-table-scroll enhanced-table-scroll-top"
@@ -1259,6 +1283,8 @@ export default function TransactionTable(props: TransactionTableProps) {
                 height: 12,
                 marginBottom: 2,
                 // background: '#f3f4f6', // opcional: color de fondo
+                // --- SIEMPRE visible ---
+                visibility: 'visible',
               }}
               onScroll={(e) => {
                 const real = tableScrollContainerRef.current;
@@ -1270,10 +1296,12 @@ export default function TransactionTable(props: TransactionTableProps) {
               {/* Dummy para forzar el ancho igual al de la tabla */}
               <div
                 style={{
-                  width: tableScrollContainerRef.current
-                    ? tableScrollContainerRef.current.scrollWidth
-                    : '100%',
+                  width: tableScrollWidth || '100%',
                   height: 1,
+                  minHeight: 1,
+                  minWidth: '100%',
+                  // --- SIEMPRE visible ---
+                  visibility: 'visible',
                 }}
               />
             </div>
