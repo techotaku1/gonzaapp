@@ -716,10 +716,11 @@ export function useTransactionTableInputs({
             const v = getCellValue(row, field);
             if (isMoneyField && typeof v === 'number') return v;
             if (typeof v === 'boolean') return v ? '1' : '';
+            // --- Permite mostrar string vacío si el valor es null/undefined ---
             if (v === null || typeof v === 'undefined') return '';
             return v as string | number;
           })()}
-          title={formatValue(value)} // Agregar tooltip a todos los inputs
+          title={formatValue(value)}
           onChange={(e) => {
             let newValue: InputValue;
             if (field === 'cilindraje') {
@@ -731,13 +732,14 @@ export function useTransactionTableInputs({
               const onlyNumbers = e.target.value.replace(/[^\d]/g, '');
               newValue = onlyNumbers === '' ? null : onlyNumbers;
             } else if (isMoneyField) {
-              newValue = parseNumberAction(e.target.value);
+              newValue =
+                e.target.value === '' ? 0 : parseNumberAction(e.target.value);
             } else if (type === 'checkbox') {
               newValue = e.target.checked;
             } else if (type === 'number') {
               newValue = e.target.value ? Number(e.target.value) : null;
             } else {
-              newValue = e.target.value || null;
+              newValue = e.target.value === '' ? null : e.target.value;
             }
             handleInputChangeAction(row.id, field, newValue);
           }}

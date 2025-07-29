@@ -164,7 +164,6 @@ export function useTransactionTableLogic(props: {
   // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
-      // ...existing code...
       setEditValues((prev: EditValues) => {
         const prevEdits = prev[id] ?? {};
         let newValue = value;
@@ -188,19 +187,33 @@ export function useTransactionTableLogic(props: {
           );
         }
 
-        // ...existing code for other fields...
+        // --- Limpia valores vacíos para campos que aceptan null ---
         if (
-          [
-            'precioNeto',
-            'tarifaServicio',
-            'impuesto4x1000',
-            'gananciaBruta',
-            'boletasRegistradas',
-            'cilindraje',
-          ].includes(field as string)
+          (field === 'novedad' ||
+            field === 'observaciones' ||
+            field === 'tipoVehiculo' ||
+            field === 'celular' ||
+            field === 'cilindraje') &&
+          (value === '' || value === undefined)
         ) {
-          newValue = typeof value === 'string' ? Number(value) || 0 : value;
+          newValue = null;
         }
+        // Para campos string NOT NULL, pon string vacío si es null/undefined
+        const notNullStringFields = [
+          'tramite',
+          'emitidoPor',
+          'placa',
+          'tipoDocumento',
+          'numeroDocumento',
+          'nombre',
+          'ciudad',
+          'asesor',
+        ];
+        if (notNullStringFields.includes(field)) {
+          // Preferir nullish coalescing assignment
+          newValue ??= '';
+        }
+        // ...existing code for numeric fields...
         const extra: Partial<TransactionRecord> = {};
         if (
           (field === 'tipoVehiculo' || field === 'cilindraje') &&
@@ -899,21 +912,24 @@ export function useTransactionTableLogic(props: {
           const remote = props.initialData.find((r) => r.id === id);
           if (!remote) return false;
           return Object.entries(edits).every(([field, value]) => {
-            return (
-              JSON.stringify(remote[field as keyof typeof remote]) ===
-              JSON.stringify(value)
-            );
+            // --- Permite comparar null y string vacío como equivalentes para campos que aceptan ambos ---
+            const remoteVal = remote[field as keyof typeof remote];
+            if (
+              (value === null || value === '') &&
+              (remoteVal === null || remoteVal === '')
+            ) {
+              return true;
+            }
+            return JSON.stringify(remoteVal) === JSON.stringify(value);
           });
         }
       );
       if (allEditsAreInRemote) {
-        // Si el usuario hace una nueva edición durante el delay, NO limpies los edits
         if (clearEditsTimeoutRef.current) {
           clearTimeout(clearEditsTimeoutRef.current);
         }
         const lastEdit = lastEditTimestampRef.current;
         clearEditsTimeoutRef.current = setTimeout(() => {
-          // Solo limpia si no hubo una edición nueva durante el delay
           if (lastEdit === lastEditTimestampRef.current) {
             setEditValues({});
             editValuesRef.current = {};
@@ -921,14 +937,12 @@ export function useTransactionTableLogic(props: {
           }
         }, 150);
       } else {
-        // Si los edits no están reflejados, limpia cualquier timeout pendiente
         if (clearEditsTimeoutRef.current) {
           clearTimeout(clearEditsTimeoutRef.current);
           clearEditsTimeoutRef.current = null;
         }
       }
     } else {
-      // Si hay edits activos, cancela cualquier timeout pendiente
       if (clearEditsTimeoutRef.current) {
         clearTimeout(clearEditsTimeoutRef.current);
         clearEditsTimeoutRef.current = null;

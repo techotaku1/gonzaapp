@@ -311,6 +311,18 @@ export async function updateRecords(
               val = null;
             }
           }
+          // --- Limpia valores vacíos para campos que aceptan null ---
+          if (
+            [
+              'novedad',
+              'observaciones',
+              'tipoVehiculo',
+              'celular',
+              'cilindraje',
+            ].includes(key)
+          ) {
+            if (val === '' || typeof val === 'undefined') val = null;
+          }
           // Corrige campos string NOT NULL: nunca null/undefined, siempre string
           // Ajusta aquí según tu schema real
           const notNullStringFields = [

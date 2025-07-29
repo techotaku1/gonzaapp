@@ -68,11 +68,32 @@ export function useDebouncedSave(
         if (lastSavedDataRef.current === dataString) return;
         isSavingRef.current = true;
         try {
-          const result = await saveFunction(pendingDataRef.current!);
+          // --- Limpia valores vacíos antes de guardar ---
+          const cleanedData = data.map((row) => {
+            const cleaned: TransactionRecord = { ...row };
+            Object.keys(cleaned).forEach((k) => {
+              // Si el valor es string vacío, pon null solo para campos que aceptan null
+              if (
+                cleaned[k as keyof TransactionRecord] === '' &&
+                [
+                  'novedad',
+                  'observaciones',
+                  'tipoVehiculo',
+                  'celular',
+                  'cilindraje',
+                ].includes(k)
+              ) {
+                // Solución: usa 'as unknown as Record<string, unknown>' para evitar error TS2352
+                (cleaned as unknown as Record<string, unknown>)[k] = null;
+              }
+            });
+            return cleaned;
+          });
+          const result = await saveFunction(cleanedData);
           if (result.success) {
             lastSavedDataRef.current = dataString;
             onSuccess();
-            // Revalida el cache SOLO después de éxito
+            // --- Fuerza revalidación del cache después de guardar ---
             await mutate(CACHE_KEY, undefined, { revalidate: true });
           } else {
             await mutate(CACHE_KEY, undefined, { revalidate: true });
