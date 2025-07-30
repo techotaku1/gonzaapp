@@ -43,6 +43,7 @@ interface TransactionTableRowProps {
   coloresOptions?: { nombre: string; valor: string; intensidad: number }[];
   tramiteOptions?: { nombre: string; color?: string }[];
   emitidoPorWithColors?: { nombre: string; color?: string }[]; // Nueva prop
+  onDeleteAsesorAction?: (nombre: string) => void; // NUEVO
 }
 
 const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
@@ -62,6 +63,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     coloresOptions = [],
     tramiteOptions = [],
     emitidoPorWithColors = [], // Nueva prop
+    onDeleteAsesorAction: _onDeleteAsesorAction, // Prefijo _ para evitar warning eslint
   }) => {
     // Determinar qué clase y estilo aplicar basándose en el tipo de trámite
     const getRowClassAndStyle = () => {

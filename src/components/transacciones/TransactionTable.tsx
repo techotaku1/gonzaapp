@@ -448,6 +448,36 @@ export default function TransactionTable(props: TransactionTableProps) {
     }
   };
 
+  // Handler para eliminar asesor
+  const handleDeleteAsesorAction = async (nombre: string) => {
+    try {
+      const res = await fetch('/api/asesores', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre }),
+      });
+      if (!res.ok) {
+        let msg = 'Error al eliminar asesor';
+        try {
+          // Tipar la respuesta para evitar acceso inseguro
+          interface ErrorResponse {
+            error?: string;
+          }
+          const data: ErrorResponse = await res.json();
+          msg = data.error ?? msg;
+        } catch (_err) {
+          // Si ocurre un error al parsear, deja el mensaje por defecto
+        }
+        alert(msg);
+        throw new Error(msg);
+      }
+      await globalMutate('/api/asesores', undefined, { revalidate: true });
+    } catch (_error) {
+      alert('Error al eliminar asesor');
+      throw _error;
+    }
+  };
+
   const handleOpenColorPicker = (rowId?: string) => {
     if (rowId) {
       setPendingRowId(rowId);
@@ -479,6 +509,9 @@ export default function TransactionTable(props: TransactionTableProps) {
     onOpenColorPickerAction: handleOpenColorPicker,
     onOpenEmitidoPorColorPickerAction: handleOpenEmitidoPorColorPicker,
     emitidoPorWithColors, // Pasar los datos de emitidoPor con colores
+    onDeleteAsesorAction: (nombre: string) => {
+      void handleDeleteAsesorAction(nombre);
+    }, // <-- wrap in void function
   });
   const router = useRouter();
 
@@ -884,7 +917,9 @@ export default function TransactionTable(props: TransactionTableProps) {
                   </button>
                   {logic.isDeleteMode && logic.rowsToDelete.size > 0 ? (
                     <button
-                      onClick={logic.handleDeleteSelected}
+                      onClick={() => {
+                        void logic.handleDeleteSelected();
+                      }}
                       className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
                     >
                       Eliminar ({logic.rowsToDelete.size})
@@ -1184,8 +1219,8 @@ export default function TransactionTable(props: TransactionTableProps) {
                 body: JSON.stringify({ nombre: tramiteName }),
               });
               await mutateTramites();
-            } catch (error) {
-              console.error('Error deleting tramite:', error);
+            } catch {
+              console.error('Error deleting tramite:');
               alert('Error al eliminar el trámite.');
             }
           }}
@@ -1382,7 +1417,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                           coloresOptions={coloresOptions}
                           tramiteOptions={tramiteOptions}
                           emitidoPorWithColors={emitidoPorWithColors}
-                          showFullDate={false} // SOLO hora en tabla principal
+                          onDeleteAsesorAction={handleDeleteAsesorAction} // <-- PASA EL HANDLER AQUÍ
                         />
                       )
                     )}

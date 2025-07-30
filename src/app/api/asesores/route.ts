@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { addAsesor, getAllAsesores } from '~/server/actions/tableGeneral';
+import {
+  addAsesor,
+  deleteAsesor,
+  getAllAsesores,
+} from '~/server/actions/tableGeneral';
 
 export async function GET(_req: NextRequest) {
   try {
@@ -51,6 +55,32 @@ export async function POST(req: Request) {
   } catch (_error) {
     return NextResponse.json(
       { success: false, error: 'Error al agregar asesor' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const { nombre } = await req.json();
+    if (!nombre || typeof nombre !== 'string' || !nombre.trim()) {
+      return NextResponse.json(
+        { success: false, error: 'Nombre requerido' },
+        { status: 400 }
+      );
+    }
+    // Elimina el asesor por nombre usando la función de actions
+    const result = await deleteAsesor(nombre);
+    if (result.success) {
+      return NextResponse.json({ success: true });
+    }
+    return NextResponse.json(
+      { success: false, error: result.error },
+      { status: 500 }
+    );
+  } catch (_error) {
+    return NextResponse.json(
+      { success: false, error: 'Error al eliminar asesor' },
       { status: 500 }
     );
   }

@@ -253,6 +253,7 @@ export function useTransactionTableInputs({
   onOpenColorPickerAction,
   onOpenEmitidoPorColorPickerAction,
   emitidoPorWithColors = [],
+  onDeleteAsesorAction, // NUEVO
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -274,6 +275,7 @@ export function useTransactionTableInputs({
   onOpenColorPickerAction?: (rowId: string) => void;
   onOpenEmitidoPorColorPickerAction?: (rowId: string) => void;
   emitidoPorWithColors?: { nombre: string; color?: string }[];
+  onDeleteAsesorAction?: (nombre: string) => void;
 }) {
   // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
   const getCellValue = (
@@ -703,6 +705,16 @@ export function useTransactionTableInputs({
           }}
           asesores={asesores}
           onAddAsesorAction={onAddAsesorAction}
+          {...(onDeleteAsesorAction && {
+            onDeleteAsesorAction: (nombre: string) => {
+              // Llama la función y siempre retorna una promesa
+              const result = onDeleteAsesorAction(nombre);
+              // Si la función retorna void, simplemente retorna Promise.resolve()
+              return typeof result === 'object' && result !== null && typeof (result as Promise<void>).then === 'function'
+                ? result as Promise<void>
+                : Promise.resolve();
+            },
+          })}
           className="border-purple-400 bg-purple-200 text-purple-700"
         />
       );

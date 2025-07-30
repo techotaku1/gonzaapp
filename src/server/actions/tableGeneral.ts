@@ -650,3 +650,19 @@ export async function updateTramite(
     };
   }
 }
+
+// Nueva función para eliminar asesores del backend
+export async function deleteAsesor(
+  nombre: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db.delete(asesores).where(eq(asesores.nombre, nombre.trim()));
+    revalidateTag('asesores');
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete asesor',
+    };
+  }
+}
