@@ -51,8 +51,17 @@ export default function HeaderTitles({
             </div>
           </th>
         )}
-        {tableHeaders.map((header) => (
-          <th key={header} scope="col" className="whitespace-nowrap">
+        {tableHeaders.map((header, idx) => (
+          <th
+            key={header}
+            scope="col"
+            className={
+              idx === 0
+                ? // Sticky a la izquierda, borde derecho, fondo y z-index alto
+                  'sticky left-0 z-20 table-header border-r border-gray-600 bg-gray-50'
+                : 'table-header whitespace-nowrap'
+            }
+          >
             {header}
           </th>
         ))}

@@ -5,7 +5,7 @@ import { useSWRConfig } from 'swr';
 import type { TransactionRecord } from '~/types';
 
 const CACHE_KEY = 'transactions';
-const DEBOUNCE_DELAY = 1200;
+const DEBOUNCE_DELAY = 200; // Más rápido para edición y borrado
 
 export function useDebouncedSave(
   saveFunction: (
@@ -18,12 +18,8 @@ export function useDebouncedSave(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingDataRef = useRef<TransactionRecord[] | null>(null);
   const lastSavedDataRef = useRef<string>('');
-  // Mantén los edits locales hasta que el backend confirme el último guardado
   const latestEditRef = useRef<TransactionRecord[] | null>(null);
-  // Nuevo: bandera para saber si hay un guardado pendiente
   const isSavingRef = useRef(false);
-  // Nuevo: contador para limitar mutaciones
-  const mutationCountRef = useRef(0);
 
   // Limpia el timeout al desmontar
   useEffect(() => {
@@ -45,24 +41,19 @@ export function useDebouncedSave(
       );
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-      // OPTIMISTIC UPDATE: Limitar frecuencia de mutaciones
-      // Solo hacer mutate optimista cada 3 ediciones para reducir procesamiento
-      mutationCountRef.current += 1;
-      if (mutationCountRef.current >= 3 || lastSavedDataRef.current === '') {
-        mutate(
-          CACHE_KEY,
-          (current: TransactionRecord[] | undefined) => {
-            if (!current) return data;
-            const map = new Map(current.map((r) => [r.id, r]));
-            data.forEach((edit) =>
-              map.set(edit.id, { ...map.get(edit.id), ...edit })
-            );
-            return Array.from(map.values());
-          },
-          false // nunca revalidar aún
-        );
-        mutationCountRef.current = 0;
-      }
+      // Refleja el cambio en el cache local de inmediato (sin mutationCountRef)
+      mutate(
+        CACHE_KEY,
+        (current: TransactionRecord[] | undefined) => {
+          if (!current) return data;
+          const map = new Map(current.map((r) => [r.id, r]));
+          data.forEach((edit) =>
+            map.set(edit.id, { ...map.get(edit.id), ...edit })
+          );
+          return Array.from(map.values());
+        },
+        false // nunca revalidar aún
+      );
 
       timeoutRef.current = setTimeout(async () => {
         if (lastSavedDataRef.current === dataString) return;
@@ -72,7 +63,6 @@ export function useDebouncedSave(
           const cleanedData = data.map((row) => {
             const cleaned: TransactionRecord = { ...row };
             Object.keys(cleaned).forEach((k) => {
-              // Si el valor es string vacío, pon null solo para campos que aceptan null
               if (
                 cleaned[k as keyof TransactionRecord] === '' &&
                 [
@@ -83,21 +73,15 @@ export function useDebouncedSave(
                   'cilindraje',
                 ].includes(k)
               ) {
-                // Solución: usa 'as unknown as Record<string, unknown>' para evitar error TS2352
                 (cleaned as unknown as Record<string, unknown>)[k] = null;
               }
             });
             return cleaned;
           });
-          const result = await saveFunction(cleanedData);
-          if (result.success) {
-            lastSavedDataRef.current = dataString;
-            onSuccess();
-            // --- Fuerza revalidación del cache después de guardar ---
-            await mutate(CACHE_KEY, undefined, { revalidate: true });
-          } else {
-            await mutate(CACHE_KEY, undefined, { revalidate: true });
-          }
+          const _result = await saveFunction(cleanedData);
+          lastSavedDataRef.current = dataString;
+          onSuccess();
+          await mutate(CACHE_KEY, undefined, { revalidate: true });
         } catch (error) {
           await mutate(CACHE_KEY, undefined, { revalidate: true });
           console.error('Error saving data:', error);

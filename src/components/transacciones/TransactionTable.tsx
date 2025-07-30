@@ -121,7 +121,6 @@ export default function TransactionTable(props: TransactionTableProps) {
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
   const topScrollBarRef = useRef<HTMLDivElement>(null);
 
-
   // --- NUEVO: Estado para ancho de la tabla para el scroll superior ---
   const [tableScrollWidth, setTableScrollWidth] = useState<number>(0);
 
@@ -139,12 +138,7 @@ export default function TransactionTable(props: TransactionTableProps) {
     return () => {
       window.removeEventListener('resize', updateScrollWidth);
     };
-  }, [
-    logic.paginatedData,
-    logic.zoom,
-    logic.selectedDate,
-    props.showTotals,
-  ]);
+  }, [logic.paginatedData, logic.zoom, logic.selectedDate, props.showTotals]);
 
   // Estados para los modales
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -1248,7 +1242,30 @@ export default function TransactionTable(props: TransactionTableProps) {
               onRowSelect={logic.handleRowSelect}
               renderCheckbox={logic.renderCheckbox}
               renderAsesorSelect={logic.renderAsesorSelect}
-              renderInput={renderInput}
+              renderInput={(row, field, type) =>
+                field === 'fecha' ? (
+                  <span>
+                    {(() => {
+                      const value = row.fecha;
+                      if (!value) return '';
+                      const dateObj =
+                        value instanceof Date ? value : new Date(value);
+                      // Mostrar fecha completa en búsqueda
+                      return dateObj.toLocaleString('es-CO', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                        timeZone: 'America/Bogota',
+                      });
+                    })()}
+                  </span>
+                ) : (
+                  renderInput(row, field, type)
+                )
+              }
               getEmitidoPorClass={getEmitidoPorClass}
               isDeleteMode={logic.isDeleteMode}
               isAsesorSelectionMode={logic.isAsesorSelectionMode}
@@ -1340,35 +1357,34 @@ export default function TransactionTable(props: TransactionTableProps) {
                   <HeaderTitles isDeleteMode={logic.isDeleteMode} />
                   <tbody>
                     {logic.paginatedData.map(
-                      (row: TransactionRecord, _index: number) => {
-                        return (
-                          <TransactionTableRow
-                            key={row.id}
-                            row={row}
-                            isDeleteMode={logic.isDeleteMode}
-                            isAsesorSelectionMode={logic.isAsesorSelectionMode}
-                            selectedRows={logic.selectedRows}
-                            rowsToDelete={logic.rowsToDelete}
-                            handleInputChange={logic.handleInputChange}
-                            handleRowSelect={logic.handleRowSelect}
-                            handleDeleteSelect={logic.handleDeleteSelect}
-                            renderCheckbox={renderCheckbox}
-                            renderAsesorSelect={logic.renderAsesorSelect}
-                            renderInput={
-                              renderInput as (
-                                row: TransactionRecord,
-                                field: keyof TransactionRecord,
-                                type?: InputType
-                              ) => React.ReactNode
-                            }
-                            _getEmitidoPorClass={getEmitidoPorClass}
-                            getTramiteColorClass={getTramiteColorClassForRow}
-                            coloresOptions={coloresOptions}
-                            tramiteOptions={tramiteOptions}
-                            emitidoPorWithColors={emitidoPorWithColors}
-                          />
-                        );
-                      }
+                      (row: TransactionRecord, _index: number) => (
+                        <TransactionTableRow
+                          key={row.id}
+                          row={row}
+                          isDeleteMode={logic.isDeleteMode}
+                          isAsesorSelectionMode={logic.isAsesorSelectionMode}
+                          selectedRows={logic.selectedRows}
+                          rowsToDelete={logic.rowsToDelete}
+                          handleInputChange={logic.handleInputChange}
+                          handleRowSelect={logic.handleRowSelect}
+                          handleDeleteSelect={logic.handleDeleteSelect}
+                          renderCheckbox={renderCheckbox}
+                          renderAsesorSelect={logic.renderAsesorSelect}
+                          renderInput={
+                            renderInput as (
+                              row: TransactionRecord,
+                              field: keyof TransactionRecord,
+                              type?: InputType
+                            ) => React.ReactNode
+                          }
+                          _getEmitidoPorClass={getEmitidoPorClass}
+                          getTramiteColorClass={getTramiteColorClassForRow}
+                          coloresOptions={coloresOptions}
+                          tramiteOptions={tramiteOptions}
+                          emitidoPorWithColors={emitidoPorWithColors}
+                          showFullDate={false} // SOLO hora en tabla principal
+                        />
+                      )
                     )}
                   </tbody>
                 </table>
