@@ -112,7 +112,10 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     const { className: rowClass, style: rowStyle } = getRowClassAndStyle();
 
     return (
-      <tr className={`border-b hover:bg-gray-50 ${rowClass}`} style={rowStyle}>
+      <tr
+        className={`group border-b hover:bg-gray-50 ${rowClass}`}
+        style={rowStyle}
+      >
         {isDeleteMode ? (
           <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
             <div className="flex h-full items-center justify-center">

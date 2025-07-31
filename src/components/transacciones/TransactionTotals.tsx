@@ -275,7 +275,8 @@ export default function TransactionTotals({
             dateFormat="dd/MM/yyyy"
             locale={es}
             popperPlacement="bottom"
-            isClearable
+            // Quitar el icono de limpiar (clearable)
+            isClearable={false}
             autoComplete="off"
           />
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">
@@ -309,7 +310,8 @@ export default function TransactionTotals({
             dateFormat="dd/MM/yyyy"
             locale={es}
             popperPlacement="bottom"
-            isClearable
+            // Quitar el icono de limpiar (clearable)
+            isClearable={false}
             autoComplete="off"
           />
           <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-gray-400">
