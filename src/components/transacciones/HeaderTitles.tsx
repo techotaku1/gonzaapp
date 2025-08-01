@@ -1,3 +1,7 @@
+import React, { useEffect, useState } from 'react';
+
+import { Calendar } from 'lucide-react';
+
 export default function HeaderTitles({
   isDeleteMode = false,
 }: {
@@ -29,6 +33,29 @@ export default function HeaderTitles({
     'Observaciones',
   ];
 
+  // Estado local para forzar re-render cuando cambia el global
+  const [fechaExpand, setFechaExpand] = useState(
+    typeof window !== 'undefined' ? window.__fechaColExpand : false
+  );
+
+  useEffect(() => {
+    const update = () => setFechaExpand(window.__fechaColExpand);
+    if (typeof window !== 'undefined') {
+      window.__fechaColExpandListeners.add(update);
+      setFechaExpand(window.__fechaColExpand);
+      return () => {
+        window.__fechaColExpandListeners.delete(update);
+      };
+    }
+  }, []);
+
+  const handleToggleFecha = () => {
+    if (typeof window !== 'undefined') {
+      window.__fechaColExpand = !window.__fechaColExpand;
+      window.__fechaColExpandListeners.forEach((fn) => fn());
+    }
+  };
+
   return (
     <thead className="sticky top-0 z-50 bg-gray-50">
       <tr className="[&>th]:table-header">
@@ -57,12 +84,39 @@ export default function HeaderTitles({
             scope="col"
             className={
               idx === 0
-                ? // Sticky a la izquierda, borde derecho, fondo y z-index alto
-                  'sticky left-0 z-20 table-header border-r border-gray-600 bg-gray-50'
+                ? 'table-header sticky left-0 z-20 cursor-pointer border-r border-gray-600 bg-gray-50 select-none'
                 : 'table-header whitespace-nowrap'
             }
+            onClick={idx === 0 ? handleToggleFecha : undefined}
+            style={
+              idx === 0
+                ? {
+                    minWidth: fechaExpand ? 120 : 32,
+                    maxWidth: fechaExpand ? 180 : 32,
+                    width: fechaExpand ? 140 : 32,
+                    textAlign: 'center',
+                  }
+                : undefined
+            }
+            title={
+              idx === 0
+                ? fechaExpand
+                  ? 'Contraer columna fecha'
+                  : 'Expandir columna fecha'
+                : undefined
+            }
           >
-            {header}
+            {idx === 0 ? (
+              fechaExpand ? (
+                <span className="text-xs font-semibold text-gray-700">
+                  Fecha
+                </span>
+              ) : (
+                <Calendar size={20} className="mx-auto text-gray-500" />
+              )
+            ) : (
+              header
+            )}
           </th>
         ))}
       </tr>
