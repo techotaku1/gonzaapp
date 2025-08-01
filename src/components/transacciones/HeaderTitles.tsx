@@ -108,7 +108,14 @@ export default function HeaderTitles({
           >
             {idx === 0 ? (
               fechaExpand ? (
-                <span className="text-xs font-semibold text-gray-700">
+                <span
+                  className="text-md font-semibold"
+                  style={{
+                    color: 'black',
+                    fontFamily:
+                      'var(--font-table-text), var(--font-lexend), sans-serif',
+                  }}
+                >
                   Fecha
                 </span>
               ) : (
