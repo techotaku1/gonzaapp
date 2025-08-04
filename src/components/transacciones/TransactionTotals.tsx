@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 
 import { calculateFormulas } from '~/utils/formulas';
+import { getColombiaDate } from '~/utils/dateUtils'; // Add this import
 
 import type { TransactionRecord } from '~/types';
 
@@ -96,10 +97,8 @@ export default function TransactionTotals({
           : new Date(transaction.fecha);
       if (isNaN(fecha.getTime())) return;
 
-      // Fecha en zona horaria de Colombia (solo la parte de la fecha)
-      const colombiaDate = new Date(
-        fecha.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-      );
+      // CORREGIDO: Usar la función de utilidad para obtener la fecha en Colombia
+      const colombiaDate = getColombiaDate(fecha);
       const dateStr = colombiaDate.toISOString().split('T')[0];
       if (!dateStr) return;
 
@@ -141,16 +140,26 @@ export default function TransactionTotals({
     );
   }, [transactions]);
 
-  // Filtrar totales por búsqueda y rango de fechas de forma optimizada
+  // CORREGIDO: Filtrar totales por búsqueda y rango de fechas de forma optimizada
   const filteredTotals = useMemo(() => {
     let filtered = totals;
-    // Filtrado por rango de fechas
+    // CORREGIDO: Filtrado por rango de fechas con mejor manejo de timezone
     if (startDate && endDate) {
-      const start = startDate.setHours(0, 0, 0, 0);
-      const end = endDate.setHours(23, 59, 59, 999);
+      // Crear fechas en timezone de Colombia para comparación correcta
+      const startDateColombia = getColombiaDate(startDate);
+      const endDateColombia = getColombiaDate(endDate);
+
+      // Establecer horas para el rango completo del día
+      startDateColombia.setHours(0, 0, 0, 0);
+      endDateColombia.setHours(23, 59, 59, 999);
+
+      // Convertir a strings para comparación
+      const startStr = startDateColombia.toISOString().split('T')[0];
+      const endStr = endDateColombia.toISOString().split('T')[0];
+
       filtered = filtered.filter((t) => {
-        const tDate = new Date(t.date).getTime();
-        return tDate >= start && tDate <= end;
+        // Comparar strings de fechas directamente (YYYY-MM-DD)
+        return t.date >= startStr && t.date <= endStr;
       });
     }
     // Filtrado global por texto (en todas las columnas relevantes)

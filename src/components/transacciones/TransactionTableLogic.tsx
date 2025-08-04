@@ -450,6 +450,7 @@ export function useTransactionTableLogic(props: {
       const filtered = props.initialData.filter((record) => {
         const recordDate = getColombiaDate(new Date(record.fecha));
         if (dateFilter.startDate && dateFilter.endDate) {
+          // CORREGIDO: Usar las funciones de utilidad para manejo correcto
           const startDate = getColombiaDate(dateFilter.startDate);
           const endDate = getColombiaDate(dateFilter.endDate);
           startDate.setHours(0, 0, 0, 0);
