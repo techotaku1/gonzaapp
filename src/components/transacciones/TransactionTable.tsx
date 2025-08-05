@@ -936,17 +936,27 @@ export default function TransactionTable(props: TransactionTableProps) {
                 {/* Botón Ver Totales / Ver Registros */}
                 <button
                   onClick={() => {
-                    // CORREGIDO: Si estamos en vista de totales mensuales, ir directamente a registros
-                    if (props.showMonthlyTotals) {
-                      // Solo apagar monthly totals, no encender daily totals
-                      props.onToggleMonthlyTotalsAction?.();
-                    } else if (props.showTotals) {
-                      // Si estamos en daily totals, ir a registros
-                      logic.handleToggleTotals();
-                    } else {
-                      // Si estamos en registros, ir a daily totals
-                      logic.handleToggleTotals();
-                    }
+                    // CORREGIDO: Activar loading para todas las transiciones
+                    logic.setIsTotalsButtonLoading?.(true);
+
+                    setTimeout(() => {
+                      // CORREGIDO: Si estamos en vista de totales mensuales, ir directamente a registros
+                      if (props.showMonthlyTotals) {
+                        // Solo apagar monthly totals, no encender daily totals
+                        props.onToggleMonthlyTotalsAction?.();
+                      } else if (props.showTotals) {
+                        // Si estamos en daily totals, ir a registros
+                        logic.handleToggleTotals();
+                      } else {
+                        // Si estamos en registros, ir a daily totals
+                        logic.handleToggleTotals();
+                      }
+
+                      // Desactivar loading después de la transición
+                      setTimeout(() => {
+                        logic.setIsTotalsButtonLoading?.(false);
+                      }, 100);
+                    }, 400);
                   }}
                   disabled={logic.isTotalsButtonLoading}
                   className="relative flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-6 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
@@ -968,7 +978,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                           ) : (
                             <>
                               <BiWorld className="mr-1 h-5 w-5" />
-                              Ver Totales
+                              Totales Diarios
                             </>
                           )}
                         </span>
@@ -981,7 +991,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                     ) : (
                       <>
                         <BiWorld className="mr-1 h-5 w-5" />
-                        Ver Totales
+                        Totales Diarios
                       </>
                     )}
                   </span>
@@ -1007,8 +1017,8 @@ export default function TransactionTable(props: TransactionTableProps) {
                     className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-6 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
                   >
                     {props.showMonthlyTotals
-                      ? 'Ver Totales Diarios'
-                      : 'Ver Totales Mensuales'}
+                      ? 'Totales Diarios'
+                      : 'Totales Mensuales'}
                   </button>
                 )}
 
@@ -1083,7 +1093,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                           ) : (
                             <>
                               <BiWorld className="mr-1 h-5 w-5" />
-                              Ver Totales
+                              Totales Diarios
                             </>
                           )}
                         </span>
@@ -1096,7 +1106,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                     ) : (
                       <>
                         <BiWorld className="mr-1 h-5 w-5" />
-                        Ver Totales
+                        Totales Diarios
                       </>
                     )}
                   </span>

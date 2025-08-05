@@ -1106,6 +1106,7 @@ export function useTransactionTableLogic(props: {
     handleNavigateToCuadre,
     handleToggleTotals,
     isTotalsButtonLoading,
+    setIsTotalsButtonLoading, // <-- NUEVO: Exponer la función setter
     formatCurrency,
     parseNumber,
     addNewRow,
