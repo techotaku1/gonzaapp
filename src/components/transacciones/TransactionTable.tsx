@@ -18,6 +18,7 @@ import ColorPickerModal from '../modals/ColorPickerModal';
 import EmitidoPorColorModal from '../modals/EmitidoPorColorModal';
 
 import HeaderTitles from './HeaderTitles';
+import TransactionMonthlyTotals from './TransactionMonthlyTotals';
 import TransactionSearchRemote from './TransactionSearchRemote';
 import {
   getEmitidoPorClass,
@@ -39,7 +40,9 @@ interface TransactionTableProps {
   showTotals: boolean;
   onToggleTotalsAction: () => void;
   searchTerm?: string;
-  isLoading?: boolean; // <-- agrega esta prop
+  isLoading?: boolean;
+  showMonthlyTotals?: boolean; // NUEVO
+  onToggleMonthlyTotalsAction?: () => void; // NUEVO
 }
 
 function formatLongDate(date: Date) {
@@ -819,7 +822,7 @@ export default function TransactionTable(props: TransactionTableProps) {
   return (
     <div className="relative">
       {/* Mostrar SIEMPRE la fecha en formato largo arriba del botón agregar */}
-      {!props.showTotals && (
+      {!props.showTotals && !props.showMonthlyTotals && (
         <div className="mb-3 flex items-center justify-between">
           <time
             id="current-date-display"
@@ -834,7 +837,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         <div className="mb-4 flex w-full items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             {/* Botón Agregar y Eliminar solo si NO estamos en la vista de totales */}
-            {!props.showTotals && (
+            {!props.showTotals && !props.showMonthlyTotals && (
               <>
                 {/* Botón Agregar */}
                 <button
@@ -928,11 +931,23 @@ export default function TransactionTable(props: TransactionTableProps) {
                 </div>
               </>
             )}
-            {props.showTotals ? (
+            {props.showTotals || props.showMonthlyTotals ? (
               <div className="flex gap-4 pl-6">
                 {/* Botón Ver Totales / Ver Registros */}
                 <button
-                  onClick={logic.handleToggleTotals}
+                  onClick={() => {
+                    // CORREGIDO: Si estamos en vista de totales mensuales, ir directamente a registros
+                    if (props.showMonthlyTotals) {
+                      // Solo apagar monthly totals, no encender daily totals
+                      props.onToggleMonthlyTotalsAction?.();
+                    } else if (props.showTotals) {
+                      // Si estamos en daily totals, ir a registros
+                      logic.handleToggleTotals();
+                    } else {
+                      // Si estamos en registros, ir a daily totals
+                      logic.handleToggleTotals();
+                    }
+                  }}
                   disabled={logic.isTotalsButtonLoading}
                   className="relative flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-6 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
                 >
@@ -945,7 +960,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                         </span>
                         {/* Espacio reservado para el texto, invisible pero ocupa el mismo ancho */}
                         <span className="invisible flex items-center">
-                          {props.showTotals ? (
+                          {props.showTotals || props.showMonthlyTotals ? (
                             <>
                               <MdOutlineTableChart className="mr-1 h-5 w-5" />
                               Ver Registros
@@ -958,7 +973,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                           )}
                         </span>
                       </>
-                    ) : props.showTotals ? (
+                    ) : props.showTotals || props.showMonthlyTotals ? (
                       <>
                         <MdOutlineTableChart className="mr-1 h-5 w-5" />
                         Ver Registros
@@ -971,6 +986,32 @@ export default function TransactionTable(props: TransactionTableProps) {
                     )}
                   </span>
                 </button>
+
+                {/* Botón alternar entre Totales Diarios y Mensuales */}
+                {props.onToggleMonthlyTotalsAction && (
+                  <button
+                    onClick={() => {
+                      // CORREGIDO: El botón debe llevar a la vista que indica su texto
+                      if (props.showMonthlyTotals) {
+                        // Si estamos en vista mensual y el botón dice "Ver Totales Diarios"
+                        // Apagar monthly totals y encender daily totals
+                        props.onToggleMonthlyTotalsAction?.(); // Apaga monthly
+                        props.onToggleTotalsAction(); // Enciende daily
+                      } else if (props.showTotals) {
+                        // Si estamos en vista diaria y el botón dice "Ver Totales Mensuales"
+                        // Apagar daily totals y encender monthly totals
+                        props.onToggleTotalsAction(); // Apaga daily
+                        props.onToggleMonthlyTotalsAction?.(); // Enciende monthly
+                      }
+                    }}
+                    className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-6 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
+                  >
+                    {props.showMonthlyTotals
+                      ? 'Ver Totales Diarios'
+                      : 'Ver Totales Mensuales'}
+                  </button>
+                )}
+
                 {/* Botón Exportar a Excel */}
                 <button
                   onClick={() => logic.setIsExportModalOpen(true)}
@@ -1060,6 +1101,36 @@ export default function TransactionTable(props: TransactionTableProps) {
                     )}
                   </span>
                 </button>
+
+                {/* Botón Totales Mensuales */}
+                {props.onToggleMonthlyTotalsAction && (
+                  <button
+                    onClick={() => {
+                      // CORREGIDO: Al hacer click desde la vista de registros, ir directamente a mensuales
+                      props.onToggleMonthlyTotalsAction?.();
+                    }}
+                    className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
+                  >
+                    <>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-1 h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      Totales Mensuales
+                    </>
+                  </button>
+                )}
+
                 {/* Botón Exportar a Excel */}
                 <button
                   onClick={() => logic.setIsExportModalOpen(true)}
@@ -1108,7 +1179,7 @@ export default function TransactionTable(props: TransactionTableProps) {
               </>
             )}
             {/* Controles de auto-guardado and zoom solo en la vista de registros */}
-            {!props.showTotals && (
+            {!props.showTotals && !props.showMonthlyTotals && (
               <div className="flex items-center gap-4">
                 {/* Indicador de auto-guardado */}
                 <div className="flex h-10 items-center gap-4">
@@ -1149,7 +1220,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         </div>
 
         {/* Mover SearchFilters aquí, justo debajo de los botones principales y arriba de la tabla */}
-        {!props.showTotals && (
+        {!props.showTotals && !props.showMonthlyTotals && (
           <SearchFilters
             data={props.initialData}
             onFilterAction={logic.handleFilterData}
@@ -1261,7 +1332,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         />
 
         {/* Mostrar tabla de búsqueda remota si hay término de búsqueda */}
-        {!props.showTotals && props.searchTerm ? (
+        {!props.showTotals && !props.showMonthlyTotals && props.searchTerm ? (
           <div
             className="table-container"
             style={{
@@ -1312,7 +1383,8 @@ export default function TransactionTable(props: TransactionTableProps) {
             />
           </div>
         ) : null}
-        {!props.showTotals && !props.searchTerm ? (
+
+        {!props.showTotals && !props.showMonthlyTotals && !props.searchTerm ? (
           <div
             className="enhanced-table-container"
             style={{
@@ -1445,6 +1517,8 @@ export default function TransactionTable(props: TransactionTableProps) {
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
         {props.showTotals ? (
           <TransactionTotals transactions={props.initialData} />
+        ) : props.showMonthlyTotals ? (
+          <TransactionMonthlyTotals transactions={props.initialData} />
         ) : null}
 
         {/* Add the payment UI */}
@@ -1537,7 +1611,7 @@ export default function TransactionTable(props: TransactionTableProps) {
         )}
       </div>
       {/* Muestra SOLO UNA VEZ la paginación de días abajo de la tabla */}
-      {!props.showTotals && (
+      {!props.showTotals && !props.showMonthlyTotals && (
         <DatePagination
           currentPage={logic.currentPage}
           setCurrentPage={logic.setCurrentPage}

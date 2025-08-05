@@ -5,15 +5,15 @@ import { useCallback, useMemo, useState } from 'react';
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 
+import { getColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
-import { getColombiaDate } from '~/utils/dateUtils'; // Add this import
 
 import type { TransactionRecord } from '~/types';
 
 import 'react-datepicker/dist/react-datepicker.css';
 
-interface TotalsByDate {
-  date: string;
+interface TotalsByMonth {
+  month: string; // YYYY-MM format
   precioNetoTotal: number;
   tarifaServicioTotal: number;
   impuesto4x1000Total: number;
@@ -21,7 +21,7 @@ interface TotalsByDate {
   transactionCount: number;
 }
 
-export default function TransactionTotals({
+export default function TransactionMonthlyTotals({
   transactions,
 }: {
   transactions: TransactionRecord[];
@@ -29,41 +29,31 @@ export default function TransactionTotals({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Estado para filtro de búsqueda y fechas en la vista de totales
+  // Estado para filtro de búsqueda y fechas en la vista de totales mensuales
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
-  // Declarar formatDate antes de los useMemo y envolver en useCallback
-  const formatDate = useCallback((dateString: string) => {
+  // Función para formatear el mes
+  const formatMonth = useCallback((monthString: string) => {
     try {
-      const date = new Date(dateString);
-      // Create date in Colombia timezone maintaining the day
-      const colombiaDate = new Date(
-        date.toLocaleString('en-US', { timeZone: 'America/Bogota' })
-      );
-      colombiaDate.setMinutes(
-        colombiaDate.getMinutes() + colombiaDate.getTimezoneOffset()
-      );
+      const [year, month] = monthString.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
 
       const formatted = new Intl.DateTimeFormat('es-CO', {
-        weekday: 'long',
         year: 'numeric',
         month: 'long',
-        day: 'numeric',
         timeZone: 'America/Bogota',
-      }).format(colombiaDate);
+      }).format(date);
 
       return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     } catch (error) {
-      console.error('Error formatting date:', error);
-      return dateString;
+      console.error('Error formatting month:', error);
+      return monthString;
     }
   }, []);
 
-  // Declarar formatCurrency antes de los useMemo y envolver en useCallback
   const formatCurrency = useCallback((amount: number) => {
-    // Redondear al entero más cercano
     const roundedAmount = Math.round(amount);
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
@@ -73,37 +63,36 @@ export default function TransactionTotals({
     }).format(roundedAmount);
   }, []);
 
-  // Función para normalizar texto: quita tildes, signos, puntos, comas, espacios y pasa a minúsculas (ahora con useCallback)
+  // Función para normalizar texto
   const normalizeText = useCallback(
     (text: string) =>
       text
         .normalize('NFD')
-        .replace(/[$.,\-\s]/g, '') // quita $, puntos, comas, guiones, espacios
-        .replace(/[\u0300-\u036f]/g, '') // quita tildes
+        .replace(/[$.,\-\s]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase(),
     []
   );
 
-  // --- CORREGIDO: Calcula los totales por fecha usando TODOS los registros recibidos ---
+  // Calcular los totales por mes
   const totals = useMemo(() => {
-    const totalsByDate = new Map<string, TotalsByDate>();
+    const totalsByMonth = new Map<string, TotalsByMonth>();
     const COMISION_EXTRA = 30000;
 
     transactions.forEach((transaction) => {
-      // Asegura que la fecha sea válida
       const fecha =
         transaction.fecha instanceof Date
           ? transaction.fecha
           : new Date(transaction.fecha);
       if (isNaN(fecha.getTime())) return;
 
-      // CORREGIDO: Usar la función de utilidad para obtener la fecha en Colombia
       const colombiaDate = getColombiaDate(fecha);
-      const dateStr = colombiaDate.toISOString().split('T')[0];
-      if (!dateStr) return;
+      const monthStr = `${colombiaDate.getFullYear()}-${String(colombiaDate.getMonth() + 1).padStart(2, '0')}`;
 
-      const current = totalsByDate.get(dateStr) ?? {
-        date: dateStr,
+      if (!monthStr) return;
+
+      const current = totalsByMonth.get(monthStr) ?? {
+        month: monthStr,
         precioNetoTotal: 0,
         tarifaServicioTotal: 0,
         impuesto4x1000Total: 0,
@@ -111,11 +100,9 @@ export default function TransactionTotals({
         transactionCount: 0,
       };
 
-      // Calcular las fórmulas para cada transacción y usar tarifaServicioAjustada
       const { tarifaServicioAjustada, impuesto4x1000, gananciaBruta } =
         calculateFormulas(transaction);
 
-      // Añadir comisión extra si está marcada
       const precioNetoConComision = transaction.comisionExtra
         ? (transaction.precioNeto ?? 0) + COMISION_EXTRA
         : (transaction.precioNeto ?? 0);
@@ -131,51 +118,42 @@ export default function TransactionTotals({
         transactionCount: current.transactionCount + 1,
       };
 
-      totalsByDate.set(dateStr, updatedTotal);
+      totalsByMonth.set(monthStr, updatedTotal);
     });
 
-    // Ordena por fecha descendente (más reciente primero)
-    return Array.from(totalsByDate.values()).sort((a, b) =>
-      b.date.localeCompare(a.date)
+    // Ordenar por mes descendente (más reciente primero)
+    return Array.from(totalsByMonth.values()).sort((a, b) =>
+      b.month.localeCompare(a.month)
     );
   }, [transactions]);
 
-  // CORREGIDO: Filtrar totales por búsqueda y rango de fechas de forma optimizada
+  // Filtrar totales por búsqueda y rango de fechas
   const filteredTotals = useMemo(() => {
     let filtered = totals;
-    // CORREGIDO: Filtrado por rango de fechas con mejor manejo de timezone
+
+    // Filtrado por rango de fechas (por mes)
     if (startDate && endDate) {
-      // Crear fechas en timezone de Colombia para comparación correcta
-      const startDateColombia = getColombiaDate(startDate);
-      const endDateColombia = getColombiaDate(endDate);
-
-      // Establecer horas para el rango completo del día
-      startDateColombia.setHours(0, 0, 0, 0);
-      endDateColombia.setHours(23, 59, 59, 999);
-
-      // Convertir a strings para comparación
-      const startStr = startDateColombia.toISOString().split('T')[0];
-      const endStr = endDateColombia.toISOString().split('T')[0];
+      const startMonth = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+      const endMonth = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}`;
 
       filtered = filtered.filter((t) => {
-        // Comparar strings de fechas directamente (YYYY-MM-DD)
-        return t.date >= startStr && t.date <= endStr;
+        return t.month >= startMonth && t.month <= endMonth;
       });
     }
-    // Filtrado global por texto (en todas las columnas relevantes)
+
+    // Filtrado por texto
     if (searchTerm.trim()) {
       const search = normalizeText(searchTerm.trim());
       filtered = filtered.filter((t) => {
-        // Formatear todos los valores como string para búsqueda flexible
         const valuesToSearch = [
-          formatDate(t.date),
+          formatMonth(t.month),
           String(t.transactionCount),
           formatCurrency(t.precioNetoTotal),
           formatCurrency(t.tarifaServicioTotal),
           formatCurrency(t.impuesto4x1000Total),
           formatCurrency(t.gananciaBrutaTotal),
         ].map((v) => normalizeText(String(v)));
-        // Coincidencia exacta o parcial en cualquier columna
+
         return valuesToSearch.some(
           (val) => val.includes(search) || search.includes(val)
         );
@@ -187,12 +165,12 @@ export default function TransactionTotals({
     searchTerm,
     startDate,
     endDate,
-    formatDate,
+    formatMonth,
     formatCurrency,
     normalizeText,
   ]);
 
-  // --- CORREGIDO: Paginación local sobre los totales por fecha ---
+  // Paginación
   const totalPages = Math.max(
     1,
     Math.ceil(filteredTotals.length / itemsPerPage)
@@ -202,7 +180,7 @@ export default function TransactionTotals({
     currentPage * itemsPerPage
   );
 
-  // Calcular totales generales SOLO del rango filtrado
+  // Calcular totales generales del rango filtrado
   const grandTotals = useMemo(() => {
     return filteredTotals.reduce(
       (acc, curr) => ({
@@ -224,9 +202,10 @@ export default function TransactionTotals({
 
   return (
     <div className="font-display container mx-auto px-6">
-      {/* Texto Totales Generales fuera del rectángulo */}
-      <h3 className="mb-2 text-4xl font-semibold">Totales Diarios</h3>
-      {/* Totales generales con colores e iconos */}
+      {/* Título */}
+      <h3 className="mb-2 text-4xl font-semibold">Totales Mensuales</h3>
+
+      {/* Totales generales */}
       <div className="mb-6 rounded-lg bg-gray-100 p-6">
         <div className="grid grid-cols-2 gap-4 font-bold md:grid-cols-5">
           <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
@@ -262,7 +241,7 @@ export default function TransactionTotals({
         </div>
       </div>
 
-      {/* Barra de búsqueda y filtro por rango para totales, ahora debajo de Totales Generales */}
+      {/* Barra de búsqueda y filtro por rango */}
       <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">
         <input
           type="text"
@@ -271,7 +250,8 @@ export default function TransactionTotals({
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-64 rounded-md border border-gray-300 px-3 py-2"
         />
-        {/* Fecha inicial */}
+
+        {/* Selector de mes inicial */}
         <div className="relative">
           <DatePicker
             selected={startDate}
@@ -279,12 +259,12 @@ export default function TransactionTotals({
             selectsStart
             startDate={startDate}
             endDate={endDate}
-            placeholderText="Fecha inicial"
+            placeholderText="Mes inicial"
             className="w-40 rounded-md border border-gray-300 px-3 py-2 pr-10"
-            dateFormat="dd/MM/yyyy"
+            dateFormat="MM/yyyy"
+            showMonthYearPicker
             locale={es}
             popperPlacement="bottom"
-            // Quitar el icono de limpiar (clearable)
             isClearable={false}
             autoComplete="off"
           />
@@ -305,7 +285,8 @@ export default function TransactionTotals({
             </svg>
           </span>
         </div>
-        {/* Fecha final */}
+
+        {/* Selector de mes final */}
         <div className="relative">
           <DatePicker
             selected={endDate}
@@ -314,12 +295,12 @@ export default function TransactionTotals({
             startDate={startDate}
             endDate={endDate}
             minDate={startDate ?? undefined}
-            placeholderText="Fecha final"
+            placeholderText="Mes final"
             className="w-40 rounded-md border border-gray-300 px-3 py-2 pr-10"
-            dateFormat="dd/MM/yyyy"
+            dateFormat="MM/yyyy"
+            showMonthYearPicker
             locale={es}
             popperPlacement="bottom"
-            // Quitar el icono de limpiar (clearable)
             isClearable={false}
             autoComplete="off"
           />
@@ -340,6 +321,7 @@ export default function TransactionTotals({
             </svg>
           </span>
         </div>
+
         {(startDate ?? endDate) && (
           <button
             onClick={() => {
@@ -353,13 +335,13 @@ export default function TransactionTotals({
         )}
       </div>
 
-      {/* Tabla mejorada con colores para los valores */}
+      {/* Tabla */}
       <div className="overflow-x-auto">
         <table className="w-full rounded-lg bg-white shadow-lg">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Fecha
+                Mes
               </th>
               <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Transacciones
@@ -381,11 +363,11 @@ export default function TransactionTotals({
           <tbody className="divide-y divide-gray-200">
             {paginatedTotals.map((total) => (
               <tr
-                key={total.date}
+                key={total.month}
                 className="transition-colors hover:bg-gray-50"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {formatDate(total.date)}
+                  {formatMonth(total.month)}
                 </td>
                 <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-blue-600">
                   {total.transactionCount}

@@ -18,6 +18,7 @@ export default function TransactionTableClient({
   ) => Promise<{ success: boolean; error?: string }>;
 }) {
   const [showTotals, setShowTotals] = useState(false);
+  const [showMonthlyTotals, setShowMonthlyTotals] = useState(false);
 
   // --- NUEVO: Estado para controlar si la tabla está activa ---
   const [isActive, setIsActive] = useState(true);
@@ -137,8 +138,23 @@ export default function TransactionTableClient({
         <TransactionTable
           initialData={data ?? []}
           onUpdateRecordAction={handleUpdateRecords}
-          onToggleTotalsAction={() => setShowTotals((prev) => !prev)}
+          onToggleTotalsAction={() => {
+            // CORREGIDO: Solo alternar showTotals, no tocar showMonthlyTotals aquí
+            setShowTotals((prev) => !prev);
+            // ELIMINADO: No tocar showMonthlyTotals aquí para permitir transición directa
+            // if (showMonthlyTotals) {
+            //   setShowMonthlyTotals(false);
+            // }
+          }}
           showTotals={showTotals}
+          showMonthlyTotals={showMonthlyTotals}
+          onToggleMonthlyTotalsAction={() => {
+            // CORREGIDO: Solo alternar showMonthlyTotals, asegurar que showTotals esté apagado
+            setShowMonthlyTotals((prev) => !prev);
+            if (showTotals) {
+              setShowTotals(false);
+            }
+          }}
           isLoading={isLoading}
         />
       </main>
