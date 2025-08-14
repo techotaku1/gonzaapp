@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
@@ -118,7 +125,10 @@ function DatePagination({
   );
 }
 
-export default function TransactionTable(props: TransactionTableProps) {
+const TransactionTable = forwardRef(function TransactionTable(
+  props: TransactionTableProps,
+  ref: React.Ref<{ scrollToPlaca: (placa: string) => void }>
+) {
   const logic = useTransactionTableLogic(props);
   // Crear una referencia para el contenedor de scroll de la tabla
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -819,6 +829,32 @@ export default function TransactionTable(props: TransactionTableProps) {
     };
   }, [dragging]);
 
+  // --- NUEVO: Scroll y selección por placa ---
+  useImperativeHandle(ref, () => ({
+    scrollToPlaca: (placa: string) => {
+      // Busca la fila por placa (mayúsculas)
+      const row = logic.paginatedData.find(
+        (r) => r.placa && r.placa.toUpperCase() === placa.toUpperCase()
+      );
+      if (!row) return;
+      // Selecciona la fila
+      logic.setSelectedRows(new Set([row.id]));
+      // Busca el elemento en el DOM
+      setTimeout(() => {
+        const el = document.querySelector(
+          `tr[data-placa="${row.placa.toUpperCase()}"]`
+        ) as HTMLTableRowElement | null;
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-4', 'ring-yellow-400');
+          setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-yellow-400');
+          }, 1600);
+        }
+      }, 100);
+    },
+  }));
+
   return (
     <div className="relative">
       {/* Mostrar SIEMPRE la fecha en formato largo arriba del botón agregar */}
@@ -1500,6 +1536,7 @@ export default function TransactionTable(props: TransactionTableProps) {
                           tramiteOptions={tramiteOptions}
                           emitidoPorWithColors={emitidoPorWithColors}
                           onDeleteAsesorAction={handleDeleteAsesorAction} // <-- PASA EL HANDLER AQUÍ
+                          data-placa={row.placa?.toUpperCase() || ''}
                         />
                       )
                     )}
@@ -1640,4 +1677,6 @@ export default function TransactionTable(props: TransactionTableProps) {
       )}
     </div>
   );
-}
+});
+
+export default TransactionTable;

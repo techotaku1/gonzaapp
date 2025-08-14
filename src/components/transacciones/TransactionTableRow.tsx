@@ -115,6 +115,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
       <tr
         className={`group border-b hover:bg-gray-50 ${rowClass}`}
         style={rowStyle}
+        data-placa={row.placa?.toUpperCase() || ''}
       >
         {isDeleteMode ? (
           <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">

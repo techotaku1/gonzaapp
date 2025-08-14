@@ -209,6 +209,18 @@ export default function TransactionTableClient({
     }
   };
 
+  // Ref para exponer función de scroll/select a la tabla principal
+  const tableRef = useRef<{ scrollToPlaca: (placa: string) => void } | null>(
+    null
+  );
+
+  // Handler para ir a la placa en la tabla principal
+  const handleGoToPlaca = (placa: string) => {
+    // Llama a la función expuesta por la tabla
+    tableRef.current?.scrollToPlaca(placa);
+    setNotificationOpen(false);
+  };
+
   // Handler para ignorar placa
   const handleIgnorePlaca = async (placa: string) => {
     await fetch('/api/ignored-plates', {
@@ -250,7 +262,7 @@ export default function TransactionTableClient({
                 <span
                   style={{
                     position: 'absolute',
-                    top: -12, // más arriba
+                    top: -12,
                     right: -8,
                     background: '#f59e42',
                     color: 'white',
@@ -310,13 +322,19 @@ export default function TransactionTableClient({
                         {notificationList.map((item, idx) => (
                           <li
                             key={item.placa + idx}
-                            className="flex flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
+                            className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
+                            onClick={() => handleGoToPlaca(item.placa)}
+                            tabIndex={0}
+                            style={{ outline: 'none' }}
                           >
                             <span className="flex items-center justify-between text-base font-bold text-gray-900">
                               {item.placa}
                               <button
                                 className="ml-2 text-xs text-red-500 underline"
-                                onClick={() => handleIgnorePlaca(item.placa)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleIgnorePlaca(item.placa);
+                                }}
                                 title="Ignorar esta placa"
                               >
                                 Ignorar
@@ -363,20 +381,15 @@ export default function TransactionTableClient({
         }}
       >
         <TransactionTable
+          ref={tableRef}
           initialData={data ?? []}
           onUpdateRecordAction={handleUpdateRecords}
           onToggleTotalsAction={() => {
-            // CORREGIDO: Solo alternar showTotals, no tocar showMonthlyTotals aquí
             setShowTotals((prev) => !prev);
-            // ELIMINADO: No tocar showMonthlyTotals aquí para permitir transición directa
-            // if (showMonthlyTotals) {
-            //   setShowMonthlyTotals(false);
-            // }
           }}
           showTotals={showTotals}
           showMonthlyTotals={showMonthlyTotals}
           onToggleMonthlyTotalsAction={() => {
-            // CORREGIDO: Solo alternar showMonthlyTotals, asegurar que showTotals esté apagado
             setShowMonthlyTotals((prev) => !prev);
             if (showTotals) {
               setShowTotals(false);
