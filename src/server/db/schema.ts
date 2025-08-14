@@ -102,3 +102,9 @@ export const egressStats = pgTable('egress_stats', {
   date: varchar('date', { length: 10 }).notNull(), // YYYY-MM-DD
   queryParams: varchar('query_params', { length: 1000 }),
 });
+
+export const ignoredPlates = pgTable('ignored_plates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  placa: varchar('placa', { length: 20 }).notNull().unique(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});

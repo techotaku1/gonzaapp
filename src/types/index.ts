@@ -102,3 +102,9 @@ export interface EgressStatSummary {
   requestCount: number;
   uniqueEndpoints: number;
 }
+
+export interface IgnoredPlateRecord {
+  id: string;
+  placa: string;
+  createdAt: Date;
+}
