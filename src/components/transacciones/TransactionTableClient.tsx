@@ -243,38 +243,54 @@ export default function TransactionTableClient({
               top: 12,
               right: 24,
               zIndex: 100,
-              cursor: 'pointer',
-              background: 'rgba(255,255,255,0.95)',
+              // Elimina background y padding aquí para evitar doble fondo blanco
               borderRadius: 24,
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              padding: '6px 12px',
               display: 'flex',
               alignItems: 'center',
               gap: 8,
             }}
           >
-            <div
-              style={{ position: 'relative' }}
+            {/* Botón expandido y blanco para la campanita y su padding */}
+            <button
+              type="button"
+              onClick={handleNotificationClick}
+              style={{
+                position: 'relative',
+                background: 'white',
+                border: 'none',
+                borderRadius: 32,
+                padding: 12,
+                minWidth: 44,
+                minHeight: 44,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+                transition: 'background 0.2s',
+              }}
               title="Faltan boletas o pagos"
+              tabIndex={0}
             >
-              {/* Badge más arriba de la campana */}
+              {/* Badge más abajo y a la derecha de la campana */}
               {notificationList.length > 0 && (
                 <span
                   style={{
                     position: 'absolute',
-                    top: -12,
-                    right: -8,
+                    top: 1, // más abajo
+                    right: 2, // más a la derecha
                     background: '#f59e42',
                     color: 'white',
                     borderRadius: '50%',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
-                    minWidth: 20,
-                    minHeight: 20,
+                    minWidth: 22,
+                    minHeight: 22,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    padding: '0 5px',
+                    padding: '0 6px',
                     border: '2px solid #fff',
                     zIndex: 2,
                   }}
@@ -289,86 +305,84 @@ export default function TransactionTableClient({
                     : 'text-yellow-500'
                 }
                 size={22}
-                onClick={handleNotificationClick}
                 style={{ transition: 'transform 0.2s' }}
               />
-              {/* --- Menú hamburguesa debajo de la campana --- */}
-              {notificationOpen && (
-                <div
-                  id="notification-bell-list"
-                  style={{
-                    position: 'absolute',
-                    top: 32,
-                    right: 0,
-                    minWidth: 260,
-                    background: 'white',
-                    border: '1px solid #fbbf24',
-                    borderRadius: 8,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                    padding: '12px 8px',
-                    zIndex: 9999,
-                  }}
-                >
-                  {notificationLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Icons.spinner className="h-8 w-8 text-yellow-500" />
+            </button>
+            {/* --- Menú hamburguesa debajo de la campana --- */}
+            {notificationOpen && (
+              <div
+                id="notification-bell-list"
+                style={{
+                  position: 'absolute',
+                  top: 48, // antes 32, ahora más abajo
+                  right: 0,
+                  minWidth: 260,
+                  background: 'white',
+                  border: '1px solid #fbbf24',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                  padding: '12px 8px',
+                  zIndex: 9999,
+                }}
+              >
+                {notificationLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Icons.spinner className="h-8 w-8 text-yellow-500" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-2 font-bold text-yellow-700">
+                      Placas Por Pagar:
                     </div>
-                  ) : (
-                    <>
-                      <div className="mb-2 font-bold text-yellow-700">
-                        Placas Por Pagar:
-                      </div>
-                      <ul className="max-h-64 overflow-y-auto">
-                        {notificationList.map((item, idx) => (
-                          <li
-                            key={item.placa + idx}
-                            className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
-                            onClick={() => handleGoToPlaca(item.placa)}
-                            tabIndex={0}
-                            style={{ outline: 'none' }}
-                          >
-                            <span className="flex items-center justify-between text-base font-bold text-gray-900">
-                              {item.placa}
-                              <button
-                                className="ml-2 text-xs text-red-500 underline"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleIgnorePlaca(item.placa);
-                                }}
-                                title="Ignorar esta placa"
-                              >
-                                Ignorar
-                              </button>
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {item.fecha instanceof Date &&
-                              !isNaN(item.fecha.getTime())
-                                ? item.fecha.toLocaleString('es-CO', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    hour12: true,
-                                    timeZone: 'America/Bogota',
-                                  })
-                                : ''}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                      <button
-                        className="mt-3 w-full rounded bg-yellow-400 py-1 font-semibold text-white hover:bg-yellow-500"
-                        onClick={() => setNotificationOpen(false)}
-                      >
-                        Cerrar
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            {/* Texto eliminado, solo campana y número */}
+                    <ul className="max-h-64 overflow-y-auto">
+                      {notificationList.map((item, idx) => (
+                        <li
+                          key={item.placa + idx}
+                          className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
+                          onClick={() => handleGoToPlaca(item.placa)}
+                          tabIndex={0}
+                          style={{ outline: 'none' }}
+                        >
+                          <span className="flex items-center justify-between text-base font-bold text-gray-900">
+                            {item.placa}
+                            <button
+                              className="ml-2 text-xs text-red-500 underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleIgnorePlaca(item.placa);
+                              }}
+                              title="Ignorar esta placa"
+                            >
+                              Ignorar
+                            </button>
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {item.fecha instanceof Date &&
+                            !isNaN(item.fecha.getTime())
+                              ? item.fecha.toLocaleString('es-CO', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                  timeZone: 'America/Bogota',
+                                })
+                              : ''}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      className="mt-3 w-full rounded bg-yellow-400 py-1 font-semibold text-white hover:bg-yellow-500"
+                      onClick={() => setNotificationOpen(false)}
+                    >
+                      Cerrar
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
