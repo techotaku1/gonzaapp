@@ -844,7 +844,9 @@ export function useTransactionTableLogic(props: {
 
   useEffect(() => {
     updateDateDisplay(dateFilter.startDate, dateFilter.endDate);
-  }, [dateFilter, currentPage, updateDateDisplay]);
+    // Solo depende de los valores de fecha, no del display ni de la función
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFilter.startDate, dateFilter.endDate]);
   // handleDateFilterChange: tipa los parámetros correctamente
   const handleDateFilterChange = useCallback(
     (_start: Date | null, _end: Date | null) => {
