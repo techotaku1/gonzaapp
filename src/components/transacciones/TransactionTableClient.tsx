@@ -129,7 +129,13 @@ export default function TransactionTableClient({
   // --- NUEVO: Detectar filas con boleta!==true o pagado!==true y guardar placas ---
   const [showNotification, setShowNotification] = useState(false);
   const [notificationList, setNotificationList] = useState<
-    { placa: string; fecha: Date }[]
+    {
+      placa: string;
+      fecha: Date;
+      asesor: string;
+      precioNeto: number;
+      emitidoPor: string;
+    }[]
   >([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false); // NUEVO
@@ -178,6 +184,9 @@ export default function TransactionTableClient({
       .map((row) => ({
         placa: row.placa!.toUpperCase(),
         fecha: row.fecha instanceof Date ? row.fecha : new Date(row.fecha),
+        asesor: row.asesor ?? '',
+        precioNeto: row.precioNeto ?? 0,
+        emitidoPor: row.emitidoPor ?? '',
       }));
     setShowNotification(pendientes.length > 0);
     setNotificationList(pendientes);
@@ -214,10 +223,35 @@ export default function TransactionTableClient({
     null
   );
 
+  // NUEVO: Estado para la fecha actual de la paginación y función para cambiarla
+  const [paginaActualFecha, setPaginaActualFecha] = useState(currentDate);
+
+  // NUEVO: Cuando cambia currentDate, actualiza paginaActualFecha
+  useEffect(() => {
+    setPaginaActualFecha(currentDate);
+  }, [currentDate]);
+
+  // NUEVO: Handler para cambiar la página por fecha
+  const cambiarPaginaPorFecha = (fecha: string) => {
+    setPaginaActualFecha(fecha);
+  };
+
   // Handler para ir a la placa en la tabla principal
-  const handleGoToPlaca = (placa: string) => {
-    // Llama a la función expuesta por la tabla
-    tableRef.current?.scrollToPlaca(placa);
+  const handleGoToPlaca = (placa: string, fechaPlaca?: Date) => {
+    const fechaStr =
+      fechaPlaca instanceof Date
+        ? fechaPlaca.toISOString().slice(0, 10)
+        : undefined;
+    if (fechaStr && fechaStr !== paginaActualFecha) {
+      // Cambia la página a la fecha de la placa
+      cambiarPaginaPorFecha(fechaStr);
+      // Espera a que la página cambie y luego selecciona la placa
+      setTimeout(() => {
+        tableRef.current?.scrollToPlaca(placa);
+      }, 500); // Ajusta el timeout si es necesario
+    } else {
+      tableRef.current?.scrollToPlaca(placa);
+    }
     setNotificationOpen(false);
   };
 
@@ -339,7 +373,9 @@ export default function TransactionTableClient({
                         <li
                           key={item.placa + idx}
                           className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
-                          onClick={() => handleGoToPlaca(item.placa)}
+                          onClick={() =>
+                            handleGoToPlaca(item.placa, item.fecha)
+                          }
                           tabIndex={0}
                           style={{ outline: 'none' }}
                         >
@@ -357,18 +393,45 @@ export default function TransactionTableClient({
                             </button>
                           </span>
                           <span className="text-xs text-gray-500">
-                            {item.fecha instanceof Date &&
-                            !isNaN(item.fecha.getTime())
-                              ? item.fecha.toLocaleString('es-CO', {
-                                  day: '2-digit',
-                                  month: '2-digit',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true,
-                                  timeZone: 'America/Bogota',
-                                })
-                              : ''}
+                            {(() => {
+                              let fecha: Date | undefined;
+                              if (
+                                item.fecha instanceof Date &&
+                                !isNaN(item.fecha.getTime())
+                              ) {
+                                fecha = item.fecha;
+                              } else if (
+                                typeof item.fecha === 'string' ||
+                                typeof item.fecha === 'number'
+                              ) {
+                                const f = new Date(item.fecha);
+                                if (!isNaN(f.getTime())) fecha = f;
+                              }
+                              if (!fecha) return '';
+                              // Sumar 5 horas a la fecha para ajustar el horario
+                              const fechaAjustada = new Date(
+                                fecha.getTime() + 5 * 60 * 60 * 1000
+                              );
+                              return fechaAjustada.toLocaleString('es-CO', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true,
+                                timeZone: 'America/Bogota',
+                              });
+                            })()}
+                          </span>
+                          <span className="text-xs text-gray-700">
+                            Asesor: <b>{item.asesor}</b>
+                          </span>
+                          <span className="text-xs text-gray-700">
+                            Precio Neto:{' '}
+                            <b>${item.precioNeto.toLocaleString('es-CO')}</b>
+                          </span>
+                          <span className="text-xs text-gray-700">
+                            Emitido Por: <b>{item.emitidoPor}</b>
                           </span>
                         </li>
                       ))}
@@ -410,6 +473,9 @@ export default function TransactionTableClient({
             }
           }}
           isLoading={isLoading}
+          // NUEVO: Pasa la fecha actual y el setter a TransactionTable si lo necesitas
+          // paginaActualFecha={paginaActualFecha}
+          // setPaginaActualFecha={setPaginaActualFecha}
         />
       </main>
     </SWRProvider>
