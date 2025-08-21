@@ -137,16 +137,14 @@ Tutorial UPDATE DEPENDENCIES:
 7. `npm install nombre-del-paquete@latest` // Instala la última versión de un paquete específico
 
 8. `npm outdated --include=dev` // Muestra las dependencias de desarrollo que están desactualizadas
-9. `npm outdated -g --depth=0` // Muestra las dependencias globales que están desactualizadas
-10. `npm install -g [nombre-del-paquete]@latest` // Instala la última versión de un paquete global específico
-
+9. `npm list -g --depth=0` // Muestra las dependencias globales que están desactualizadas
+10. `npm outdated -g --depth=0` // Instala la última versión de los paquetes globales
 11. `npm install tailwindcss @tailwindcss/postcss postcss` // Instala las últimas versiones de TailwindCSS 4.0
 12. `npm install tailwindcss@latest @tailwindcss/cli@latest` // Actualizar TailwindCss 4
 13. `npx @clerk/upgrade --from=core-1` // Instala la última versión de Clerk para Next.js 1
 14. `npx @clerk/upgrade -g` // Instala la última versión de Clerk para Next.js 2
 15. `npm install drizzle-orm@latest` // Instala la última versión de Drizzle ORM
 16. `npx @next/codemod@canary upgrade latest` // Ayuda a actualizar tu código para que sea compatible con la última versión de Next.js
-17. `npm i next@latest react@latest react-dom@latest` // Este comando instala las últimas versiones estables de los paquetes core necesarios para Next.js
 
 ---
 
@@ -166,7 +164,7 @@ Forzar Dependencias
 
 ---
 
-Tutorial de Comandos Para El Fomateo Eslint, Prettier y Typescript:
+Tutorial de Comandos Para El Formateo Eslint, Prettier y Typescript:
 
 1. `npm run lint`: Ejecuta ESLint para identificar problemas en el código sin corregirlos.|
 2. `npm run lint:fix`: Ejecuta ESLint y corrige automáticamente los problemas que pueda solucionar.
