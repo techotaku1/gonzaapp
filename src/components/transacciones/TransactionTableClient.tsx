@@ -167,7 +167,6 @@ export default function TransactionTableClient({
     const minDate = new Date('2025-08-10T00:00:00-05:00');
     const pendientes = (data ?? initialData)
       .filter((row) => {
-        // Solo placas válidas y desde la fecha mínima
         const fecha =
           row.fecha instanceof Date ? row.fecha : new Date(row.fecha);
         return (
@@ -195,8 +194,19 @@ export default function TransactionTableClient({
         tramite: row.tramite ?? '',
         novedad: row.novedad ?? '',
       }));
+
+    // Solo actualiza si cambia el length o el contenido
     setShowNotification(pendientes.length > 0);
-    setNotificationList(pendientes);
+    setNotificationList((prev) => {
+      // Evita update infinito: compara shallow por JSON.stringify
+      if (
+        prev.length === pendientes.length &&
+        JSON.stringify(prev) === JSON.stringify(pendientes)
+      ) {
+        return prev;
+      }
+      return pendientes;
+    });
   }, [data, initialData, ignoredPlates]);
 
   // --- NUEVO: Cerrar lista al hacer click fuera ---
