@@ -127,6 +127,7 @@ export default function TransactionTableClient({
   };
 
   // --- NUEVO: Detectar filas con boleta!==true o pagado!==true y guardar placas ---
+  // Extiende el tipo para incluir tramite y novedad
   const [showNotification, setShowNotification] = useState(false);
   const [notificationList, setNotificationList] = useState<
     {
@@ -135,6 +136,8 @@ export default function TransactionTableClient({
       asesor: string;
       precioNeto: number;
       emitidoPor: string;
+      tramite: string;
+      novedad: string;
     }[]
   >([]);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -173,7 +176,9 @@ export default function TransactionTableClient({
           typeof row.placa === 'string' &&
           row.placa.trim() !== '' &&
           fecha >= minDate &&
-          !ignoredPlates.includes(row.placa.toUpperCase())
+          !ignoredPlates.includes(
+            typeof row.placa === 'string' ? row.placa.toUpperCase() : ''
+          )
         );
       })
       .sort((a, b) => {
@@ -182,11 +187,13 @@ export default function TransactionTableClient({
         return fechaB.getTime() - fechaA.getTime();
       })
       .map((row) => ({
-        placa: row.placa!.toUpperCase(),
+        placa: typeof row.placa === 'string' ? row.placa.toUpperCase() : '',
         fecha: row.fecha instanceof Date ? row.fecha : new Date(row.fecha),
         asesor: row.asesor ?? '',
         precioNeto: row.precioNeto ?? 0,
         emitidoPor: row.emitidoPor ?? '',
+        tramite: row.tramite ?? '',
+        novedad: row.novedad ?? '',
       }));
     setShowNotification(pendientes.length > 0);
     setNotificationList(pendientes);
@@ -371,7 +378,7 @@ export default function TransactionTableClient({
                     <ul className="max-h-64 overflow-y-auto">
                       {notificationList.map((item, idx) => (
                         <li
-                          key={item.placa + idx}
+                          key={(item.placa || item.tramite) + idx}
                           className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
                           onClick={() =>
                             handleGoToPlaca(item.placa, item.fecha)
@@ -380,7 +387,11 @@ export default function TransactionTableClient({
                           style={{ outline: 'none' }}
                         >
                           <span className="flex items-center justify-between text-base font-bold text-gray-900">
-                            {item.placa}
+                            {/* Mostrar tramite si no es SOAT, si no mostrar placa */}
+                            {item.tramite &&
+                            item.tramite.toUpperCase() !== 'SOAT'
+                              ? (item.tramite ?? '(Sin trámite)')
+                              : item.placa}
                             <button
                               className="ml-2 text-xs text-red-500 underline"
                               onClick={(e) => {
