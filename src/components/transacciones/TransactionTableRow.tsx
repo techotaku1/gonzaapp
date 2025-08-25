@@ -153,7 +153,8 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
         {/* Boleta */}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {renderCheckbox(row.id, 'boleta', row.boleta)}
+            {/* El checkbox de boleta usa selectedRows, no el valor de row.boleta */}
+            {renderCheckbox(row.id, 'boleta', _selectedRows.has(row.id))}
           </div>
         </td>
         {/* Pagado */}

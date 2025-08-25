@@ -659,7 +659,7 @@ const TransactionTable = forwardRef(function TransactionTable(
   // }, [logic.paginatedData, isPaying, pendingPaidIds, logic]);
 
   // --- NUEVO: Estado local para pagos pendientes ---
-  const [localPaid, setLocalPaid] = useState<Record<string, boolean>>({});
+  // const [localPaid, setLocalPaid] = useState<Record<string, boolean>>({});
 
   // Memoiza las filas seleccionadas y el total
   const selectedRowsArray = useMemo(
@@ -676,26 +676,25 @@ const TransactionTable = forwardRef(function TransactionTable(
   const totalSelected = useMemo(
     () =>
       selectedRowsArray
-        .filter((row) => !row.pagado && !localPaid[row.id])
+        .filter((row) => !row.pagado)
         .reduce((sum, row) => sum + row.precioNeto, 0),
-    [selectedRowsArray, localPaid]
+    [selectedRowsArray]
   );
 
   const placasSeleccionadas = useMemo(
     () =>
       selectedRowsArray
-        .filter((row) => !row.pagado && !localPaid[row.id])
+        .filter((row) => !row.pagado)
         .map((row) => row.placa?.toUpperCase())
         .join(', '),
-    [selectedRowsArray, localPaid]
+    [selectedRowsArray]
   );
 
   // Pagar boletas seleccionadas: ejecuta el pago directamente, muestra spinner y activa "Guardando cambios..."
   const handlePayLocal = async () => {
     setIsPaying(true);
-    logic.setIsActuallySaving(true); // <-- activa el estado de guardado
+    logic.setIsActuallySaving(true);
 
-    // CORREGIDO: Procesar TODOS los registros seleccionados, no solo los que tienen boleta=true
     const allSelectedRecords = Array.from(logic.selectedRows)
       .map((id) => props.initialData.find((r) => r.id === id))
       .filter(
@@ -706,21 +705,15 @@ const TransactionTable = forwardRef(function TransactionTable(
     const toUpdate = allSelectedRecords.map((row) => ({
       ...row,
       pagado: true,
-      boleta: true, // <-- NUEVO: Marcar boleta como true al pagar
+      boleta: true,
       boletasRegistradas: totalSelected,
     }));
 
     if (toUpdate.length > 0) {
-      const updates: Record<string, boolean> = {};
-      toUpdate.forEach((row) => {
-        updates[row.id] = true;
-      });
-      setLocalPaid((prev) => ({ ...prev, ...updates }));
       await logic.onUpdateRecordAction(toUpdate);
-      setLocalPaid({});
       logic.setSelectedRows(new Set());
     }
-    logic.setIsActuallySaving(false); // <-- desactiva el estado de guardado
+    logic.setIsActuallySaving(false);
     setIsPaying(false);
   };
 
@@ -731,6 +724,24 @@ const TransactionTable = forwardRef(function TransactionTable(
     value: boolean,
     disabled?: boolean
   ) => {
+    if (field === 'boleta') {
+      const row = logic.paginatedData.find((r) => r.id === id);
+      // El checkbox de boleta selecciona/deselecciona la fila para pago
+      return (
+        <label className="check-label">
+          <input
+            type="checkbox"
+            checked={logic.selectedRows.has(id)}
+            disabled={row?.pagado ?? disabled}
+            onChange={(e) => {
+              if (row) handleBoletaCheckbox(id, e.target.checked, row);
+            }}
+            className="sr-only"
+          />
+          <div className="checkmark" />
+        </label>
+      );
+    }
     if (field === 'pagado') {
       const row = logic.paginatedData.find((r) => r.id === id);
       return (
@@ -740,8 +751,7 @@ const TransactionTable = forwardRef(function TransactionTable(
             checked={!!value}
             disabled={disabled}
             onChange={async (e) => {
-              setLocalPaid((prev) => ({ ...prev, [id]: e.target.checked }));
-              logic.setIsActuallySaving(true); // <-- activa el estado de guardado
+              logic.setIsActuallySaving(true);
               if (row) {
                 await logic.onUpdateRecordAction([
                   {
@@ -753,12 +763,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                   },
                 ]);
               }
-              setLocalPaid((prev) => {
-                const copy = { ...prev };
-                delete copy[id];
-                return copy;
-              });
-              logic.setIsActuallySaving(false); // <-- desactiva el estado de guardado
+              logic.setIsActuallySaving(false);
             }}
             className="sr-only"
           />
@@ -768,6 +773,22 @@ const TransactionTable = forwardRef(function TransactionTable(
     }
     // Para otros checks usa el render original
     return logic.renderCheckbox(id, field, value, disabled);
+  };
+
+  // --- NUEVO: Handler para seleccionar/deseleccionar filas por el checkbox de boleta ---
+  const handleBoletaCheckbox = (
+    id: string,
+    value: boolean,
+    row: TransactionRecord
+  ) => {
+    // Si se selecciona, agrega a selectedRows; si se deselecciona, quita
+    const newSelected = new Set(logic.selectedRows);
+    if (value) {
+      if (!row.pagado) newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    logic.setSelectedRows(newSelected);
   };
 
   // Crear función para obtener clase de color de trámite
@@ -1664,11 +1685,7 @@ const TransactionTable = forwardRef(function TransactionTable(
               <div className="flex flex-col gap-2 text-base">
                 <div>
                   Registros a pagar:{' '}
-                  {
-                    selectedRowsArray.filter(
-                      (row) => !row.pagado && !localPaid[row.id]
-                    ).length
-                  }
+                  {selectedRowsArray.filter((row) => !row.pagado).length}
                 </div>
                 <div className="font-mono uppercase">
                   Placas: {placasSeleccionadas}
@@ -1679,18 +1696,15 @@ const TransactionTable = forwardRef(function TransactionTable(
               onClick={handlePayLocal}
               className="mt-2 flex w-full cursor-pointer items-center justify-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
               disabled={
-                selectedRowsArray.filter(
-                  (row) => !row.pagado && !localPaid[row.id]
-                ).length === 0 || isPaying
+                selectedRowsArray.filter((row) => !row.pagado).length === 0 ||
+                isPaying
               }
               style={{
                 pointerEvents: 'auto',
                 zIndex: 1000,
                 cursor:
                   isPaying ||
-                  selectedRowsArray.filter(
-                    (row) => !row.pagado && !localPaid[row.id]
-                  ).length === 0
+                  selectedRowsArray.filter((row) => !row.pagado).length === 0
                     ? 'not-allowed'
                     : 'pointer',
               }}
