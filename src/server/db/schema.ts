@@ -45,6 +45,7 @@ export const transactions = pgTable('transactions', {
   }).notNull(),
   rappi: boolean('rappi').notNull().default(false),
   observaciones: varchar('observaciones'),
+  createdByInitial: varchar('created_by_initial'),
 });
 
 export const cuadre = pgTable('cuadre', {

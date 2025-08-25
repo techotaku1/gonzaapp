@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-
 import { Calendar } from 'lucide-react';
 
 export default function HeaderTitles({
@@ -59,6 +58,7 @@ export default function HeaderTitles({
   return (
     <thead className="sticky top-0 z-50 bg-gray-50">
       <tr className="[&>th]:table-header">
+        {/* Si hay modo delete o asesor, agregar celdas vacías */}
         {isDeleteMode && (
           <th scope="col" className="w-10 whitespace-nowrap">
             <div className="absolute inset-0 flex items-center justify-center">
@@ -78,52 +78,43 @@ export default function HeaderTitles({
             </div>
           </th>
         )}
-        {tableHeaders.map((header, idx) => (
-          <th
-            key={header}
-            scope="col"
-            className={
-              idx === 0
-                ? 'table-header sticky left-0 z-20 cursor-pointer border-r border-gray-600 bg-gray-50 select-none'
-                : 'table-header whitespace-nowrap'
-            }
-            onClick={idx === 0 ? handleToggleFecha : undefined}
-            style={
-              idx === 0
-                ? {
-                    minWidth: fechaExpand ? 120 : 32,
-                    maxWidth: fechaExpand ? 180 : 32,
-                    width: fechaExpand ? 140 : 32,
-                    textAlign: 'center',
-                  }
-                : undefined
-            }
-            title={
-              idx === 0
-                ? fechaExpand
-                  ? 'Contraer columna fecha'
-                  : 'Expandir columna fecha'
-                : undefined
-            }
-          >
-            {idx === 0 ? (
-              fechaExpand ? (
-                <span
-                  className="text-md font-semibold"
-                  style={{
-                    color: 'black',
-                    fontFamily:
-                      'var(--font-table-text), var(--font-lexend), sans-serif',
-                  }}
-                >
-                  Fecha
-                </span>
-              ) : (
-                <Calendar size={20} className="mx-auto text-gray-500" />
-              )
-            ) : (
-              header
-            )}
+        {/* Nueva columna: Creador */}
+        <th className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-gray-800 whitespace-nowrap">
+          Creador
+        </th>
+        {/* Icono de calendario para la columna fecha */}
+        <th
+          scope="col"
+          className="table-header sticky left-0 z-20 cursor-pointer border-r border-gray-600 bg-gray-50 select-none"
+          onClick={handleToggleFecha}
+          style={{
+            minWidth: fechaExpand ? 120 : 32,
+            maxWidth: fechaExpand ? 180 : 32,
+            width: fechaExpand ? 140 : 32,
+            textAlign: 'center',
+          }}
+          title={
+            fechaExpand ? 'Contraer columna fecha' : 'Expandir columna fecha'
+          }
+        >
+          {fechaExpand ? (
+            <span
+              className="text-md font-semibold"
+              style={{
+                color: 'black',
+                fontFamily:
+                  'var(--font-table-text), var(--font-lexend), sans-serif',
+              }}
+            >
+              Fecha
+            </span>
+          ) : (
+            <Calendar size={20} className="mx-auto text-gray-500" />
+          )}
+        </th>
+        {tableHeaders.slice(1).map((header) => (
+          <th key={header} scope="col" className="table-header whitespace-nowrap">
+            {header}
           </th>
         ))}
       </tr>

@@ -23,6 +23,7 @@ export interface BaseTransactionRecord {
   gananciaBruta: number;
   rappi: boolean;
   observaciones: string | null;
+  createdByInitial?: string | null; // <-- debe ser opcional y permitir null
 }
 
 export interface CuadreData {

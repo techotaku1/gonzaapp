@@ -145,6 +145,10 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
             </div>
           </td>
         ) : null}
+        {/* Nueva columna: Creador */}
+        <td className="table-cell text-center font-bold whitespace-nowrap text-purple-700">
+          {row.createdByInitial ?? ''}
+        </td>
         <TransactionTableCell
           row={row}
           field="fecha"

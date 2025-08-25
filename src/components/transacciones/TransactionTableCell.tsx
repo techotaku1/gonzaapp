@@ -56,6 +56,20 @@ const TransactionTableCell: React.FC<TransactionTableCellProps> = React.memo(
         : 'table-cell whitespace-nowrap pl-2 transition-all duration-200 min-w-[32px] max-w-[32px] w-[32px] overflow-hidden text-center'
       : (className ?? 'table-cell whitespace-nowrap');
 
+    // Si es la columna creador, solo mostrar el valor
+    if (field === 'createdByInitial') {
+      return (
+        <td
+          className={className ?? 'table-cell whitespace-nowrap'}
+          style={style}
+        >
+          <span className="font-bold text-purple-700">
+            {row.createdByInitial ?? ''}
+          </span>
+        </td>
+      );
+    }
+
     return (
       <td className={fechaCellClasses} style={style}>
         {isFecha ? (

@@ -15,6 +15,8 @@ import {
   transactions,
 } from '~/server/db/schema';
 
+import { getUserInitial } from './letterinitial';
+
 import type { ColorRecord, TramiteRecord, TransactionRecord } from '~/types';
 
 // Función original de lectura
@@ -217,9 +219,11 @@ export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // --- Guarda la fecha tal como la recibe ---
+    // Obtener la inicial del usuario Clerk
+    const initial = await getUserInitial();
     await db.insert(transactions).values({
       ...record,
+      createdByInitial: initial ?? null,
       fecha: record.fecha,
       boletasRegistradas: Number(record.boletasRegistradas).toString(),
       precioNeto: record.precioNeto.toString(),
