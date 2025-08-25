@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+
 import { Calendar } from 'lucide-react';
 
 export default function HeaderTitles({
@@ -78,9 +79,93 @@ export default function HeaderTitles({
             </div>
           </th>
         )}
-        {/* Nueva columna: Creador */}
-        <th className="px-2 py-3 text-xs font-bold uppercase tracking-wider text-gray-800 whitespace-nowrap">
-          Creador
+        {/* Columna Creador: reemplaza el texto por el SVG */}
+        <th className="px-2 py-3 text-center text-xs font-bold tracking-wider whitespace-nowrap text-gray-800 uppercase">
+          <svg
+            viewBox="0 0 24 24"
+            id="Layer_1"
+            data-name="Layer 1"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="#000000"
+            width={20}
+            height={20}
+            style={{ display: 'inline-block', verticalAlign: 'middle' }}
+          >
+            <g>
+              <circle
+                className="cls-1"
+                cx="12"
+                cy="12"
+                r="9.58"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+              <line
+                className="cls-1"
+                x1="12"
+                y1="0.5"
+                x2="12"
+                y2="5.29"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+              <line
+                className="cls-1"
+                x1="12"
+                y1="18.71"
+                x2="12"
+                y2="23.5"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+              <line
+                className="cls-1"
+                x1="23.5"
+                y1="12"
+                x2="18.71"
+                y2="12"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+              <line
+                className="cls-1"
+                x1="5.29"
+                y1="12"
+                x2="0.5"
+                y2="12"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+              <circle
+                className="cls-1"
+                cx="12"
+                cy="11.04"
+                r="2.87"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+              <path
+                className="cls-1"
+                d="M7.21,19.67v-1A4.78,4.78,0,0,1,12,13.92h0a4.78,4.78,0,0,1,4.79,4.79v1"
+                fill="none"
+                stroke="#020202"
+                strokeMiterlimit="10"
+                strokeWidth="1.92"
+              />
+            </g>
+          </svg>
         </th>
         {/* Icono de calendario para la columna fecha */}
         <th
@@ -113,7 +198,11 @@ export default function HeaderTitles({
           )}
         </th>
         {tableHeaders.slice(1).map((header) => (
-          <th key={header} scope="col" className="table-header whitespace-nowrap">
+          <th
+            key={header}
+            scope="col"
+            className="table-header whitespace-nowrap"
+          >
             {header}
           </th>
         ))}

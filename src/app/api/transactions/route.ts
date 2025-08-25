@@ -97,7 +97,13 @@ export async function POST(req: NextRequest) {
       }
       try {
         const records = await getTransactionsByIds(ids);
-        return NextResponse.json(records, { status: 200 });
+        return NextResponse.json(
+          records.map((record) => ({
+            ...record,
+            createdByInitial: record.createdByInitial ?? null,
+          })),
+          { status: 200 }
+        );
       } catch (error) {
         console.error('Error in getTransactionsByIds:', error);
         return NextResponse.json([], { status: 200 });

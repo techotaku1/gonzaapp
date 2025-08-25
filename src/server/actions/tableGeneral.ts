@@ -28,6 +28,7 @@ export async function getTransactions(): Promise<TransactionRecord[]> {
       .orderBy(desc(transactions.fecha));
     return results.map((record) => ({
       ...record,
+      createdByInitial: record.createdByInitial ?? null, // <-- asegúrate de incluirlo
       fecha: new Date(record.fecha),
       boletasRegistradas: Number(record.boletasRegistradas),
       precioNeto: Number(record.precioNeto),
@@ -84,6 +85,7 @@ export const getTransactionsPaginated = unstable_cache(
       cilindraje: transactions.cilindraje,
       tipoVehiculo: transactions.tipoVehiculo,
       celular: transactions.celular,
+      createdByInitial: transactions.createdByInitial, // <-- Asegúrate de incluirlo aquí
     };
     const where = _sql`DATE(${transactions.fecha}) = ${date}`;
     const data = await db
@@ -102,6 +104,7 @@ export const getTransactionsPaginated = unstable_cache(
     // Normaliza tipos
     const dataFixed = data.map((row) => ({
       ...row,
+      createdByInitial: row.createdByInitial ?? null,
       fecha: new Date(row.fecha),
       boletasRegistradas: Number(row.boletasRegistradas),
       precioNeto: Number(row.precioNeto),
@@ -141,7 +144,7 @@ async function _searchTransactions(
       fecha: transactions.fecha,
       tramite: transactions.tramite,
       pagado: transactions.pagado,
-      boleta: transactions.boleta, // <-- Añadir este campo
+      boleta: transactions.boleta,
       boletasRegistradas: transactions.boletasRegistradas,
       emitidoPor: transactions.emitidoPor,
       placa: transactions.placa,
@@ -161,6 +164,7 @@ async function _searchTransactions(
       cilindraje: transactions.cilindraje,
       tipoVehiculo: transactions.tipoVehiculo,
       celular: transactions.celular,
+      createdByInitial: transactions.createdByInitial, // <-- Asegúrate de incluirlo aquí
     })
     .from(transactions)
     .where(
@@ -177,6 +181,7 @@ async function _searchTransactions(
   // Normaliza tipos
   return results.map((record) => ({
     ...record,
+    createdByInitial: record.createdByInitial ?? null,
     fecha: new Date(record.fecha),
     boletasRegistradas: Number(record.boletasRegistradas),
     precioNeto: Number(record.precioNeto),
@@ -219,9 +224,8 @@ export async function createRecord(
   record: TransactionRecord
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Obtener la inicial del usuario Clerk
     const initial = await getUserInitial();
-    await db.insert(transactions).values({
+    const insertObj = {
       ...record,
       createdByInitial: initial ?? null,
       fecha: record.fecha,
@@ -230,7 +234,9 @@ export async function createRecord(
       tarifaServicio: record.tarifaServicio.toString(),
       impuesto4x1000: record.impuesto4x1000.toString(),
       gananciaBruta: record.gananciaBruta.toString(),
-    });
+    };
+    console.log('DEBUG INSERT OBJ:', insertObj); // <--- Depuración
+    await db.insert(transactions).values(insertObj);
     revalidateTag('transactions');
     return { success: true };
   } catch (error) {

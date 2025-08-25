@@ -65,6 +65,9 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     emitidoPorWithColors = [], // Nueva prop
     onDeleteAsesorAction: _onDeleteAsesorAction, // Prefijo _ para evitar warning eslint
   }) => {
+    // DEBUG: Verifica si el campo llega al frontend
+    console.log('ROW DEBUG:', row);
+
     // Determinar qué clase y estilo aplicar basándose en el tipo de trámite
     const getRowClassAndStyle = () => {
       // Si es SOAT, usar el sistema de emitidoPor (estático + dinámico)
