@@ -1516,10 +1516,17 @@ const TransactionTable = forwardRef(function TransactionTable(
                           row={row}
                           isDeleteMode={logic.isDeleteMode}
                           isAsesorSelectionMode={logic.isAsesorSelectionMode}
-                          selectedRows={logic.selectedRows}
+                          selectedRows={
+                            logic.isAsesorSelectionMode
+                              ? logic.selectedAsesores
+                              : logic.selectedRows
+                          }
                           rowsToDelete={logic.rowsToDelete}
                           handleInputChange={logic.handleInputChange}
-                          handleRowSelect={logic.handleRowSelect}
+                          handleRowSelect={
+                            // Cambia aquí: usa handleRowSelect para ambos modos
+                            logic.handleRowSelect
+                          }
                           handleDeleteSelect={logic.handleDeleteSelect}
                           renderCheckbox={renderCheckbox}
                           renderAsesorSelect={logic.renderAsesorSelect}
@@ -1535,7 +1542,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                           coloresOptions={coloresOptions}
                           tramiteOptions={tramiteOptions}
                           emitidoPorWithColors={emitidoPorWithColors}
-                          onDeleteAsesorAction={handleDeleteAsesorAction} // <-- PASA EL HANDLER AQUÍ
+                          onDeleteAsesorAction={handleDeleteAsesorAction}
                           data-placa={row.placa?.toUpperCase() || ''}
                         />
                       )

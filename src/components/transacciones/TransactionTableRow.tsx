@@ -117,6 +117,22 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
         style={rowStyle}
         data-placa={row.placa?.toUpperCase() || ''}
       >
+        {/* NUEVO: Checkbox de selección por asesor, solo visible en modo selección por asesor */}
+        {isAsesorSelectionMode ? (
+          <td className="table-checkbox-cell whitespace-nowrap">
+            <div className="table-checkbox-wrapper">
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={selectedRows.has(row.id)}
+                  onChange={() => handleRowSelect(row.id, row.precioNeto)}
+                  className="h-4 w-4 rounded border-gray-600"
+                />
+                <div className="checkmark" />
+              </label>
+            </div>
+          </td>
+        ) : null}
         {isDeleteMode ? (
           <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
             <div className="flex h-full items-center justify-center">
@@ -142,20 +158,23 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           renderInput={renderInput}
           index={1}
         />
-        <td className="table-checkbox-cell whitespace-nowrap">
-          <div className="table-checkbox-wrapper">
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={selectedRows.has(row.id)}
-                onChange={() => handleRowSelect(row.id, row.precioNeto)}
-                disabled={row.pagado}
-                className="sr-only"
-              />
-              <div className="checkmark" />
-            </label>
-          </div>
-        </td>
+        {/* El checkbox de selección general (para pagar) solo si NO está en modo selección por asesor */}
+        {!isAsesorSelectionMode && (
+          <td className="table-checkbox-cell whitespace-nowrap">
+            <div className="table-checkbox-wrapper">
+              <label className="check-label">
+                <input
+                  type="checkbox"
+                  checked={selectedRows.has(row.id)}
+                  onChange={() => handleRowSelect(row.id, row.precioNeto)}
+                  disabled={row.pagado}
+                  className="sr-only"
+                />
+                <div className="checkmark" />
+              </label>
+            </div>
+          </td>
+        )}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
             {renderCheckbox(row.id, 'pagado', row.pagado)}
@@ -223,6 +242,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           renderInput={renderInput}
           index={13}
         />
+        {/* Columna asesor: si está en modo selección por asesor, muestra el select normal, si no, el input */}
         <td className="table-cell whitespace-nowrap">
           {isAsesorSelectionMode
             ? renderAsesorSelect(row)
