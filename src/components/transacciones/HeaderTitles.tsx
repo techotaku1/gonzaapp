@@ -4,8 +4,10 @@ import { Calendar } from 'lucide-react';
 
 export default function HeaderTitles({
   isDeleteMode = false,
+  _isAsesorSelectionMode = false,
 }: {
   isDeleteMode?: boolean;
+  _isAsesorSelectionMode?: boolean;
 }) {
   const tableHeaders = [
     'Fecha',

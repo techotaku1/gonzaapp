@@ -1514,7 +1514,10 @@ const TransactionTable = forwardRef(function TransactionTable(
                 }}
               >
                 <table className="w-full text-left text-sm text-gray-600">
-                  <HeaderTitles isDeleteMode={logic.isDeleteMode} />
+                  <HeaderTitles
+                    isDeleteMode={logic.isDeleteMode}
+                    _isAsesorSelectionMode={logic.isAsesorSelectionMode}
+                  />
                   <tbody>
                     {logic.paginatedData.map(
                       (row: TransactionRecord, _index: number) => (
@@ -1523,17 +1526,14 @@ const TransactionTable = forwardRef(function TransactionTable(
                           row={row}
                           isDeleteMode={logic.isDeleteMode}
                           isAsesorSelectionMode={logic.isAsesorSelectionMode}
-                          selectedRows={
+                          _selectedRows={
                             logic.isAsesorSelectionMode
                               ? logic.selectedAsesores
                               : logic.selectedRows
                           }
                           rowsToDelete={logic.rowsToDelete}
                           handleInputChange={logic.handleInputChange}
-                          handleRowSelect={
-                            // Cambia aquí: usa handleRowSelect para ambos modos
-                            logic.handleRowSelect
-                          }
+                          _handleRowSelect={logic.handleRowSelect}
                           handleDeleteSelect={logic.handleDeleteSelect}
                           renderCheckbox={renderCheckbox}
                           renderAsesorSelect={logic.renderAsesorSelect}

@@ -85,7 +85,10 @@ const TransactionSearchRemote: React.FC<Props> = ({
           style={{ overflow: 'visible', height: 'auto' }}
         >
           <table className="w-full text-left text-sm text-white">
-            <HeaderTitles isDeleteMode={isDeleteMode} />
+            <HeaderTitles
+              isDeleteMode={isDeleteMode}
+              _isAsesorSelectionMode={isAsesorSelectionMode}
+            />
             <tbody>
               {/* Mostrar spinner mientras loading y searchTerm no está vacío */}
               {searchTerm && !error && isFetching && (
@@ -132,17 +135,17 @@ const TransactionSearchRemote: React.FC<Props> = ({
                         row={row}
                         isDeleteMode={isDeleteMode}
                         isAsesorSelectionMode={isAsesorSelectionMode}
-                        selectedRows={selectedRows}
+                        _selectedRows={selectedRows}
                         rowsToDelete={rowsToDelete}
                         handleInputChange={() => {
                           /* Solo lectura en búsqueda remota */
                         }}
-                        handleRowSelect={onRowSelect}
+                        _handleRowSelect={onRowSelect}
                         handleDeleteSelect={handleDeleteSelect}
                         renderCheckbox={renderCheckbox}
                         renderAsesorSelect={renderAsesorSelect}
                         renderInput={renderInput}
-                        _getEmitidoPorClass={getEmitidoPorClass} // Prefijo _ para indicar que no se usa
+                        _getEmitidoPorClass={getEmitidoPorClass}
                       />
                     )
                   )

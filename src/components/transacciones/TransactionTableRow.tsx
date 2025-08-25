@@ -16,7 +16,7 @@ interface TransactionTableRowProps {
   _editValues?: Partial<TransactionRecord>;
   isDeleteMode: boolean;
   isAsesorSelectionMode: boolean;
-  selectedRows: Set<string>;
+  _selectedRows: Set<string>;
   rowsToDelete: Set<string>;
   _selectedAsesores?: Set<string>;
   handleInputChange: (
@@ -24,7 +24,7 @@ interface TransactionTableRowProps {
     field: keyof TransactionRecord,
     value: InputValue
   ) => void;
-  handleRowSelect: (id: string, precioNeto: number) => void;
+  _handleRowSelect: (id: string, precioNeto: number) => void;
   handleDeleteSelect: (id: string) => void;
   renderCheckbox: (
     id: string,
@@ -38,12 +38,12 @@ interface TransactionTableRowProps {
     field: keyof TransactionRecord,
     type?: InputType
   ) => React.ReactNode;
-  _getEmitidoPorClass: (emitidoPor: string) => string; // Marcar como unused
+  _getEmitidoPorClass: (emitidoPor: string) => string;
   getTramiteColorClass?: (tramite: string) => string;
   coloresOptions?: { nombre: string; valor: string; intensidad: number }[];
   tramiteOptions?: { nombre: string; color?: string }[];
-  emitidoPorWithColors?: { nombre: string; color?: string }[]; // Nueva prop
-  onDeleteAsesorAction?: (nombre: string) => void; // NUEVO
+  emitidoPorWithColors?: { nombre: string; color?: string }[];
+  onDeleteAsesorAction?: (nombre: string) => void;
 }
 
 const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
@@ -51,19 +51,19 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     row,
     isDeleteMode,
     isAsesorSelectionMode,
-    selectedRows,
+    _selectedRows,
     rowsToDelete,
-    handleRowSelect,
+    _handleRowSelect,
     handleDeleteSelect,
     renderCheckbox,
     renderAsesorSelect,
     renderInput,
-    _getEmitidoPorClass, // Prefijo _ para indicar que no se usa
+    _getEmitidoPorClass,
     getTramiteColorClass,
     coloresOptions = [],
     tramiteOptions = [],
-    emitidoPorWithColors = [], // Nueva prop
-    onDeleteAsesorAction: _onDeleteAsesorAction, // Prefijo _ para evitar warning eslint
+    emitidoPorWithColors = [],
+    onDeleteAsesorAction: _onDeleteAsesorAction,
   }) => {
     // DEBUG: Verifica si el campo llega al frontend
     console.log('ROW DEBUG:', row);
@@ -120,22 +120,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
         style={rowStyle}
         data-placa={row.placa?.toUpperCase() || ''}
       >
-        {/* NUEVO: Checkbox de selección por asesor, solo visible en modo selección por asesor */}
-        {isAsesorSelectionMode ? (
-          <td className="table-checkbox-cell whitespace-nowrap">
-            <div className="table-checkbox-wrapper">
-              <label className="check-label">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.has(row.id)}
-                  onChange={() => handleRowSelect(row.id, row.precioNeto)}
-                  className="h-4 w-4 rounded border-gray-600"
-                />
-                <div className="checkmark" />
-              </label>
-            </div>
-          </td>
-        ) : null}
+        {/* Eliminar */}
         {isDeleteMode ? (
           <td className="table-cell h-full border-r border-gray-600 px-0.5 py-0.5">
             <div className="flex h-full items-center justify-center">
@@ -148,7 +133,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
             </div>
           </td>
         ) : null}
-        {/* Nueva columna: Creador */}
+        {/* Creador */}
         <td className="table-cell text-center font-bold whitespace-nowrap text-purple-700">
           {row.createdByInitial ?? ''}
         </td>
@@ -165,23 +150,13 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           renderInput={renderInput}
           index={1}
         />
-        {/* El checkbox de selección general (para pagar) solo si NO está en modo selección por asesor */}
-        {!isAsesorSelectionMode && (
-          <td className="table-checkbox-cell whitespace-nowrap">
-            <div className="table-checkbox-wrapper">
-              <label className="check-label">
-                <input
-                  type="checkbox"
-                  checked={selectedRows.has(row.id)}
-                  onChange={() => handleRowSelect(row.id, row.precioNeto)}
-                  disabled={row.pagado}
-                  className="sr-only"
-                />
-                <div className="checkmark" />
-              </label>
-            </div>
-          </td>
-        )}
+        {/* Boleta */}
+        <td className="table-checkbox-cell whitespace-nowrap">
+          <div className="table-checkbox-wrapper">
+            {renderCheckbox(row.id, 'boleta', row.boleta)}
+          </div>
+        </td>
+        {/* Pagado */}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
             {renderCheckbox(row.id, 'pagado', row.pagado)}
@@ -249,7 +224,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           renderInput={renderInput}
           index={13}
         />
-        {/* Columna asesor: si está en modo selección por asesor, muestra el select normal, si no, el input */}
+        {/* Asesor: Si está en modo selección por asesor, muestra solo el checkbox de selección para cuadre y el select de asesor */}
         <td className="table-cell whitespace-nowrap">
           {isAsesorSelectionMode
             ? renderAsesorSelect(row)
