@@ -163,7 +163,7 @@ const TransactionTable = forwardRef(function TransactionTable(
   >(null);
 
   // Usa SWR para asesores con pooling cada 60 segundos (antes 2 segundos)
-  const { data: asesores = [] } = useSWR<string[]>(
+  const { data: asesores = [], mutate: mutateAsesores } = useSWR<string[]>(
     '/api/asesores',
     async (url: string): Promise<string[]> => {
       const res = await fetch(url, { cache: 'no-store' }); // <-- fuerza no-cache en fetch
@@ -854,6 +854,13 @@ const TransactionTable = forwardRef(function TransactionTable(
       }, 100);
     },
   }));
+
+  // --- NUEVO: Forzar recarga de asesores cuando se activa el modo selección por asesor ---
+  useEffect(() => {
+    if (logic.isAsesorSelectionMode) {
+      mutateAsesores();
+    }
+  }, [logic.isAsesorSelectionMode, mutateAsesores]);
 
   return (
     <div className="relative">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
+import useSWR from 'swr';
 import * as XLSX from 'xlsx';
 
 import { useDebouncedCallback } from '~/hooks/useDebouncedCallback';
@@ -743,6 +744,36 @@ export function useTransactionTableLogic(props: {
     },
     [onAddAsesorAction, handleInputChange]
   );
+  // --- NUEVO: SWR para asesores, siempre datos frescos ---
+  const { data: asesoresBD = [], mutate: mutateAsesoresBD } = useSWR<string[]>(
+    '/api/asesores',
+    async (url: string): Promise<string[]> => {
+      const res = await fetch(url, { cache: 'no-store' });
+      // Tipar la respuesta para evitar acceso inseguro
+      const data: unknown = await res.json();
+      if (
+        typeof data === 'object' &&
+        data !== null &&
+        'asesores' in data &&
+        Array.isArray((data as { asesores: unknown }).asesores)
+      ) {
+        // Filtra solo strings
+        return (data as { asesores: unknown[] }).asesores.filter(
+          (a): a is string => typeof a === 'string'
+        );
+      }
+      return [];
+    },
+    { refreshInterval: 60000, revalidateOnFocus: true }
+  );
+
+  // --- NUEVO: Cuando se activa el modo selección por asesor, fuerza recarga de asesores ---
+  useEffect(() => {
+    if (isAsesorSelectionMode) {
+      mutateAsesoresBD();
+    }
+  }, [isAsesorSelectionMode, mutateAsesoresBD]);
+
   const renderAsesorSelect = useCallback(
     (row: TransactionRecord) => {
       if (!isAsesorSelectionMode) return null;
@@ -766,11 +797,12 @@ export function useTransactionTableLogic(props: {
               onChange={(newValue: string) =>
                 handleInputChange(row.id, 'asesor', newValue)
               }
-              asesores={props.asesores ?? []}
+              asesores={asesoresBD}
               // Usa la función que selecciona y guarda el asesor nuevo
               onAddAsesorAction={async (nombre: string) =>
                 handleAddAndSelectAsesor(row.id, nombre)
               }
+              className="border-purple-400 bg-purple-200 text-purple-700"
             />
           </div>
         </div>
@@ -781,7 +813,7 @@ export function useTransactionTableLogic(props: {
       selectedAsesores,
       handleAsesorSelection,
       handleInputChange,
-      props.asesores,
+      asesoresBD,
       handleAddAndSelectAsesor,
     ]
   );
@@ -1118,5 +1150,6 @@ export function useTransactionTableLogic(props: {
     goToNextDay,
     isTrulyLoadingPage,
     handlePagadoCheckbox,
+    asesores: asesoresBD, // <-- expón la lista de asesores actualizada
   };
 }
