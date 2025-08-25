@@ -862,6 +862,36 @@ const TransactionTable = forwardRef(function TransactionTable(
     }
   }, [logic.isAsesorSelectionMode, mutateAsesores]);
 
+  // --- NUEVO: Detectar rol del usuario Clerk (solo cliente) ---
+  const [userRole, setUserRole] = useState<string | null>(null);
+  useEffect(() => {
+    function getRole() {
+      try {
+        // Acceso seguro a window.Clerk?.user?.publicMetadata?.role
+        const w =
+          typeof window !== 'undefined'
+            ? (window as unknown as {
+                Clerk?: { user?: { publicMetadata?: { role?: unknown } } };
+              })
+            : undefined;
+        const role =
+          w?.Clerk &&
+          typeof w.Clerk === 'object' &&
+          w.Clerk.user &&
+          typeof w.Clerk.user === 'object' &&
+          w.Clerk.user.publicMetadata &&
+          typeof w.Clerk.user.publicMetadata === 'object' &&
+          'role' in w.Clerk.user.publicMetadata
+            ? w.Clerk.user.publicMetadata.role
+            : null;
+        setUserRole(typeof role === 'string' ? role : null);
+      } catch {
+        setUserRole(null);
+      }
+    }
+    getRole();
+  }, []);
+
   return (
     <div className="relative">
       {/* Mostrar SIEMPRE la fecha en formato largo arriba del botón agregar */}
@@ -974,7 +1004,9 @@ const TransactionTable = forwardRef(function TransactionTable(
                 </div>
               </>
             )}
-            {props.showTotals || props.showMonthlyTotals ? (
+            {/* --- SOLO ADMIN: Botones de Totales, Exportar, Cuadre --- */}
+            {userRole === 'admin' &&
+            (props.showTotals || props.showMonthlyTotals) ? (
               <div className="flex gap-4 pl-6">
                 {/* Botón Ver Totales / Ver Registros */}
                 <button
@@ -1111,126 +1143,130 @@ const TransactionTable = forwardRef(function TransactionTable(
                   )}
                 </button>
               </div>
-            ) : (
-              <>
-                {/* Botón Ver Totales / Ver Registros */}
-                <button
-                  onClick={logic.handleToggleTotals}
-                  disabled={logic.isTotalsButtonLoading}
-                  className="relative flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
-                >
-                  <span className="flex w-full items-center justify-center">
-                    {logic.isTotalsButtonLoading ? (
+            ) : null}
+            {/* --- SOLO ADMIN: Botones de Totales, Exportar, Cuadre en vista de registros --- */}
+            {userRole === 'admin' &&
+              !props.showTotals &&
+              !props.showMonthlyTotals && (
+                <>
+                  {/* Botón Ver Totales / Ver Registros */}
+                  <button
+                    onClick={logic.handleToggleTotals}
+                    disabled={logic.isTotalsButtonLoading}
+                    className="relative flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
+                  >
+                    <span className="flex w-full items-center justify-center">
+                      {logic.isTotalsButtonLoading ? (
+                        <>
+                          {/* Spinner2 centrado absoluto sobre el botón */}
+                          <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+                            <Icons.spinner2 className="h-5 w-5 fill-white" />
+                          </span>
+                          {/* Espacio reservado para el texto, invisible pero ocupa el mismo ancho */}
+                          <span className="invisible flex items-center">
+                            {props.showTotals ? (
+                              <>
+                                <MdOutlineTableChart className="mr-1 h-5 w-5" />
+                                Ver Registros
+                              </>
+                            ) : (
+                              <>
+                                <BiWorld className="mr-1 h-5 w-5" />
+                                Totales Diarios
+                              </>
+                            )}
+                          </span>
+                        </>
+                      ) : props.showTotals ? (
+                        <>
+                          <MdOutlineTableChart className="mr-1 h-5 w-5" />
+                          Ver Registros
+                        </>
+                      ) : (
+                        <>
+                          <BiWorld className="mr-1 h-5 w-5" />
+                          Totales Diarios
+                        </>
+                      )}
+                    </span>
+                  </button>
+
+                  {/* Botón Totales Mensuales */}
+                  {props.onToggleMonthlyTotalsAction && (
+                    <button
+                      onClick={() => {
+                        // CORREGIDO: Al hacer click desde la vista de registros, ir directamente a mensuales
+                        props.onToggleMonthlyTotalsAction?.();
+                      }}
+                      className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
+                    >
                       <>
-                        {/* Spinner2 centrado absoluto sobre el botón */}
-                        <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-                          <Icons.spinner2 className="h-5 w-5 fill-white" />
-                        </span>
-                        {/* Espacio reservado para el texto, invisible pero ocupa el mismo ancho */}
-                        <span className="invisible flex items-center">
-                          {props.showTotals ? (
-                            <>
-                              <MdOutlineTableChart className="mr-1 h-5 w-5" />
-                              Ver Registros
-                            </>
-                          ) : (
-                            <>
-                              <BiWorld className="mr-1 h-5 w-5" />
-                              Totales Diarios
-                            </>
-                          )}
-                        </span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="mr-1 h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                          />
+                        </svg>
+                        Totales Mensuales
                       </>
-                    ) : props.showTotals ? (
+                    </button>
+                  )}
+
+                  {/* Botón Exportar a Excel */}
+                  <button
+                    onClick={() => logic.setIsExportModalOpen(true)}
+                    className="export-excel-button h-10 px-8"
+                  >
+                    <svg
+                      fill="#fff"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 50 50"
+                    >
+                      <path d="M28.8125 .03125L.8125 5.34375C.339844 5.433594 0 5.863281 0 6.34375L0 43.65625C0 44.136719 .339844 44.566406 .8125 44.65625L28.8125 49.96875C28.875 49.980469 28.9375 50 29 50C29.230469 50 29.445313 49.929688 29.625 49.78125C29.855469 49.589844 30 49.296875 30 49L30 1C30 .703125 29.855469 .410156 29.625 .21875C29.394531 .0273438 29.105469 -.0234375 28.8125 .03125ZM32 6L32 13L34 13L34 15L32 15L32 20L34 20L34 22L32 22L32 27L34 27L34 29L32 29L32 35L34 35L34 37L32 37L32 44L47 44C48.101563 44 49 43.101563 49 42L49 8C49 6.898438 48.101563 6 47 6ZM6.6875 15.6875L11.8125 15.6875L14.5 21.28125C14.710938 21.722656 14.898438 22.265625 15.0625 22.875L15.09375 22.875C15.199219 22.511719 15.402344 21.941406 15.6875 21.21875L18.65625 15.6875L23.34375 15.6875L17.75 24.9375L23.5 34.375L18.53125 34.375L15.28125 28.28125C15.160156 28.054688 15.035156 27.636719 14.90625 27.03125L14.875 27.03125C14.8125 27.316406 14.664063 27.761719 14.4375 28.34375L11.1875 34.375L6.1875 34.375L12.15625 25.03125ZM36 20L44 20L44 22L36 22ZM36 27L44 27L44 29L36 29ZM36 35L44 35L44 37L36 37Z" />
+                    </svg>
+                    Exportar a Excel
+                  </button>
+                  {/* Botón Ir al Cuadre */}
+                  <button
+                    onClick={logic.handleNavigateToCuadre}
+                    disabled={logic.isNavigatingToCuadre}
+                    className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600 active:scale-95 disabled:opacity-50"
+                  >
+                    {logic.isNavigatingToCuadre ? (
                       <>
-                        <MdOutlineTableChart className="mr-1 h-5 w-5" />
-                        Ver Registros
+                        <Icons.spinner className="h-5 w-5" />
+                        <span>Redirigiendo...</span>
                       </>
                     ) : (
                       <>
-                        <BiWorld className="mr-1 h-5 w-5" />
-                        Totales Diarios
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 100 2h4a1 1 0 100-2H8z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span>Ir al Cuadre</span>
                       </>
                     )}
-                  </span>
-                </button>
-
-                {/* Botón Totales Mensuales */}
-                {props.onToggleMonthlyTotalsAction && (
-                  <button
-                    onClick={() => {
-                      // CORREGIDO: Al hacer click desde la vista de registros, ir directamente a mensuales
-                      props.onToggleMonthlyTotalsAction?.();
-                    }}
-                    className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
-                  >
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-1 h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                        />
-                      </svg>
-                      Totales Mensuales
-                    </>
                   </button>
-                )}
-
-                {/* Botón Exportar a Excel */}
-                <button
-                  onClick={() => logic.setIsExportModalOpen(true)}
-                  className="export-excel-button h-10 px-8"
-                >
-                  <svg
-                    fill="#fff"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 50 50"
-                  >
-                    <path d="M28.8125 .03125L.8125 5.34375C.339844 5.433594 0 5.863281 0 6.34375L0 43.65625C0 44.136719 .339844 44.566406 .8125 44.65625L28.8125 49.96875C28.875 49.980469 28.9375 50 29 50C29.230469 50 29.445313 49.929688 29.625 49.78125C29.855469 49.589844 30 49.296875 30 49L30 1C30 .703125 29.855469 .410156 29.625 .21875C29.394531 .0273438 29.105469 -.0234375 28.8125 .03125ZM32 6L32 13L34 13L34 15L32 15L32 20L34 20L34 22L32 22L32 27L34 27L34 29L32 29L32 35L34 35L34 37L32 37L32 44L47 44C48.101563 44 49 43.101563 49 42L49 8C49 6.898438 48.101563 6 47 6ZM6.6875 15.6875L11.8125 15.6875L14.5 21.28125C14.710938 21.722656 14.898438 22.265625 15.0625 22.875L15.09375 22.875C15.199219 22.511719 15.402344 21.941406 15.6875 21.21875L18.65625 15.6875L23.34375 15.6875L17.75 24.9375L23.5 34.375L18.53125 34.375L15.28125 28.28125C15.160156 28.054688 15.035156 27.636719 14.90625 27.03125L14.875 27.03125C14.8125 27.316406 14.664063 27.761719 14.4375 28.34375L11.1875 34.375L6.1875 34.375L12.15625 25.03125ZM36 20L44 20L44 22L36 22ZM36 27L44 27L44 29L36 29ZM36 35L44 35L44 37L36 37Z" />
-                  </svg>
-                  Exportar a Excel
-                </button>
-                {/* Botón Ir al Cuadre */}
-                <button
-                  onClick={logic.handleNavigateToCuadre}
-                  disabled={logic.isNavigatingToCuadre}
-                  className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600 active:scale-95 disabled:opacity-50"
-                >
-                  {logic.isNavigatingToCuadre ? (
-                    <>
-                      <Icons.spinner className="h-5 w-5" />
-                      <span>Redirigiendo...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 100 2h4a1 1 0 100-2H8z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>Ir al Cuadre</span>
-                    </>
-                  )}
-                </button>
-              </>
-            )}
+                </>
+              )}
             {/* Controles de auto-guardado and zoom solo en la vista de registros */}
             {!props.showTotals && !props.showMonthlyTotals && (
               <div className="flex items-center gap-4">
