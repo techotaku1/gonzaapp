@@ -883,8 +883,8 @@ const TransactionTable = forwardRef(function TransactionTable(
     }
   }, [logic.isAsesorSelectionMode, mutateAsesores]);
 
-  // --- NUEVO: Detectar rol del usuario Clerk (soporta Clerk en producción y localStorage en localhost) ---
-  const [userRole, setUserRole] = useState<string | null>(null);
+  // --- NUEVO: Detectar rol del usuario Clerk (pero NO usar para permisos de botones) ---
+  const [_userRole, setUserRole] = useState<string | null>(null);
   useEffect(() => {
     // Tipado seguro para evitar 'any' y acceso inseguro
     interface ClerkUser {
@@ -943,108 +943,103 @@ const TransactionTable = forwardRef(function TransactionTable(
         {/* Fecha actual de la página, arriba del grupo de botones */}
         <div className="mb-4 flex w-full items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* --- SOLO ADMIN O EMPLEADO: Botón Agregar y Eliminar --- */}
+            {/* --- Mostrar SIEMPRE los botones de Agregar y Eliminar para todos los roles --- */}
             {!props.showTotals && !props.showMonthlyTotals && (
               <>
-                {(userRole === 'admin' || userRole === 'empleado') && (
-                  <>
-                    {/* Botón Agregar */}
-                    <button
-                      onClick={logic.addNewRow}
-                      disabled={logic.isAddingRow}
-                      className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500 disabled:opacity-50"
-                    >
-                      <span
-                        className={`ml-8 transform font-semibold text-white transition-all duration-300 ${
-                          logic.isAddingRow
-                            ? 'opacity-0'
-                            : 'group-hover:translate-x-20'
-                        }`}
+                {/* Botón Agregar */}
+                <button
+                  onClick={logic.addNewRow}
+                  disabled={logic.isAddingRow}
+                  className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500 disabled:opacity-50"
+                >
+                  <span
+                    className={`ml-8 transform font-semibold text-white transition-all duration-300 ${
+                      logic.isAddingRow
+                        ? 'opacity-0'
+                        : 'group-hover:translate-x-20'
+                    }`}
+                  >
+                    Agregar
+                  </span>
+                  <span
+                    className={`absolute right-0 flex h-full items-center justify-center rounded-lg bg-green-500 transition-all duration-300 ${
+                      logic.isAddingRow
+                        ? 'w-full translate-x-0'
+                        : 'w-10 group-hover:w-full group-hover:translate-x-0'
+                    }`}
+                  >
+                    {logic.isAddingRow ? (
+                      <div className="button-spinner">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <div key={i} className="spinner-blade" />
+                        ))}
+                      </div>
+                    ) : (
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-8 text-white group-active:scale-[0.8]"
+                        fill="none"
+                        height="24"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                        width="24"
                       >
-                        Agregar
-                      </span>
-                      <span
-                        className={`absolute right-0 flex h-full items-center justify-center rounded-lg bg-green-500 transition-all duration-300 ${
-                          logic.isAddingRow
-                            ? 'w-full translate-x-0'
-                            : 'w-10 group-hover:w-full group-hover:translate-x-0'
-                        }`}
-                      >
-                        {logic.isAddingRow ? (
-                          <div className="button-spinner">
-                            {Array.from({ length: 12 }).map((_, i) => (
-                              <div key={i} className="spinner-blade" />
-                            ))}
-                          </div>
-                        ) : (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="w-8 text-white group-active:scale-[0.8]"
-                            fill="none"
-                            height="24"
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            viewBox="0 0 24 24"
-                            width="24"
-                          >
-                            <line x1="12" x2="12" y1="5" y2="19" />
-                            <line x1="5" x2="19" y1="12" y2="12" />
-                          </svg>
-                        )}
-                      </span>
-                    </button>
+                        <line x1="12" x2="12" y1="5" y2="19" />
+                        <line x1="5" x2="19" y1="12" y2="12" />
+                      </svg>
+                    )}
+                  </span>
+                </button>
 
-                    {/* Botón Eliminar */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={logic.handleDeleteModeToggle}
-                        className="delete-button"
-                      >
-                        <span className="text">
-                          {logic.isDeleteMode ? 'Cancelar' : 'Eliminar'}
-                        </span>
-                        <span className="icon">
-                          {logic.isDeleteMode ? (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z" />
-                            </svg>
-                          ) : (
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M3 6v18h18v-18h-18zm5 14c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm4-18v2h-20v-2h5.711c.9 0 1.631-1.099 1.631-2h5.315c0 .901.73 2 1.631 2h5.712z" />
-                            </svg>
-                          )}
-                        </span>
-                      </button>
-                      {logic.isDeleteMode && logic.rowsToDelete.size > 0 ? (
-                        <button
-                          onClick={() => {
-                            void logic.handleDeleteSelected();
-                          }}
-                          className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+                {/* Botón Eliminar */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={logic.handleDeleteModeToggle}
+                    className="delete-button"
+                  >
+                    <span className="text">
+                      {logic.isDeleteMode ? 'Cancelar' : 'Eliminar'}
+                    </span>
+                    <span className="icon">
+                      {logic.isDeleteMode ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
                         >
-                          Eliminar ({logic.rowsToDelete.size})
-                        </button>
-                      ) : null}
-                    </div>
-                  </>
-                )}
+                          <path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z" />
+                        </svg>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M3 6v18h18v-18h-18zm5 14c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm4-18v2h-20v-2h5.711c.9 0 1.631-1.099 1.631-2h5.315c0 .901.73 2 1.631 2h5.712z" />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                  {logic.isDeleteMode && logic.rowsToDelete.size > 0 ? (
+                    <button
+                      onClick={() => {
+                        void logic.handleDeleteSelected();
+                      }}
+                      className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+                    >
+                      Eliminar ({logic.rowsToDelete.size})
+                    </button>
+                  ) : null}
+                </div>
               </>
             )}
-            {/* --- SOLO ADMIN: Botones de Totales, Exportar, Cuadre --- */}
-            {userRole === 'admin' &&
-            (props.showTotals || props.showMonthlyTotals) ? (
+            {/* --- Mostrar SIEMPRE los botones de Totales, Exportar, Cuadre para todos los roles --- */}
+            {(props.showTotals || props.showMonthlyTotals) && (
               <div className="flex gap-4 pl-6">
                 {/* Botón Ver Totales / Ver Registros */}
                 <button
@@ -1181,10 +1176,9 @@ const TransactionTable = forwardRef(function TransactionTable(
                   )}
                 </button>
               </div>
-            ) : null}
-            {/* --- SOLO ADMIN: Botones de Totales, Exportar, Cuadre en vista de registros --- */}
-            {userRole === 'admin' &&
-              !props.showTotals &&
+            )}
+            {/* --- Mostrar SIEMPRE los botones de Totales, Exportar, Cuadre en vista de registros para todos los roles --- */}
+            {!props.showTotals &&
               !props.showMonthlyTotals && (
                 <>
                   {/* Botón Ver Totales / Ver Registros */}
