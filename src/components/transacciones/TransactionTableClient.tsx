@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { useUser } from '@clerk/nextjs'; // Agrega este import
 import { Bell } from 'lucide-react'; // Agrega este import para el icono de campana
 import useSWR from 'swr';
 
@@ -282,6 +283,10 @@ export default function TransactionTableClient({
     mutateIgnoredPlates();
   };
 
+  // Detectar el rol usando Clerk en el cliente
+  const { user } = useUser();
+  const role = user?.publicMetadata?.role === 'admin' ? 'admin' : 'empleado';
+
   return (
     <SWRProvider active={isActive}>
       <div ref={containerRef} className="fixed top-0 left-0 z-50 w-full">
@@ -494,9 +499,8 @@ export default function TransactionTableClient({
             }
           }}
           isLoading={isLoading}
-          // NUEVO: Pasa la fecha actual y el setter a TransactionTable si lo necesitas
-          // paginaActualFecha={paginaActualFecha}
-          // setPaginaActualFecha={setPaginaActualFecha}
+          // NUEVO: Pasa el rol como prop
+          userRole={role}
         />
       </main>
     </SWRProvider>
