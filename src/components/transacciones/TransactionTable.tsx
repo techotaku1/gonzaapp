@@ -525,7 +525,8 @@ const TransactionTable = forwardRef(function TransactionTable(
     emitidoPorWithColors, // Pasar los datos de emitidoPor con colores
     onDeleteAsesorAction: (nombre: string) => {
       void handleDeleteAsesorAction(nombre);
-    }, // <-- wrap in void function
+    },
+    userRole: props.userRole, // NUEVO: pasa el rol
   });
   const router = useRouter();
 
@@ -1379,6 +1380,7 @@ const TransactionTable = forwardRef(function TransactionTable(
             isLoadingAsesorMode={logic.isLoadingAsesorMode}
             searchTerm={props.searchTerm ?? ''}
             setSearchTermAction={logic.setSearchTermAction}
+            userRole={props.userRole} // NUEVO
           />
         )}
 
@@ -1622,6 +1624,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                           emitidoPorWithColors={emitidoPorWithColors}
                           onDeleteAsesorAction={handleDeleteAsesorAction}
                           data-placa={row.placa?.toUpperCase() || ''}
+                          userRole={props.userRole} // NUEVO: pasa el rol
                         />
                       )
                     )}

@@ -12,11 +12,13 @@ interface TransactionTableCellProps {
   renderInput: (
     row: TransactionRecord,
     field: keyof TransactionRecord,
-    type?: InputType
+    type?: InputType,
+    extraProps?: { disabled?: boolean; style?: React.CSSProperties }
   ) => React.ReactNode;
   index?: number;
   className?: string;
   style?: React.CSSProperties;
+  isRowLocked?: boolean; // NUEVO
 }
 
 // Estado global para expandir/retraer todas las celdas de fecha
@@ -33,7 +35,15 @@ if (typeof window !== 'undefined') {
 }
 
 const TransactionTableCell: React.FC<TransactionTableCellProps> = React.memo(
-  ({ row, field, type = 'text', renderInput, className, style }) => {
+  ({
+    row,
+    field,
+    type = 'text',
+    renderInput,
+    className,
+    style,
+    isRowLocked,
+  }) => {
     const isFecha = field === 'fecha';
     // Solo lee el estado global, no lo cambia aquí
     const [expanded, setExpanded] = useState(
@@ -70,20 +80,41 @@ const TransactionTableCell: React.FC<TransactionTableCellProps> = React.memo(
       );
     }
 
+    // NUEVO: Si la fila está bloqueada, aplica cursor not-allowed y deshabilita el input
+    const cellStyle: React.CSSProperties = {
+      ...(style ?? {}),
+      ...(isRowLocked ? { cursor: 'not-allowed', pointerEvents: 'auto' } : {}),
+    };
+
     return (
-      <td className={fechaCellClasses} style={style}>
+      <td className={fechaCellClasses} style={cellStyle}>
         {isFecha ? (
           expanded ? (
             <div className="flex w-full items-center gap-2">
-              <div className="flex-1">{renderInput(row, field, type)}</div>
+              <div className="flex-1">
+                {renderInput(
+                  row,
+                  field,
+                  type,
+                  isRowLocked
+                    ? { disabled: true, style: { cursor: 'not-allowed' } }
+                    : undefined
+                )}
+              </div>
             </div>
           ) : (
-            // Mostrar el icono de calendario en todas las filas cuando está retraída
             <Calendar size={20} className="mx-auto text-gray-500" />
           )
         ) : (
           <div className="w-full truncate overflow-hidden">
-            {renderInput(row, field, type)}
+            {renderInput(
+              row,
+              field,
+              type,
+              isRowLocked
+                ? { disabled: true, style: { cursor: 'not-allowed' } }
+                : undefined
+            )}
           </div>
         )}
       </td>

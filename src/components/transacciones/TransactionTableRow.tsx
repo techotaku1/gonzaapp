@@ -44,19 +44,20 @@ interface TransactionTableRowProps {
   tramiteOptions?: { nombre: string; color?: string }[];
   emitidoPorWithColors?: { nombre: string; color?: string }[];
   onDeleteAsesorAction?: (nombre: string) => void;
+  userRole?: 'admin' | 'empleado'; // NUEVO
 }
 
 const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
   ({
     row,
     isDeleteMode,
-    isAsesorSelectionMode,
+    isAsesorSelectionMode: _isAsesorSelectionMode,
     _selectedRows,
     rowsToDelete,
     _handleRowSelect,
     handleDeleteSelect,
     renderCheckbox,
-    renderAsesorSelect,
+    renderAsesorSelect: _renderAsesorSelect,
     renderInput,
     _getEmitidoPorClass,
     getTramiteColorClass,
@@ -64,6 +65,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     tramiteOptions = [],
     emitidoPorWithColors = [],
     onDeleteAsesorAction: _onDeleteAsesorAction,
+    userRole, // NUEVO
   }) => {
     // DEBUG: Verifica si el campo llega al frontend
     console.log('ROW DEBUG:', row);
@@ -114,6 +116,10 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
 
     const { className: rowClass, style: rowStyle } = getRowClassAndStyle();
 
+    // NUEVO: Determina si la fila está bloqueada para empleados
+    const isRowLocked =
+      userRole === 'empleado' && row.boleta === true && row.pagado === true;
+
     return (
       <tr
         className={`group border-b hover:bg-gray-50 ${rowClass}`}
@@ -129,6 +135,8 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
                 checked={rowsToDelete.has(row.id)}
                 onChange={() => handleDeleteSelect(row.id)}
                 className="h-4 w-4 rounded border-gray-600"
+                disabled={isRowLocked}
+                style={isRowLocked ? { cursor: 'not-allowed' } : undefined}
               />
             </div>
           </td>
@@ -143,24 +151,30 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="date"
           renderInput={renderInput}
           index={0}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="tramite"
           renderInput={renderInput}
           index={1}
+          isRowLocked={isRowLocked}
         />
         {/* Boleta */}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {/* El checkbox de boleta usa selectedRows, no el valor de row.boleta */}
-            {renderCheckbox(row.id, 'boleta', _selectedRows.has(row.id))}
+            {renderCheckbox(
+              row.id,
+              'boleta',
+              _selectedRows.has(row.id),
+              isRowLocked
+            )}
           </div>
         </td>
         {/* Pagado */}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {renderCheckbox(row.id, 'pagado', row.pagado)}
+            {renderCheckbox(row.id, 'pagado', row.pagado, isRowLocked)}
           </div>
         </td>
         <TransactionTableCell
@@ -169,6 +183,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="number"
           renderInput={renderInput}
           index={4}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
@@ -176,29 +191,34 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           renderInput={renderInput}
           index={5}
           className="table-cell whitespace-nowrap"
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="placa"
           renderInput={renderInput}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="tipoDocumento"
           renderInput={renderInput}
           index={7}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="numeroDocumento"
           renderInput={renderInput}
           index={8}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="nombre"
           renderInput={renderInput}
           index={9}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
@@ -206,36 +226,50 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="number"
           renderInput={renderInput}
           index={10}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="tipoVehiculo"
           renderInput={renderInput}
           index={11}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="celular"
           renderInput={renderInput}
           index={12}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
           field="ciudad"
           renderInput={renderInput}
           index={13}
+          isRowLocked={isRowLocked}
         />
-        {/* Asesor: Si está en modo selección por asesor, muestra solo el checkbox de selección para cuadre y el select de asesor */}
-        <td className="table-cell whitespace-nowrap">
-          {isAsesorSelectionMode
-            ? renderAsesorSelect(row)
-            : renderInput(row, 'asesor')}
-        </td>
+        {/* Asesor: si está en modo selección por asesor, usa el renderAsesorSelect */}
+        {_isAsesorSelectionMode ? (
+          <td className="table-cell whitespace-nowrap">
+            {_renderAsesorSelect(row)}
+          </td>
+        ) : (
+          <TransactionTableCell
+            row={row}
+            field="asesor"
+            renderInput={(rowArg, fieldArg, typeArg) =>
+              renderInput(rowArg, fieldArg, typeArg)
+            }
+            isRowLocked={isRowLocked}
+          />
+        )}
         <TransactionTableCell
           row={row}
           field="novedad"
           renderInput={renderInput}
           index={15}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
@@ -243,6 +277,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="number"
           renderInput={renderInput}
           index={16}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
@@ -250,10 +285,16 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="number"
           renderInput={renderInput}
           index={17}
+          isRowLocked={isRowLocked}
         />
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {renderCheckbox(row.id, 'comisionExtra', row.comisionExtra)}
+            {renderCheckbox(
+              row.id,
+              'comisionExtra',
+              row.comisionExtra,
+              isRowLocked
+            )}
           </div>
         </td>
         <TransactionTableCell
@@ -262,6 +303,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="number"
           renderInput={renderInput}
           index={19}
+          isRowLocked={isRowLocked}
         />
         <TransactionTableCell
           row={row}
@@ -269,16 +311,18 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           type="number"
           renderInput={renderInput}
           index={20}
+          isRowLocked={isRowLocked}
         />
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {renderCheckbox(row.id, 'rappi', row.rappi)}
+            {renderCheckbox(row.id, 'rappi', row.rappi, isRowLocked)}
           </div>
         </td>
         <TransactionTableCell
           row={row}
           field="observaciones"
           renderInput={renderInput}
+          isRowLocked={isRowLocked}
         />
       </tr>
     );

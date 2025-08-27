@@ -28,6 +28,7 @@ interface SearchControlsProps {
   isLoadingAsesorMode: boolean;
   searchTerm: string;
   setSearchTermAction: (value: string) => void;
+  userRole?: 'admin' | 'empleado'; // NUEVO
 }
 
 interface RemoteSearchInputProps {
@@ -101,6 +102,7 @@ export default function SearchFilters({
   hasSelectedAsesores,
   isLoadingAsesorMode,
   setSearchTermAction,
+  userRole, // NUEVO
 }: SearchControlsProps) {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -283,52 +285,57 @@ export default function SearchFilters({
         ) : null}
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <button
-          onClick={onToggleAsesorSelectionAction}
-          disabled={!hasSearchResults || isLoadingAsesorMode}
-          className={`flex items-center gap-2 rounded-md px-4 py-2 text-white transition-all ${
-            hasSearchResults
-              ? 'bg-yellow-500 hover:bg-yellow-600'
-              : 'cursor-not-allowed bg-gray-400'
-          }`}
-        >
-          {isLoadingAsesorMode ? (
-            <>
-              <Icons.spinner className="h-4 w-4 animate-spin" />
-              <span>Cargando...</span>
-            </>
-          ) : (
-            <span>
-              {isAsesorSelectionMode
-                ? 'Cancelar Selección'
-                : 'Seleccionar por Asesor'}
-            </span>
-          )}
-        </button>
-        {shouldNavigate ? (
-          <Link
-            href="/cuadre"
-            className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-            prefetch={false}
-          >
-            <Icons.spinner className="h-4 w-4 animate-spin" />
-            <span>Redirigiendo...</span>
-          </Link>
-        ) : (
-          <button
-            onClick={handleGenerateCuadre}
-            disabled={!hasSelectedAsesores || isGeneratingCuadre}
-            className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-          >
-            {isGeneratingCuadre ? (
-              <>
+        {/* SOLO mostrar estos botones si el rol NO es empleado */}
+        {userRole !== 'empleado' && (
+          <>
+            <button
+              onClick={onToggleAsesorSelectionAction}
+              disabled={!hasSearchResults || isLoadingAsesorMode}
+              className={`flex items-center gap-2 rounded-md px-4 py-2 text-white transition-all ${
+                hasSearchResults
+                  ? 'bg-yellow-500 hover:bg-yellow-600'
+                  : 'cursor-not-allowed bg-gray-400'
+              }`}
+            >
+              {isLoadingAsesorMode ? (
+                <>
+                  <Icons.spinner className="h-4 w-4 animate-spin" />
+                  <span>Cargando...</span>
+                </>
+              ) : (
+                <span>
+                  {isAsesorSelectionMode
+                    ? 'Cancelar Selección'
+                    : 'Seleccionar por Asesor'}
+                </span>
+              )}
+            </button>
+            {shouldNavigate ? (
+              <Link
+                href="/cuadre"
+                className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+                prefetch={false}
+              >
                 <Icons.spinner className="h-4 w-4 animate-spin" />
-                <span>Generando...</span>
-              </>
+                <span>Redirigiendo...</span>
+              </Link>
             ) : (
-              <span>Generar Cuadre</span>
+              <button
+                onClick={handleGenerateCuadre}
+                disabled={!hasSelectedAsesores || isGeneratingCuadre}
+                className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+              >
+                {isGeneratingCuadre ? (
+                  <>
+                    <Icons.spinner className="h-4 w-4 animate-spin" />
+                    <span>Generando...</span>
+                  </>
+                ) : (
+                  <span>Generar Cuadre</span>
+                )}
+              </button>
             )}
-          </button>
+          </>
         )}
       </div>
     </div>

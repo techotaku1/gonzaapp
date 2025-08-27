@@ -254,6 +254,7 @@ export function useTransactionTableInputs({
   onOpenEmitidoPorColorPickerAction,
   emitidoPorWithColors = [],
   onDeleteAsesorAction, // NUEVO
+  userRole, // NUEVO
 }: {
   editValues: Record<string, Partial<TransactionRecord>>;
   handleInputChangeAction: (
@@ -276,6 +277,7 @@ export function useTransactionTableInputs({
   onOpenEmitidoPorColorPickerAction?: (rowId: string) => void;
   emitidoPorWithColors?: { nombre: string; color?: string }[];
   onDeleteAsesorAction?: (nombre: string) => void;
+  userRole?: 'admin' | 'empleado'; // NUEVO
 }) {
   // Helper: obtiene SIEMPRE el valor local editado si existe, si no el remoto
   const getCellValue = (
@@ -294,7 +296,8 @@ export function useTransactionTableInputs({
   const renderInput = (
     row: TransactionRecord,
     field: keyof TransactionRecord,
-    type: InputType = 'text'
+    type: InputType = 'text',
+    extraProps?: { disabled?: boolean; style?: React.CSSProperties }
   ) => {
     // SIEMPRE usa el valor local editado si existe
     const value = getCellValue(row, field);
@@ -415,6 +418,7 @@ export function useTransactionTableInputs({
         <select
           value={!isSoat ? 'NO APLICA' : (value as string)}
           onChange={(e) => {
+            if (extraProps?.disabled) return;
             if (e.target.value === '__add_new__') {
               if (onOpenEmitidoPorColorPickerAction) {
                 onOpenEmitidoPorColorPickerAction(row.id);
@@ -433,9 +437,9 @@ export function useTransactionTableInputs({
             }
           }}
           className={`table-select-base w-[105px] rounded border`}
-          style={selectStyle}
+          style={{ ...selectStyle, ...(extraProps?.style ?? {}) }}
           title={isSoat ? (value as string) : 'NO APLICA'}
-          disabled={!isSoat}
+          disabled={extraProps?.disabled ?? !isSoat}
         >
           <option value="">Seleccionar...</option>
           {emitidoPorOptions.map((option) => (
@@ -475,6 +479,7 @@ export function useTransactionTableInputs({
             type="datetime-local"
             value={dateValue}
             onChange={(e) => {
+              if (extraProps?.disabled) return;
               try {
                 // El valor del input es 'YYYY-MM-DDTHH:mm'
                 // --- CORREGIDO: convierte a fecha en zona horaria de Colombia ---
@@ -487,6 +492,8 @@ export function useTransactionTableInputs({
               }
             }}
             className="table-date-field flex w-[140px] cursor-pointer items-center justify-center rounded border px-0 py-0.5 text-center text-[10px]"
+            disabled={extraProps?.disabled}
+            style={extraProps?.style}
           />
         </div>
       );
@@ -500,13 +507,15 @@ export function useTransactionTableInputs({
           value={formatValue(value)}
           title={formatValue(value)}
           onChange={(e) =>
+            !extraProps?.disabled &&
             handleInputChangeAction(row.id, field, e.target.value.toUpperCase())
           }
           className="placa-field w-[80px] cursor-pointer overflow-hidden rounded border bg-yellow-500 hover:overflow-visible hover:text-clip"
+          disabled={extraProps?.disabled}
+          style={extraProps?.style}
         />
       </div>
     );
-
     if (field === ('placa' as keyof TransactionRecord)) {
       return renderPlacaInput();
     }
@@ -517,10 +526,13 @@ export function useTransactionTableInputs({
         <select
           value={value as string}
           onChange={(e) =>
+            !extraProps?.disabled &&
             handleInputChangeAction(row.id, field, e.target.value)
           }
           className="table-select-base w-[70px] rounded border border-gray-600"
           title={value as string}
+          disabled={extraProps?.disabled}
+          style={extraProps?.style}
         >
           <option value="">-</option>
           {['CC', 'NIT', 'TI', 'CE', 'PAS'].map((option) => (
@@ -559,6 +571,7 @@ export function useTransactionTableInputs({
         <select
           value={value as string}
           onChange={(e) => {
+            if (extraProps?.disabled) return;
             if (e.target.value === '__add_new__') {
               if (onOpenColorPickerAction) {
                 onOpenColorPickerAction(row.id);
@@ -569,6 +582,8 @@ export function useTransactionTableInputs({
           }}
           className="table-select-base w-[70px] rounded border border-gray-600"
           title={value as string}
+          disabled={extraProps?.disabled}
+          style={extraProps?.style}
         >
           {tramiteOptions.map((option) => (
             <option
@@ -604,10 +619,13 @@ export function useTransactionTableInputs({
         <select
           value={valueStr}
           onChange={(e) =>
+            !extraProps?.disabled &&
             handleInputChangeAction(row.id, field, e.target.value || null)
           }
           className="table-select-base w-[150px] rounded border border-gray-600"
           title={valueStr}
+          disabled={extraProps?.disabled}
+          style={extraProps?.style}
         >
           <option value="">Seleccionar...</option>
           {options.map((option) => (
@@ -623,12 +641,12 @@ export function useTransactionTableInputs({
         </select>
       );
     }
-
     if (field === 'novedad') {
       return (
         <select
           value={(value as string) || ''}
           onChange={async (e) => {
+            if (extraProps?.disabled) return;
             if (e.target.value === '__add_new__') {
               if (onAddNovedadAction) {
                 const nombre = prompt('Ingrese la nueva novedad:');
@@ -642,7 +660,9 @@ export function useTransactionTableInputs({
             }
           }}
           className="table-select-base w-[120px] rounded border border-gray-600"
-          title={value as string} // El título mostrará el texto completo al hacer hover
+          title={value as string}
+          disabled={extraProps?.disabled}
+          style={extraProps?.style}
         >
           <option value="">Seleccionar...</option>
           {novedadOptions.map((option) => (
@@ -668,7 +688,7 @@ export function useTransactionTableInputs({
       field === 'tarifaServicio' ||
       field === 'impuesto4x1000' ||
       field === 'gananciaBruta' ||
-      field === 'boletasRegistradas' // <-- Añadido aquí para que use el mismo input formateado
+      field === 'boletasRegistradas'
     ) {
       return (
         <div className={`relative flex items-center`}>
@@ -677,10 +697,13 @@ export function useTransactionTableInputs({
             value={formatValue(adjustedValue)}
             title={formatValue(adjustedValue)}
             onChange={(e) => {
+              if (extraProps?.disabled) return;
               const newValue: InputValue = parseNumberAction(e.target.value);
               handleInputChangeAction(row.id, field, newValue);
             }}
             className={`flex items-center justify-center overflow-hidden rounded border px-0.5 py-0.5 text-center text-[10px] text-ellipsis ${getWidth(field)} table-numeric-field hover:overflow-visible hover:text-clip`}
+            disabled={extraProps?.disabled}
+            style={extraProps?.style}
           />
         </div>
       );
@@ -688,10 +711,43 @@ export function useTransactionTableInputs({
 
     // Usa AsesorSelect como input para el campo asesor
     if (field === 'asesor') {
+      // Solo para empleados y cuando boleta y pagado están en true, NO permitir modificar el select (pero sin cambiar el estilo)
+      const isEmpleadoLocked =
+        userRole === 'empleado' && row.boleta === true && row.pagado === true;
+
+      if (isEmpleadoLocked) {
+        // Bloquea cambios y fuerza el cursor prohibido en todo el select
+        return (
+          <div
+            style={{
+              cursor: 'not-allowed',
+              pointerEvents: 'auto',
+              width: '100%',
+              display: 'flex',
+            }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={(e) => e.preventDefault()}
+          >
+            <div style={{ width: '100%', pointerEvents: 'none' }}>
+              <AsesorSelect
+                value={String(value ?? '')}
+                onChange={() => {
+                  // No permitir cambios
+                }}
+                asesores={asesores}
+                onAddAsesorAction={async () => Promise.resolve()}
+                className="border-purple-400 bg-purple-200 text-purple-700"
+              />
+            </div>
+          </div>
+        );
+      }
+      // Para admin o fila editable, muestra el AsesorSelect normal
       return (
         <AsesorSelect
           value={String(value ?? '')}
           onChange={(newValue: string) => {
+            if (extraProps?.disabled) return;
             if (newValue === '__add_new__') {
               const nombre = prompt('Ingrese el nuevo asesor:');
               if (nombre && nombre.trim().length > 0) {
@@ -707,11 +763,11 @@ export function useTransactionTableInputs({
           onAddAsesorAction={onAddAsesorAction}
           {...(onDeleteAsesorAction && {
             onDeleteAsesorAction: (nombre: string) => {
-              // Llama la función y siempre retorna una promesa
               const result = onDeleteAsesorAction(nombre);
-              // Si la función retorna void, simplemente retorna Promise.resolve()
-              return typeof result === 'object' && result !== null && typeof (result as Promise<void>).then === 'function'
-                ? result as Promise<void>
+              return typeof result === 'object' &&
+                result !== null &&
+                typeof (result as Promise<void>).then === 'function'
+                ? (result as Promise<void>)
                 : Promise.resolve();
             },
           })}
@@ -734,6 +790,7 @@ export function useTransactionTableInputs({
           })()}
           title={formatValue(value)}
           onChange={(e) => {
+            if (extraProps?.disabled) return;
             let newValue: InputValue;
             if (field === 'cilindraje') {
               newValue =
@@ -780,6 +837,8 @@ export function useTransactionTableInputs({
               ? '\\d*'
               : undefined
           }
+          disabled={extraProps?.disabled}
+          style={extraProps?.style}
         />
       </div>
     );
