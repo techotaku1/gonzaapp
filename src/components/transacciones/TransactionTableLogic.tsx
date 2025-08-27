@@ -443,6 +443,12 @@ export function useTransactionTableLogic(props: {
         }
         return true;
       });
+      // --- NUEVO: Ordenar por fecha y hora descendente (más reciente arriba) ---
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.fecha).getTime();
+        const dateB = new Date(b.fecha).getTime();
+        return dateB - dateA;
+      });
       setHasSearchResults(filtered.length > 0);
       return filtered;
     } else if (debouncedSearchTerm) {

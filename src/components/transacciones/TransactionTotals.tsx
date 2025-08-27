@@ -5,8 +5,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 
-import { calculateFormulas } from '~/utils/formulas';
 import { getColombiaDate } from '~/utils/dateUtils'; // Add this import
+import { calculateFormulas } from '~/utils/formulas';
 
 import type { TransactionRecord } from '~/types';
 
