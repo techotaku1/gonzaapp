@@ -429,42 +429,43 @@ export function useTransactionTableLogic(props: {
   );
   // Cambia filteredData para que NO dependa de editValues ni de ningún estado de edición
   const filteredData = useMemo(() => {
-    // Solo filtra por fecha o búsqueda, nunca por edición
+    // --- NUEVO: Permitir búsqueda por texto sobre el resultado del filtro de fechas ---
+    let filtered: TransactionRecord[] = props.initialData;
+
+    // Primero, filtra por rango de fechas si está activo
     if (dateFilter.startDate && dateFilter.endDate) {
-      const filtered = props.initialData.filter((record) => {
+      // --- CORREGIDO: Solo llama getColombiaDate si no es null ---
+      filtered = filtered.filter((record) => {
         const recordDate = getColombiaDate(new Date(record.fecha));
-        if (dateFilter.startDate && dateFilter.endDate) {
-          // CORREGIDO: Usar las funciones de utilidad para manejo correcto
-          const startDate = getColombiaDate(dateFilter.startDate);
-          const endDate = getColombiaDate(dateFilter.endDate);
-          startDate.setHours(0, 0, 0, 0);
-          endDate.setHours(23, 59, 59, 999);
-          return recordDate >= startDate && recordDate <= endDate;
-        }
-        return true;
+        // Asegura que startDate y endDate no sean null antes de llamar getColombiaDate
+        if (!dateFilter.startDate || !dateFilter.endDate) return false;
+        const startDate = getColombiaDate(new Date(dateFilter.startDate));
+        const endDate = getColombiaDate(new Date(dateFilter.endDate));
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+        return recordDate >= startDate && recordDate <= endDate;
       });
-      // --- NUEVO: Ordenar por fecha y hora descendente (más reciente arriba) ---
+      // Ordenar por fecha y hora descendente (más reciente arriba)
       filtered.sort((a, b) => {
         const dateA = new Date(a.fecha).getTime();
         const dateB = new Date(b.fecha).getTime();
         return dateB - dateA;
       });
-      setHasSearchResults(filtered.length > 0);
-      return filtered;
-    } else if (debouncedSearchTerm) {
+    }
+
+    // Luego, si hay término de búsqueda, filtra sobre el resultado anterior
+    if (debouncedSearchTerm) {
       const search = debouncedSearchTerm.toLowerCase();
-      const filtered = props.initialData.filter((item) =>
+      filtered = filtered.filter((item) =>
         Object.entries(item).some(([key, value]) => {
           if (key === 'fecha' || value === null) return false;
           return String(value).toLowerCase().includes(search);
         })
       );
-      setHasSearchResults(filtered.length > 0);
-      return filtered;
-    } else {
-      setHasSearchResults(props.initialData.length > 0);
-      return props.initialData;
     }
+
+    setHasSearchResults(filtered.length > 0);
+    return filtered;
   }, [props.initialData, dateFilter, debouncedSearchTerm]);
   // paginatedData: nunca debe depender de editValues ni de ningún estado de edición
   const paginatedDataFinal: TransactionRecord[] = useMemo(() => {
