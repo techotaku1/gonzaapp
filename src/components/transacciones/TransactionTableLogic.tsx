@@ -503,15 +503,19 @@ export function useTransactionTableLogic(props: {
         const colKey = columnAliases[column] ?? column;
         filtered = filtered.filter((item) => {
           if (colKey === 'createdByInitial') {
-            return (item.createdByInitial ?? '')
-              .toString()
-              .toLowerCase()
-              .includes(value.toLowerCase());
+            // Comparación exacta (case-insensitive) para createdByInitial
+            return (
+              (item.createdByInitial ?? '').toString().toLowerCase().trim() ===
+              value.toLowerCase().trim()
+            );
           }
           if (Object.prototype.hasOwnProperty.call(item, colKey)) {
             const v = item[colKey as keyof TransactionRecord];
             if (v === null || typeof v === 'undefined') return false;
-            return String(v).toLowerCase().includes(value.toLowerCase());
+            // Comparación exacta (case-insensitive) en lugar de includes
+            return (
+              String(v).toLowerCase().trim() === value.toLowerCase().trim()
+            );
           }
           return false;
         });
