@@ -427,6 +427,48 @@ export function useTransactionTableLogic(props: {
     },
     [initialData, onUpdateRecordAction]
   );
+  // --- NUEVO: Diccionario de alias de columnas para búsqueda ---
+  const columnAliases = useMemo(
+    () =>
+      ({
+        asesor: 'asesor',
+        nombre: 'nombre',
+        tramite: 'tramite',
+        placa: 'placa',
+        ciudad: 'ciudad',
+        novedad: 'novedad',
+        creador: 'createdByInitial',
+        creadopor: 'createdByInitial',
+        creadoporinicial: 'createdByInitial',
+        inicial: 'createdByInitial',
+        tipo: 'tipoVehiculo',
+        tipovehiculo: 'tipoVehiculo',
+        documento: 'tipoDocumento',
+        tipodocumento: 'tipoDocumento',
+        numerodocumento: 'numeroDocumento',
+        emitido: 'emitidoPor',
+        emitidopor: 'emitidoPor',
+        boleta: 'boleta',
+        pagado: 'pagado',
+        celular: 'celular',
+        comision: 'comisionExtra',
+        rappi: 'rappi',
+        observaciones: 'observaciones',
+        fecha: 'fecha',
+        // Puedes agregar más alias si lo deseas
+      }) as Record<string, keyof TransactionRecord | 'createdByInitial'>,
+    []
+  );
+
+  // --- NUEVO: Función para parsear el término de búsqueda ---
+  function parseColumnSearch(term: string): { column?: string; value: string } {
+    const match = /^\s*([^,]+)\s*,\s*(.+)$/i.exec(term);
+    if (match) {
+      return { column: match[1].trim().toLowerCase(), value: match[2].trim() };
+    }
+    return { value: term.trim() };
+  }
+
   // Cambia filteredData para que NO dependa de editValues ni de ningún estado de edición
   const filteredData = useMemo(() => {
     // --- NUEVO: Permitir búsqueda por texto sobre el resultado del filtro de fechas ---
@@ -455,18 +497,40 @@ export function useTransactionTableLogic(props: {
 
     // Luego, si hay término de búsqueda, filtra sobre el resultado anterior
     if (debouncedSearchTerm) {
-      const search = debouncedSearchTerm.toLowerCase();
-      filtered = filtered.filter((item) =>
-        Object.entries(item).some(([key, value]) => {
-          if (key === 'fecha' || value === null) return false;
-          return String(value).toLowerCase().includes(search);
-        })
-      );
+      // --- NUEVO: Soporte para búsqueda por columna ---
+      const { column, value } = parseColumnSearch(debouncedSearchTerm);
+      if (column && value) {
+        const colKey = columnAliases[column] ?? column;
+        filtered = filtered.filter((item) => {
+          if (colKey === 'createdByInitial') {
+            return (item.createdByInitial ?? '')
+              .toString()
+              .toLowerCase()
+              .includes(value.toLowerCase());
+          }
+          if (Object.prototype.hasOwnProperty.call(item, colKey)) {
+            const v = item[colKey as keyof TransactionRecord];
+            if (v === null || typeof v === 'undefined') return false;
+            return String(v).toLowerCase().includes(value.toLowerCase());
+          }
+          return false;
+        });
+      } else {
+        // Búsqueda general (todas las columnas)
+        filtered = filtered.filter((item) =>
+          Object.entries(item).some(([key, v]) => {
+            if (key === 'fecha' || v === null) return false;
+            return String(v)
+              .toLowerCase()
+              .includes(debouncedSearchTerm.toLowerCase());
+          })
+        );
+      }
     }
 
     setHasSearchResults(filtered.length > 0);
     return filtered;
-  }, [props.initialData, dateFilter, debouncedSearchTerm]);
+  }, [props.initialData, dateFilter, debouncedSearchTerm, columnAliases]);
   // paginatedData: nunca debe depender de editValues ni de ningún estado de edición
   const paginatedDataFinal: TransactionRecord[] = useMemo(() => {
     // --- SIEMPRE prioriza los edits locales sobre los datos remotos ---

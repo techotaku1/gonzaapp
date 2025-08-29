@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -121,6 +121,47 @@ export default function SearchFilters({
   const [remoteSearch, setRemoteSearch] = useState('');
   const [remoteLoading, setRemoteLoading] = useState(false);
 
+  // Mueve la declaración de columnAliases aquí, antes de cualquier uso
+  const columnAliases = useMemo(
+    () =>
+      ({
+        asesor: 'asesor',
+        nombre: 'nombre',
+        tramite: 'tramite',
+        placa: 'placa',
+        ciudad: 'ciudad',
+        novedad: 'novedad',
+        creador: 'createdByInitial',
+        creadopor: 'createdByInitial',
+        creadoporinicial: 'createdByInitial',
+        inicial: 'createdByInitial',
+        tipo: 'tipoVehiculo',
+        tipovehiculo: 'tipoVehiculo',
+        documento: 'tipoDocumento',
+        tipodocumento: 'tipoDocumento',
+        numerodocumento: 'numeroDocumento',
+        emitido: 'emitidoPor',
+        emitidopor: 'emitidoPor',
+        boleta: 'boleta',
+        pagado: 'pagado',
+        celular: 'celular',
+        comision: 'comisionExtra',
+        rappi: 'rappi',
+        observaciones: 'observaciones',
+        fecha: 'fecha',
+      }) as Record<string, keyof TransactionRecord | 'createdByInitial'>,
+    []
+  );
+
+  // --- NUEVO: Función para parsear el término de búsqueda ---
+  function parseColumnSearch(term: string): { column?: string; value: string } {
+    const match = /^\s*([^,]+)\s*,\s*(.+)$/i.exec(term);
+    if (match) {
+      return { column: match[1].trim().toLowerCase(), value: match[2].trim() };
+    }
+    return { value: term.trim() };
+  }
+
   // Eliminar el useEffect que llama a onDateFilterChangeAction automáticamente
   // y solo llamar a onDateFilterChangeAction cuando el usuario hace clic en "Filtrar por Fechas"
 
@@ -155,16 +196,42 @@ export default function SearchFilters({
   const handleRemoteSearch = useCallback(() => {
     setRemoteLoading(true);
     setSearchTermAction(remoteSearch);
-    // --- CORREGIDO: Llama a onFilterAction con los resultados filtrados localmente ---
-    const filtered = data.filter((item) =>
-      Object.entries(item).some(([key, value]) => {
-        if (key === 'fecha' || value === null) return false;
-        return String(value).toLowerCase().includes(remoteSearch.toLowerCase());
-      })
-    );
+
+    // --- NUEVO: Soporte para búsqueda por columna ---
+    const { column, value } = parseColumnSearch(remoteSearch);
+    let filtered: TransactionRecord[] = [];
+
+    if (column && value) {
+      // Buscar por columna específica: coincidencia exacta de todo el campo (case-insensitive, ignora espacios extra)
+      const colKey = columnAliases[column] ?? column;
+      const searchValue = value.trim().toLowerCase();
+      filtered = data.filter((item) => {
+        let fieldValue = '';
+        if (colKey === 'createdByInitial') {
+          fieldValue = (item.createdByInitial ?? '').toString();
+        } else if (Object.prototype.hasOwnProperty.call(item, colKey)) {
+          const v = item[colKey as keyof TransactionRecord];
+          if (v === null || typeof v === 'undefined') return false;
+          fieldValue = String(v);
+        } else {
+          return false;
+        }
+        // Compara el campo completo, ignorando mayúsculas/minúsculas y espacios extra
+        return fieldValue.trim().toLowerCase() === searchValue;
+      });
+    } else {
+      // Búsqueda general (todas las columnas, sigue siendo substring)
+      filtered = data.filter((item) =>
+        Object.entries(item).some(([key, v]) => {
+          if (key === 'fecha' || v === null) return false;
+          return String(v).toLowerCase().includes(remoteSearch.toLowerCase());
+        })
+      );
+    }
+
     onFilterAction(filtered, remoteSearch);
     setTimeout(() => setRemoteLoading(false), 400); // Simula loading
-  }, [remoteSearch, setSearchTermAction, data, onFilterAction]);
+  }, [remoteSearch, setSearchTermAction, data, onFilterAction, columnAliases]);
 
   const minDateValue = startDate ?? undefined;
 
