@@ -2,8 +2,6 @@
 
 import { useCallback, useMemo, useState } from 'react';
 
-import Link from 'next/link';
-
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
 
@@ -21,7 +19,8 @@ interface SearchControlsProps {
     endDate: Date | null
   ) => void;
   onToggleAsesorSelectionAction: () => Promise<void>;
-  onGenerateCuadreAction: (records: TransactionRecord[]) => void;
+  // Cambiado: ahora debe devolver true si la acción navegó al /cuadre
+  onGenerateCuadreAction: (records: TransactionRecord[]) => Promise<boolean>;
   hasSearchResults: boolean;
   isAsesorSelectionMode: boolean;
   hasSelectedAsesores: boolean;
@@ -108,7 +107,6 @@ export default function SearchFilters({
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGeneratingCuadre, setIsGeneratingCuadre] = useState(false);
-  const [shouldNavigate, setShouldNavigate] = useState(false);
 
   // Estado para fechas filtradas
   const [filteredStartDate, setFilteredStartDate] = useState<Date | null>(null);
@@ -186,10 +184,21 @@ export default function SearchFilters({
     onDateFilterChangeAction(null, null);
   };
 
-  const handleGenerateCuadre = useCallback(() => {
+  const handleGenerateCuadre = useCallback(async () => {
+    // Mostrar spinner mientras la acción se ejecuta
     setIsGeneratingCuadre(true);
-    onGenerateCuadreAction(_filteredData);
-    setShouldNavigate(true);
+    try {
+      const navigated = await onGenerateCuadreAction(_filteredData);
+      // Si la acción no navegó, avisar al usuario (por ejemplo: no hay asesores seleccionados)
+      if (!navigated) {
+        alert('No hay asesores seleccionados para generar cuadre.');
+      }
+    } catch (err) {
+      console.error('Error generando cuadre:', err);
+      alert('Ocurrió un error al generar el cuadre.');
+    } finally {
+      setIsGeneratingCuadre(false);
+    }
   }, [_filteredData, onGenerateCuadreAction]);
 
   // Solo actualizar el searchTerm global cuando el usuario hace clic en Buscar
@@ -377,31 +386,21 @@ export default function SearchFilters({
                 </span>
               )}
             </button>
-            {shouldNavigate ? (
-              <Link
-                href="/cuadre"
-                className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-                prefetch={false}
-              >
-                <Icons.spinner className="h-4 w-4 animate-spin" />
-                <span>Redirigiendo...</span>
-              </Link>
-            ) : (
-              <button
-                onClick={handleGenerateCuadre}
-                disabled={!hasSelectedAsesores || isGeneratingCuadre}
-                className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
-              >
-                {isGeneratingCuadre ? (
-                  <>
-                    <Icons.spinner className="h-4 w-4 animate-spin" />
-                    <span>Generando...</span>
-                  </>
-                ) : (
-                  <span>Generar Cuadre</span>
-                )}
-              </button>
-            )}
+
+            <button
+              onClick={handleGenerateCuadre}
+              disabled={!hasSelectedAsesores || isGeneratingCuadre}
+              className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+            >
+              {isGeneratingCuadre ? (
+                <>
+                  <Icons.spinner className="h-4 w-4 animate-spin" />
+                  <span>Generando...</span>
+                </>
+              ) : (
+                <span>Generar Cuadre</span>
+              )}
+            </button>
           </>
         )}
       </div>

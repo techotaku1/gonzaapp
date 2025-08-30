@@ -1371,8 +1371,16 @@ const TransactionTable = forwardRef(function TransactionTable(
                   'cuadreRecords',
                   JSON.stringify(selectedRecords)
                 );
-                router.push('/cuadre', { startPosition: 0.3 });
+                // Llamada a router.push SIN await (no es thenable aquí)
+                try {
+                  router.push('/cuadre', { startPosition: 0.3 });
+                } catch (err) {
+                  console.error('Error navigating to /cuadre:', err);
+                }
+                return true;
               }
+              // No hay asesores seleccionados
+              return false;
             }}
             hasSearchResults={logic.hasSearchResults}
             isAsesorSelectionMode={logic.isAsesorSelectionMode}
@@ -1380,7 +1388,7 @@ const TransactionTable = forwardRef(function TransactionTable(
             isLoadingAsesorMode={logic.isLoadingAsesorMode}
             searchTerm={props.searchTerm ?? ''}
             setSearchTermAction={logic.setSearchTermAction}
-            userRole={props.userRole} // NUEVO
+            userRole={props.userRole}
           />
         )}
 
