@@ -138,8 +138,17 @@ async function _searchTransactions(
   if (!query || query.trim() === '') return [];
   const raw = query.trim();
 
-  // Detecta búsqueda por columna: "columna, valor"
-  const columnMatch = /^\s*([^,]+)\s*,\s*(.+)$/i.exec(raw);
+  // Parse multi-pairs: "asesor, paula, placa, mjr088" => [{column, value}, ...]
+  const parts = raw
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const pairs: { column: string; value: string }[] = [];
+  if (parts.length >= 2) {
+    for (let i = 0; i + 1 < parts.length; i += 2) {
+      pairs.push({ column: parts[i].toLowerCase(), value: parts[i + 1] });
+    }
+  }
 
   // Map de alias/columnas soportadas -> columna de la tabla
   const columnMap: Record<string, unknown> = {
@@ -155,74 +164,85 @@ async function _searchTransactions(
     // agrega más si lo necesitas
   };
 
-  if (columnMatch) {
-    const col = columnMatch[1].trim().toLowerCase();
-    const val = columnMatch[2].trim().toLowerCase();
-    const colRef = columnMap[col];
+  // Si hay pares válidos construye WHERE con AND (comparación exacta case-insensitive)
+  const validFragments = pairs
+    .map((p) => {
+      const colRef = columnMap[p.column];
+      if (!colRef) return null;
+      const val = p.value.trim().toLowerCase();
+      return { colRef, val };
+    })
+    .filter(Boolean) as { colRef: unknown; val: string }[];
 
-    if (colRef) {
-      // Consulta exacta (case-insensitive) sobre la columna indicada
-      const results = await db
-        .select({
-          id: transactions.id,
-          fecha: transactions.fecha,
-          tramite: transactions.tramite,
-          pagado: transactions.pagado,
-          boleta: transactions.boleta,
-          boletasRegistradas: transactions.boletasRegistradas,
-          emitidoPor: transactions.emitidoPor,
-          placa: transactions.placa,
-          tipoDocumento: transactions.tipoDocumento,
-          numeroDocumento: transactions.numeroDocumento,
-          nombre: transactions.nombre,
-          ciudad: transactions.ciudad,
-          asesor: transactions.asesor,
-          novedad: transactions.novedad,
-          precioNeto: transactions.precioNeto,
-          comisionExtra: transactions.comisionExtra,
-          tarifaServicio: transactions.tarifaServicio,
-          impuesto4x1000: transactions.impuesto4x1000,
-          gananciaBruta: transactions.gananciaBruta,
-          rappi: transactions.rappi,
-          observaciones: transactions.observaciones,
-          cilindraje: transactions.cilindraje,
-          tipoVehiculo: transactions.tipoVehiculo,
-          celular: transactions.celular,
-          createdByInitial: transactions.createdByInitial,
-        })
-        .from(transactions)
-        .where(_sql`LOWER(${colRef}) = ${val}`)
-        .orderBy(desc(transactions.fecha))
-        .limit(100); // límite razonable
+  if (validFragments.length > 0) {
+    // Construye cláusula AND de _sql
+    const fragmentsSql = validFragments.map(
+      (f) => _sql`LOWER(${f.colRef}) = ${f.val}`
+    );
+    const whereClause = fragmentsSql.reduce((acc, cur, idx) =>
+      idx === 0 ? cur : _sql`${acc} AND ${cur}`
+    );
+    const results = await db
+      .select({
+        id: transactions.id,
+        fecha: transactions.fecha,
+        tramite: transactions.tramite,
+        pagado: transactions.pagado,
+        boleta: transactions.boleta,
+        boletasRegistradas: transactions.boletasRegistradas,
+        emitidoPor: transactions.emitidoPor,
+        placa: transactions.placa,
+        tipoDocumento: transactions.tipoDocumento,
+        numeroDocumento: transactions.numeroDocumento,
+        nombre: transactions.nombre,
+        ciudad: transactions.ciudad,
+        asesor: transactions.asesor,
+        novedad: transactions.novedad,
+        precioNeto: transactions.precioNeto,
+        comisionExtra: transactions.comisionExtra,
+        tarifaServicio: transactions.tarifaServicio,
+        impuesto4x1000: transactions.impuesto4x1000,
+        gananciaBruta: transactions.gananciaBruta,
+        rappi: transactions.rappi,
+        observaciones: transactions.observaciones,
+        cilindraje: transactions.cilindraje,
+        tipoVehiculo: transactions.tipoVehiculo,
+        celular: transactions.celular,
+        createdByInitial: transactions.createdByInitial,
+      })
+      .from(transactions)
+      .where(whereClause)
+      .orderBy(desc(transactions.fecha))
+      .limit(100);
 
-      // Normaliza tipos
-      return results.map((record) => ({
-        ...record,
-        createdByInitial: record.createdByInitial ?? null,
-        fecha: new Date(record.fecha),
-        boletasRegistradas: Number(record.boletasRegistradas),
-        precioNeto: Number(record.precioNeto),
-        tarifaServicio: Number(record.tarifaServicio),
-        impuesto4x1000: Number(record.impuesto4x1000),
-        gananciaBruta: Number(record.gananciaBruta),
-        cilindraje:
-          record.cilindraje !== null && record.cilindraje !== undefined
-            ? Number(record.cilindraje)
-            : null,
-        tipoVehiculo:
-          record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
-            ? String(record.tipoVehiculo)
-            : null,
-        celular:
-          record.celular !== null && record.celular !== undefined
-            ? String(record.celular)
-            : null,
-        boleta: record.boleta,
-      }));
-    }
+    // Normaliza tipos
+    return results.map((record) => ({
+      ...record,
+      createdByInitial: record.createdByInitial ?? null,
+      fecha: new Date(record.fecha),
+      boletasRegistradas: Number(record.boletasRegistradas),
+      precioNeto: Number(record.precioNeto),
+      tarifaServicio: Number(record.tarifaServicio),
+      impuesto4x1000: Number(record.impuesto4x1000),
+      gananciaBruta: Number(record.gananciaBruta),
+      cilindraje:
+        typeof record.cilindraje !== 'undefined' && record.cilindraje !== null
+          ? Number(record.cilindraje)
+          : null,
+      tipoVehiculo:
+        typeof record.tipoVehiculo !== 'undefined' &&
+        record.tipoVehiculo !== null
+          ? String(record.tipoVehiculo)
+          : null,
+      celular:
+        typeof record.celular !== 'undefined' && record.celular !== null
+          ? String(record.celular)
+          : null,
+      boleta: record.boleta,
+    }));
   }
 
-  // Si no es búsqueda por columna, sigue la búsqueda general por substring (como antes)
+  // Si no es búsqueda por columna (o no hubo pares válidos), sigue la búsqueda general por substring (como antes)
   const search = raw.toLowerCase();
   const results = await db
     .select({
@@ -275,15 +295,15 @@ async function _searchTransactions(
     impuesto4x1000: Number(record.impuesto4x1000),
     gananciaBruta: Number(record.gananciaBruta),
     cilindraje:
-      record.cilindraje !== null && record.cilindraje !== undefined
+      typeof record.cilindraje !== 'undefined' && record.cilindraje !== null
         ? Number(record.cilindraje)
         : null,
     tipoVehiculo:
-      record.tipoVehiculo !== null && record.tipoVehiculo !== undefined
+      typeof record.tipoVehiculo !== 'undefined' && record.tipoVehiculo !== null
         ? String(record.tipoVehiculo)
         : null,
     celular:
-      record.celular !== null && record.celular !== undefined
+      typeof record.celular !== 'undefined' && record.celular !== null
         ? String(record.celular)
         : null,
     boleta: record.boleta,

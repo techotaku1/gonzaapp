@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
@@ -115,6 +115,11 @@ export default function SearchFilters({
   // Nuevo estado para los datos filtrados
   const [_filteredData, _setFilteredData] = useState<TransactionRecord[]>(data); // prefijo _ para evitar warning
 
+  // Sincronizar el estado interno _filteredData con la prop `data`
+  useEffect(() => {
+    _setFilteredData(data);
+  }, [data]);
+
   // Estado para búsqueda remota
   const [remoteSearch, setRemoteSearch] = useState('');
   const [remoteLoading, setRemoteLoading] = useState(false);
@@ -151,13 +156,26 @@ export default function SearchFilters({
     []
   );
 
-  // --- NUEVO: Función para parsear el término de búsqueda ---
-  function parseColumnSearch(term: string): { column?: string; value: string } {
-    const match = /^\s*([^,]+)\s*,\s*(.+)$/i.exec(term);
-    if (match) {
-      return { column: match[1].trim().toLowerCase(), value: match[2].trim() };
+  // --- REEMPLAZO: Función para parsear uno o varios pares "columna, valor" ---
+  function parseMultiColumnSearch(term: string): {
+    filters?: { column: string; value: string }[];
+    value?: string;
+  } {
+    const raw = term.trim();
+    if (!raw) return { value: '' };
+    const parts = raw
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length >= 2) {
+      const pairs: { column: string; value: string }[] = [];
+      for (let i = 0; i + 1 < parts.length; i += 2) {
+        pairs.push({ column: parts[i].toLowerCase(), value: parts[i + 1] });
+      }
+      // Si no hubo pares completos, devuelve value como fallback
+      return pairs.length ? { filters: pairs } : { value: raw };
     }
-    return { value: term.trim() };
+    return { value: raw };
   }
 
   // Eliminar el useEffect que llama a onDateFilterChangeAction automáticamente
@@ -206,36 +224,47 @@ export default function SearchFilters({
     setRemoteLoading(true);
     setSearchTermAction(remoteSearch);
 
-    // --- NUEVO: Soporte para búsqueda por columna ---
-    const { column, value } = parseColumnSearch(remoteSearch);
+    // --- NUEVO: Soporte para búsqueda por columna (múltiples pares) ---
+    const parsed = parseMultiColumnSearch(remoteSearch);
+    const filters = parsed.filters ?? undefined;
+    const singleValue = parsed.value ?? undefined;
     let filtered: TransactionRecord[] = [];
 
-    if (column && value) {
-      // Buscar por columna específica: coincidencia exacta de todo el campo (case-insensitive, ignora espacios extra)
-      const colKey = columnAliases[column] ?? column;
-      const searchValue = value.trim().toLowerCase();
-      filtered = data.filter((item) => {
-        let fieldValue = '';
-        if (colKey === 'createdByInitial') {
-          fieldValue = (item.createdByInitial ?? '').toString();
-        } else if (Object.prototype.hasOwnProperty.call(item, colKey)) {
+    if (filters?.length) {
+      // Aplicar filtros secuenciales (AND) sobre data
+      filtered = filters.reduce<TransactionRecord[]>((acc, f, idx) => {
+        const colKey = (columnAliases[f.column] ?? f.column) as
+          | keyof TransactionRecord
+          | 'createdByInitial';
+        const searchValue = f.value.trim().toLowerCase();
+        const source = idx === 0 ? data : acc;
+        return source.filter((item) => {
+          if (colKey === 'createdByInitial') {
+            return (
+              (item.createdByInitial ?? '').toString().trim().toLowerCase() ===
+              searchValue
+            );
+          }
+          if (!Object.prototype.hasOwnProperty.call(item, colKey)) return false;
           const v = item[colKey as keyof TransactionRecord];
           if (v === null || typeof v === 'undefined') return false;
-          fieldValue = String(v);
-        } else {
-          return false;
-        }
-        // Compara el campo completo, ignorando mayúsculas/minúsculas y espacios extra
-        return fieldValue.trim().toLowerCase() === searchValue;
-      });
-    } else {
-      // Búsqueda general (todas las columnas, sigue siendo substring)
+          return String(v).trim().toLowerCase() === searchValue;
+        });
+      }, []);
+      // Guardar resultados en el estado local para que el "Generar Cuadre" reciba los mismos registros
+      _setFilteredData(filtered);
+    } else if (singleValue) {
+      // Búsqueda general (todas las columnas, substring)
       filtered = data.filter((item) =>
         Object.entries(item).some(([key, v]) => {
           if (key === 'fecha' || v === null) return false;
-          return String(v).toLowerCase().includes(remoteSearch.toLowerCase());
+          return String(v).toLowerCase().includes(singleValue.toLowerCase());
         })
       );
+      _setFilteredData(filtered);
+    } else {
+      filtered = [];
+      _setFilteredData(filtered);
     }
 
     onFilterAction(filtered, remoteSearch);
@@ -248,7 +277,10 @@ export default function SearchFilters({
   const handleClearSearch = useCallback(() => {
     setRemoteSearch('');
     setSearchTermAction('');
-  }, [setSearchTermAction]);
+    // Restaurar y notificar al padre para que la tabla vuelva a mostrar `data`
+    _setFilteredData(data);
+    onFilterAction(data, '');
+  }, [setSearchTermAction, data, onFilterAction]);
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">

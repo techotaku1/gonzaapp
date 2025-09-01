@@ -460,13 +460,25 @@ export function useTransactionTableLogic(props: {
     []
   );
 
-  // --- NUEVO: Función para parsear el término de búsqueda ---
-  function parseColumnSearch(term: string): { column?: string; value: string } {
-    const match = /^\s*([^,]+)\s*,\s*(.+)$/i.exec(term);
-    if (match) {
-      return { column: match[1].trim().toLowerCase(), value: match[2].trim() };
+  // --- NUEVO: Función para parsear el término de búsqueda (múltiples pares) ---
+  function parseMultiColumnSearch(term: string): {
+    filters?: { column: string; value: string }[];
+    value?: string;
+  } {
+    const raw = term.trim();
+    if (!raw) return { value: '' };
+    const parts = raw
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length >= 2) {
+      const pairs: { column: string; value: string }[] = [];
+      for (let i = 0; i + 1 < parts.length; i += 2) {
+        pairs.push({ column: parts[i].toLowerCase(), value: parts[i + 1] });
+      }
+      return pairs.length ? { filters: pairs } : { value: raw };
     }
-    return { value: term.trim() };
+    return { value: raw };
   }
 
   // Cambia filteredData para que NO dependa de editValues ni de ningún estado de edición
@@ -497,38 +509,43 @@ export function useTransactionTableLogic(props: {
 
     // Luego, si hay término de búsqueda, filtra sobre el resultado anterior
     if (debouncedSearchTerm) {
-      // --- NUEVO: Soporte para búsqueda por columna ---
-      const { column, value } = parseColumnSearch(debouncedSearchTerm);
-      if (column && value) {
-        const colKey = columnAliases[column] ?? column;
-        filtered = filtered.filter((item) => {
-          if (colKey === 'createdByInitial') {
-            // Comparación exacta (case-insensitive) para createdByInitial
-            return (
-              (item.createdByInitial ?? '').toString().toLowerCase().trim() ===
-              value.toLowerCase().trim()
-            );
-          }
-          if (Object.prototype.hasOwnProperty.call(item, colKey)) {
+      const parsed = parseMultiColumnSearch(debouncedSearchTerm);
+      const filters = parsed.filters;
+      const singleValue = parsed.value;
+      if (filters?.length) {
+        // Aplicar filtros secuenciales (AND)
+        filtered = filters.reduce<TransactionRecord[]>((acc, f, idx) => {
+          const colKey = (columnAliases[f.column] ?? f.column) as
+            | keyof TransactionRecord
+            | 'createdByInitial';
+          const sv = f.value.trim().toLowerCase();
+          const source = idx === 0 ? filtered : acc;
+          return source.filter((item) => {
+            if (colKey === 'createdByInitial') {
+              return (
+                (item.createdByInitial ?? '')
+                  .toString()
+                  .trim()
+                  .toLowerCase() === sv
+              );
+            }
+            if (!Object.prototype.hasOwnProperty.call(item, colKey))
+              return false;
             const v = item[colKey as keyof TransactionRecord];
             if (v === null || typeof v === 'undefined') return false;
-            // Comparación exacta (case-insensitive) en lugar de includes
-            return (
-              String(v).toLowerCase().trim() === value.toLowerCase().trim()
-            );
-          }
-          return false;
-        });
-      } else {
-        // Búsqueda general (todas las columnas)
+            return String(v).trim().toLowerCase() === sv;
+          });
+        }, []);
+      } else if (singleValue) {
+        // Búsqueda general (substring)
         filtered = filtered.filter((item) =>
           Object.entries(item).some(([key, v]) => {
             if (key === 'fecha' || v === null) return false;
-            return String(v)
-              .toLowerCase()
-              .includes(debouncedSearchTerm.toLowerCase());
+            return String(v).toLowerCase().includes(singleValue.toLowerCase());
           })
         );
+      } else {
+        filtered = [];
       }
     }
 
@@ -772,21 +789,35 @@ export function useTransactionTableLogic(props: {
     }
   }, []);
   // handleAsesorSelection: sin dependencias externas
-  const handleAsesorSelection = useCallback((id: string, _asesor: string) => {
-    setSelectedAsesores((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  }, []);
-  // Elimina emptyAsync (no se usa)
-  // const emptyAsync = () => {
-  //   throw new Error('onAddAsesorAction no implementado');
-  // };
+  const handleAsesorSelection = useCallback(
+    (_id: string, asesorName: string) => {
+      // Selecciona/deselecciona todas las filas que tengan el mismo nombre de asesor.
+      // Se respetan las filas ya pagadas (no se seleccionan).
+      setSelectedAsesores((prev) => {
+        const newSet = new Set(prev);
+        const normalized = (s?: string) => (s ?? '').toString().trim();
+        const target = normalized(asesorName);
+
+        // Obtener todos los ids del asesor en initialData (excluir pagados)
+        const idsForAsesor = props.initialData
+          .filter((r) => normalized(r.asesor) === target && !r.pagado)
+          .map((r) => r.id);
+
+        if (idsForAsesor.length === 0) return newSet;
+
+        const allSelected = idsForAsesor.every((i) => newSet.has(i));
+        if (allSelected) {
+          // quitar todos
+          idsForAsesor.forEach((i) => newSet.delete(i));
+        } else {
+          // agregar todos
+          idsForAsesor.forEach((i) => newSet.add(i));
+        }
+        return newSet;
+      });
+    },
+    [props.initialData]
+  );
 
   // Desestructura onAddAsesorAction fuera del useCallback para evitar warning de dependencias
   const { onAddAsesorAction } = props;
@@ -835,15 +866,27 @@ export function useTransactionTableLogic(props: {
   const renderAsesorSelect = useCallback(
     (row: TransactionRecord) => {
       if (!isAsesorSelectionMode) return null;
+      const asesorName = (row.asesor ?? '').toString().trim();
+      // ids para este asesor (excluyendo pagados)
+      const idsForAsesor = props.initialData
+        .filter(
+          (r) => (r.asesor ?? '').toString().trim() === asesorName && !r.pagado
+        )
+        .map((r) => r.id);
+      const allSelected =
+        idsForAsesor.length > 0 &&
+        idsForAsesor.every((i) => selectedAsesores.has(i));
+
       return (
         <div className="flex items-center gap-2">
           <div className="table-checkbox-wrapper">
             <label className="check-label">
               <input
                 type="checkbox"
-                checked={selectedAsesores.has(row.id)}
-                onChange={() => handleAsesorSelection(row.id, row.asesor)}
+                checked={allSelected}
+                onChange={() => handleAsesorSelection(row.id, row.asesor ?? '')}
                 className="sr-only"
+                aria-label={`Seleccionar asesor ${asesorName}`}
               />
               <div className="checkmark" />
             </label>
@@ -873,6 +916,7 @@ export function useTransactionTableLogic(props: {
       handleInputChange,
       asesoresBD,
       handleAddAndSelectAsesor,
+      props.initialData,
     ]
   );
   // handleFilterData: sin dependencias externas
