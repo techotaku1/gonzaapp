@@ -728,15 +728,19 @@ const TransactionTable = forwardRef(function TransactionTable(
   ) => {
     if (field === 'boleta') {
       const row = logic.paginatedData.find((r) => r.id === id);
-      // El checkbox de boleta selecciona/deselecciona la fila para pago
+      // El checkbox de boleta está marcado si la fila está seleccionada O si pagado es true
+      // Está deshabilitado si pagado es true
+      const isChecked = (row?.pagado ?? false) || logic.selectedRows.has(id);
+      const isDisabled = row?.pagado ?? false;
       return (
         <label className="check-label">
           <input
             type="checkbox"
-            checked={logic.selectedRows.has(id)}
-            disabled={row?.pagado ?? disabled}
+            checked={isChecked}
+            disabled={isDisabled}
             onChange={(e) => {
-              if (row) handleBoletaCheckbox(id, e.target.checked, row);
+              if (row && !row.pagado)
+                handleBoletaCheckbox(id, e.target.checked, row);
             }}
             className="sr-only"
           />
@@ -745,27 +749,32 @@ const TransactionTable = forwardRef(function TransactionTable(
       );
     }
     if (field === 'pagado') {
-      const row = logic.paginatedData.find((r) => r.id === id);
       return (
-        <label className="check-label">
+        <label className="check-label" data-field="pagado">
           <input
             type="checkbox"
             checked={!!value}
             disabled={disabled}
             onChange={async (e) => {
-              logic.setIsActuallySaving(true);
-              if (row) {
-                await logic.onUpdateRecordAction([
-                  {
-                    ...row,
-                    pagado: e.target.checked,
-                    boletasRegistradas: e.target.checked
-                      ? row.boletasRegistradas
-                      : 0,
-                  },
-                ]);
+              // Solo permitir desmarcar (cambiar de true a false)
+              // No permitir marcar manualmente (cambiar de false a true)
+              if (!e.target.checked) {
+                logic.setIsActuallySaving(true);
+                const row = logic.paginatedData.find((r) => r.id === id);
+                if (row) {
+                  await logic.onUpdateRecordAction([
+                    {
+                      ...row,
+                      pagado: false,
+                      boletasRegistradas: 0,
+                    },
+                  ]);
+                }
+                logic.setIsActuallySaving(false);
+              } else {
+                // Si intenta marcar como pagado, revertir el cambio
+                e.target.checked = false;
               }
-              logic.setIsActuallySaving(false);
             }}
             className="sr-only"
           />

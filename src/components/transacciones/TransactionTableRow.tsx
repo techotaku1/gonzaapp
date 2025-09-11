@@ -178,7 +178,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
               row.id,
               'pagado',
               row.pagado,
-              isRowLocked || row.boleta !== true // Deshabilita si boleta no es true
+              isRowLocked // Solo deshabilitado si la fila está bloqueada por el rol de empleado
             )}
           </div>
         </td>

@@ -586,15 +586,42 @@ select.table-select-base option {
 }
 
 .check-label input:disabled ~ .checkmark {
-  background-color: #5ee429;
+  background-color: #ccc;
   opacity: 0.7;
   cursor: not-allowed;
 }
 
 .check-label input:disabled ~ .checkmark:after {
+  display: none;
+}
+
+/* Cursor de prohibido SOLO para checkbox de pagado que no se puede activar manualmente */
+/* Usamos un atributo data para identificar específicamente el checkbox de pagado */
+.check-label[data-field='pagado']:has(
+    input[type='checkbox']:not(:checked):not(:disabled)
+  )
+  .checkmark:hover {
+  cursor: not-allowed;
+}
+
+.check-label[data-field='pagado']:has(
+    input[type='checkbox']:not(:checked):not(:disabled)
+  ):hover {
+  cursor: not-allowed;
+}
+
+.check-label input:checked:disabled ~ .checkmark {
+  background-color: #5ee429;
+  opacity: 3px;
+  cursor: not-allowed;
+}
+
+.check-label input:checked:disabled ~ .checkmark:after {
   display: block;
-  opacity: 0.7;
+  opacity: 1; /* Cambiado de 0.7 a 1 para que el chulito se vea claro */
   border-color: white;
+  /* Hacer el chulito más grueso y visible */
+  border-width: 0 0.18em 0.18em 0;
 }
 
 .checkmark:after {
@@ -613,7 +640,7 @@ select.table-select-base option {
   width: 0.32em;
   height: 0.6em;
   border: solid white;
-  border-width: 0 0.15em 0.15em 0;
+  border-width: 0 0.18em 0.18em 0;
   transform: rotate(45deg);
 }
 
