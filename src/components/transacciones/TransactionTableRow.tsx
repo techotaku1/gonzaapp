@@ -174,7 +174,12 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
         {/* Pagado */}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {renderCheckbox(row.id, 'pagado', row.pagado, isRowLocked)}
+            {renderCheckbox(
+              row.id,
+              'pagado',
+              row.pagado,
+              isRowLocked || row.boleta !== true // Deshabilita si boleta no es true
+            )}
           </div>
         </td>
         <TransactionTableCell

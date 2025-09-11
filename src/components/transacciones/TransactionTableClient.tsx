@@ -170,6 +170,28 @@ export default function TransactionTableClient({
       .filter((row) => {
         const fecha =
           row.fecha instanceof Date ? row.fecha : new Date(row.fecha);
+        // --- DEBUG: Mostrar valores y tipos de boleta y pagado ---
+        if (
+          row.placa &&
+          typeof row.placa === 'string' &&
+          row.placa.trim() !== '' &&
+          fecha >= minDate &&
+          !ignoredPlates.includes(
+            typeof row.placa === 'string' ? row.placa.toUpperCase() : ''
+          )
+        ) {
+          console.log(
+            '[NOTIF DEBUG]',
+            row.placa,
+            'boleta:',
+            row.boleta,
+            typeof row.boleta,
+            'pagado:',
+            row.pagado,
+            typeof row.pagado
+          );
+        }
+        // --- CORREGIDO: Solo mostrar si boleta !== true o pagado !== true (comparación estricta) ---
         return (
           (row.boleta !== true || row.pagado !== true) &&
           row.placa &&
