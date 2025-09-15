@@ -65,58 +65,37 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     tramiteOptions = [],
     emitidoPorWithColors = [],
     onDeleteAsesorAction: _onDeleteAsesorAction,
-    userRole, // NUEVO
+    userRole,
   }) => {
-    // DEBUG: Verifica si el campo llega al frontend
-    console.log('ROW DEBUG:', row);
-
-    // Determinar qué clase y estilo aplicar basándose en el tipo de trámite
+    // Determinar clase/estilo final de fila:
+    // - Si está pagado: pintar toda la fila con el color de emitidoPor (dinámico si existe, si no el estático)
+    // - Si NO está pagado: usar color de trámite (si aplica y está configurado)
     const getRowClassAndStyle = () => {
-      // Si es SOAT, usar el sistema de emitidoPor (estático + dinámico)
-      if (row.tramite.toUpperCase() === 'SOAT') {
+      if (row.pagado) {
         const { className, style } = getEmitidoPorStyleAndClass(
-          row.emitidoPor,
-          row.pagado,
+          row.emitidoPor ?? '',
+          true,
           emitidoPorWithColors,
           coloresOptions
         );
-
-        // DEBUG: Verificar qué está pasando
-        console.log('SOAT Row Debug:', {
-          emitidoPor: row.emitidoPor,
-          pagado: row.pagado,
-          className,
-          style,
-          emitidoPorWithColors: emitidoPorWithColors.find(
-            (e) => e.nombre === row.emitidoPor
-          ),
-          hasColor: emitidoPorWithColors.some(
-            (e) => e.nombre === row.emitidoPor && e.color
-          ),
-        });
-
         return { className, style };
       }
 
-      // Para otros trámites (NO SOAT), usar el sistema de colores dinámicos SIEMPRE
+      // No pagado: colores por trámite (no SOAT)
+      const tram = typeof row.tramite === 'string' ? row.tramite : '';
       const dynamicStyle = generateDynamicColorStyle(
-        row.tramite,
+        tram,
         tramiteOptions,
         coloresOptions
       );
       const className = getTramiteColorClass
-        ? getTramiteColorClass(row.tramite)
+        ? getTramiteColorClass(tram)
         : '';
-
-      return {
-        className,
-        style: dynamicStyle,
-      };
+      return { className, style: dynamicStyle };
     };
 
     const { className: rowClass, style: rowStyle } = getRowClassAndStyle();
 
-    // NUEVO: Determina si la fila está bloqueada para empleados
     const isRowLocked =
       userRole === 'empleado' && row.boleta === true && row.pagado === true;
 
@@ -124,7 +103,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
       <tr
         className={`group border-b hover:bg-gray-50 ${rowClass}`}
         style={rowStyle}
-        data-placa={row.placa?.toUpperCase() || ''}
+        data-placa={(row.placa ? String(row.placa) : '').toUpperCase()}
       >
         {/* Eliminar */}
         {isDeleteMode ? (
@@ -177,8 +156,8 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
             {renderCheckbox(
               row.id,
               'pagado',
-              row.pagado,
-              isRowLocked // Solo deshabilitado si la fila está bloqueada por el rol de empleado
+              !!row.pagado,
+              isRowLocked
             )}
           </div>
         </td>

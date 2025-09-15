@@ -1706,6 +1706,10 @@ const TransactionTable = forwardRef(function TransactionTable(
                           _getEmitidoPorClass={getEmitidoPorClass}
                           getTramiteColorClass={getTramiteColorClassForRow}
                           userRole={props.userRole}
+                          // --- NUEVO: pasar datos de colores ---
+                          coloresOptions={coloresOptions}
+                          tramiteOptions={tramiteOptions}
+                          emitidoPorWithColors={emitidoPorWithColors}
                         />
                       )
                     )}

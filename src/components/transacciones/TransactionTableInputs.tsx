@@ -54,9 +54,28 @@ function getWidth(field: keyof TransactionRecord) {
   }
 }
 
-export const getEmitidoPorClass = (_value: string): string => {
-  // ELIMINAR TODA LA FUNCIÓN - Ya no se necesita porque los colores están en la BD
-  return '';
+export const getEmitidoPorClass = (value: string): string => {
+  // Restore the color mapping for static styling
+  const emitidoPorClassMap: Record<string, string> = {
+    'SOAT EXPRESS': 'bg-pink-300',
+    EDUARDO: 'bg-blue-300',
+    'MUNDI SEGUROS': 'bg-yellow-300',
+    LIBERTY: 'bg-green-300',
+    'AXA COLPATRIA': 'bg-purple-300',
+    'SEGUROS MUNDIAL': 'bg-orange-300',
+    'SEGUROS BOLIVAR': 'bg-red-300',
+    'SEGUROS DEL ESTADO': 'bg-indigo-300',
+    MAPFRE: 'bg-teal-300',
+    SBS: 'bg-cyan-300',
+    SURA: 'bg-green-200',
+    PREVISORA: 'bg-blue-200',
+    EQUIDAD: 'bg-red-200',
+    ALLIANZ: 'bg-yellow-200',
+    HDI: 'bg-purple-200',
+    SOLIDARIA: 'bg-gray-300',
+  };
+
+  return emitidoPorClassMap[value] || '';
 };
 
 // Nueva función para obtener clase de color por trámite - ACTUALIZADA
@@ -144,32 +163,24 @@ export const generateEmitidoPorDynamicColorStyle = (
   emitidoPorWithColors: { nombre: string; color?: string }[],
   coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
 ): React.CSSProperties => {
-  // Buscar si este emitidoPor tiene color en la BD
   const emitidoPorRecord = emitidoPorWithColors.find(
     (e) => e.nombre === emitidoPor
   );
-  if (!emitidoPorRecord?.color) {
-    return {}; // Si no tiene color, usar el estático
-  }
+  if (!emitidoPorRecord?.color) return {};
 
-  const colorRecord = coloresOptions.find(
-    (c) => c.nombre === emitidoPorRecord.color && c.intensidad === 300
-  );
-  if (!colorRecord) {
-    return {};
-  }
+  // Aceptar cualquier coincidencia de color, sin filtrar por intensidad exacta
+  const colorRecord =
+    coloresOptions.find((c) => c.nombre === emitidoPorRecord.color) ?? null;
+  if (!colorRecord) return {};
 
-  // Crear el estilo CSS dinámico basado en si está pagado
   if (pagado) {
-    // Si está pagado: pintar toda la fila (como los estáticos) - SE APLICA A LA FILA
-    const opacity = 0.3; // intensidad 300
+    // Pintar toda la fila cuando está pagado
+    const opacity = 0.3; // Opacidad base
     return {
       backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
     };
-  } else {
-    // Si NO está pagado: RETORNAR VACÍO - el borde se aplicará solo a la celda
-    return {};
   }
+  return {};
 };
 
 // Nueva función para generar estilos del SELECT interno de emitidoPor
@@ -179,26 +190,17 @@ export const generateEmitidoPorSelectStyle = (
   emitidoPorWithColors: { nombre: string; color?: string }[],
   coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
 ): React.CSSProperties => {
-  // Solo aplicar si NO está pagado (si está pagado, el color va en toda la fila)
   if (pagado) return {};
-
-  // Buscar si este emitidoPor tiene color en la BD
   const emitidoPorRecord = emitidoPorWithColors.find(
     (e) => e.nombre === emitidoPor
   );
-  if (!emitidoPorRecord?.color) {
-    return {}; // Si no tiene color, usar el estático
-  }
+  if (!emitidoPorRecord?.color) return {};
 
-  const colorRecord = coloresOptions.find(
-    (c) => c.nombre === emitidoPorRecord.color && c.intensidad === 300
-  );
-  if (!colorRecord) {
-    return {};
-  }
+  const colorRecord =
+    coloresOptions.find((c) => c.nombre === emitidoPorRecord.color) ?? null;
+  if (!colorRecord) return {};
 
-  // CAMBIO: Pintar el fondo del SELECT interno
-  const opacity = 0.3; // intensidad 300
+  const opacity = 0.3;
   return {
     backgroundColor: `color-mix(in oklch, ${colorRecord.valor} ${opacity * 100}%, transparent)`,
   };
@@ -211,13 +213,11 @@ export const getEmitidoPorStyleAndClass = (
   emitidoPorWithColors: { nombre: string; color?: string }[],
   coloresOptions: { nombre: string; valor: string; intensidad: number }[] = []
 ): { className: string; style: React.CSSProperties } => {
-  // Verificar si tiene color en la BD (dinámico)
   const hasDynamicColor = emitidoPorWithColors.some(
-    (e) => e.nombre === emitidoPor && e.color
+    (e) => e.nombre === emitidoPor && !!e.color
   );
 
   if (hasDynamicColor) {
-    // Usar sistema dinámico - SOLO pintar fila si está pagado
     return {
       className: '',
       style: generateEmitidoPorDynamicColorStyle(
@@ -227,13 +227,11 @@ export const getEmitidoPorStyleAndClass = (
         coloresOptions
       ),
     };
-  } else {
-    // Usar sistema estático (solo cuando está pagado)
-    return {
-      className: pagado ? getEmitidoPorClass(emitidoPor) : '',
-      style: {},
-    };
   }
+  return {
+    className: pagado ? getEmitidoPorClass(emitidoPor) : '',
+    style: {},
+  };
 };
 
 export function useTransactionTableInputs({
