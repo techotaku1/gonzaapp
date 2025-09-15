@@ -9,7 +9,6 @@ import React, {
   useState,
 } from 'react';
 
-import { useRouter } from '@bprogress/next/app';
 import { BiWorld } from 'react-icons/bi';
 import { MdOutlineTableChart } from 'react-icons/md';
 import useSWR, { useSWRConfig } from 'swr';
@@ -528,7 +527,7 @@ const TransactionTable = forwardRef(function TransactionTable(
     },
     userRole: props.userRole, // NUEVO: pasa el rol
   });
-  const router = useRouter();
+  // const router = useRouter();
 
   // Calcula el total de páginas para la paginación del día actual
   const totalPages = Math.max(1, Math.ceil((logic.totalRecords ?? 1) / 50));
@@ -1404,10 +1403,9 @@ const TransactionTable = forwardRef(function TransactionTable(
                   'cuadreRecords',
                   JSON.stringify(selectedRecords)
                 );
-                try {
-                  router.push('/cuadre', { startPosition: 0.3 });
-                } catch (err) {
-                  console.error('Error navigating to /cuadre:', err);
+                // Abre /cuadre en una nueva pestaña
+                if (typeof window !== 'undefined') {
+                  window.open('/cuadre', '_blank');
                 }
                 return true;
               }
