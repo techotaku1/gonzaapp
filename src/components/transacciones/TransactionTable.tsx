@@ -1031,7 +1031,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                 </button>
 
                 {/* Botón Eliminar */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center">
                   <button
                     onClick={logic.handleDeleteModeToggle}
                     className="delete-button"
@@ -1061,16 +1061,6 @@ const TransactionTable = forwardRef(function TransactionTable(
                       )}
                     </span>
                   </button>
-                  {logic.isDeleteMode && logic.rowsToDelete.size > 0 ? (
-                    <button
-                      onClick={() => {
-                        void logic.handleDeleteSelected();
-                      }}
-                      className="rounded bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-                    >
-                      Eliminar ({logic.rowsToDelete.size})
-                    </button>
-                  ) : null}
                 </div>
               </>
             )}
@@ -1370,6 +1360,20 @@ const TransactionTable = forwardRef(function TransactionTable(
             )}
           </div>
         </div>
+
+        {/* Moved: Delete confirmation button now appears below all buttons when delete mode is active */}
+        {logic.isDeleteMode && logic.rowsToDelete.size > 0 && (
+          <div className="mb-4 flex items-center justify-start">
+            <button
+              onClick={() => {
+                void logic.handleDeleteSelected();
+              }}
+              className="rounded-[8px] bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+            >
+              Eliminar ({logic.rowsToDelete.size})
+            </button>
+          </div>
+        )}
 
         {/* Mover SearchFilters aquí, justo debajo de los botones principales y arriba de la tabla */}
         {!props.showTotals && !props.showMonthlyTotals && (
