@@ -1085,36 +1085,34 @@ const TransactionTable = forwardRef(function TransactionTable(
                 >
                   <span className="flex w-full items-center justify-center">
                     {logic.isTotalsButtonLoading ? (
-                      <>
-                        {/* Spinner2 centrado absoluto sobre el botón */}
+                      <span className="relative block w-full">
                         <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
                           <Icons.spinner2 className="h-5 w-5 fill-white" />
                         </span>
-                        {/* Espacio reservado para el texto, invisible pero ocupa el mismo ancho */}
                         <span className="invisible flex items-center">
                           {props.showTotals || props.showMonthlyTotals ? (
-                            <>
+                            <span className="flex items-center">
                               <MdOutlineTableChart className="mr-1 h-5 w-5" />
                               Ver Registros
-                            </>
+                            </span>
                           ) : (
-                            <>
+                            <span className="flex items-center">
                               <BiWorld className="mr-1 h-5 w-5" />
                               Totales Diarios
-                            </>
+                            </span>
                           )}
                         </span>
-                      </>
+                      </span>
                     ) : props.showTotals || props.showMonthlyTotals ? (
-                      <>
+                      <span className="flex items-center">
                         <MdOutlineTableChart className="mr-1 h-5 w-5" />
                         Ver Registros
-                      </>
+                      </span>
                     ) : (
-                      <>
+                      <span className="flex items-center">
                         <BiWorld className="mr-1 h-5 w-5" />
                         Totales Diarios
-                      </>
+                      </span>
                     )}
                   </span>
                 </button>
@@ -1202,36 +1200,34 @@ const TransactionTable = forwardRef(function TransactionTable(
                 >
                   <span className="flex w-full items-center justify-center">
                     {logic.isTotalsButtonLoading ? (
-                      <>
-                        {/* Spinner2 centrado absoluto sobre el botón */}
+                      <span className="relative block w-full">
                         <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
                           <Icons.spinner2 className="h-5 w-5 fill-white" />
                         </span>
-                        {/* Espacio reservado para el texto, invisible pero ocupa el mismo ancho */}
                         <span className="invisible flex items-center">
                           {props.showTotals ? (
-                            <>
+                            <span className="flex items-center">
                               <MdOutlineTableChart className="mr-1 h-5 w-5" />
                               Ver Registros
-                            </>
+                            </span>
                           ) : (
-                            <>
+                            <span className="flex items-center">
                               <BiWorld className="mr-1 h-5 w-5" />
                               Totales Diarios
-                            </>
+                            </span>
                           )}
                         </span>
-                      </>
+                      </span>
                     ) : props.showTotals ? (
-                      <>
+                      <span className="flex items-center">
                         <MdOutlineTableChart className="mr-1 h-5 w-5" />
                         Ver Registros
-                      </>
+                      </span>
                     ) : (
-                      <>
+                      <span className="flex items-center">
                         <BiWorld className="mr-1 h-5 w-5" />
                         Totales Diarios
-                      </>
+                      </span>
                     )}
                   </span>
                 </button>
@@ -1360,9 +1356,11 @@ const TransactionTable = forwardRef(function TransactionTable(
             onFilterAction={logic.handleFilterData}
             onDateFilterChangeAction={logic.handleDateFilterChange}
             onToggleAsesorSelectionAction={logic.handleToggleAsesorMode}
-            onGenerateCuadreAction={async (records) => {
-              const selectedRecords = records.filter((r) =>
-                logic.selectedAsesores.has(r.id)
+            onGenerateCuadreAction={async (_records) => {
+              // CORREGIDO: Usar SOLO los seleccionados en modo asesor
+              const selectedIds = logic.selectedAsesores;
+              const selectedRecords = props.initialData.filter((r) =>
+                selectedIds.has(r.id)
               );
               if (selectedRecords.length > 0) {
                 await Promise.all(
@@ -1380,7 +1378,6 @@ const TransactionTable = forwardRef(function TransactionTable(
                   'cuadreRecords',
                   JSON.stringify(selectedRecords)
                 );
-                // Llamada a router.push SIN await (no es thenable aquí)
                 try {
                   router.push('/cuadre', { startPosition: 0.3 });
                 } catch (err) {
@@ -1388,7 +1385,6 @@ const TransactionTable = forwardRef(function TransactionTable(
                 }
                 return true;
               }
-              // No hay asesores seleccionados
               return false;
             }}
             hasSearchResults={logic.hasSearchResults}
@@ -1400,6 +1396,27 @@ const TransactionTable = forwardRef(function TransactionTable(
             userRole={props.userRole}
           />
         )}
+
+        {/* --- NUEVO: Checkbox "Seleccionar todo" cuando está activo el modo asesor --- */}
+        {!props.showTotals &&
+          !props.showMonthlyTotals &&
+          logic.isAsesorSelectionMode && (
+            <div className="mb-2 flex items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-800 select-none">
+                <input
+                  type="checkbox"
+                  checked={logic.areAllVisibleAsesoresSelected}
+                  onChange={(e) =>
+                    logic.toggleSelectAllAsesorRows(e.target.checked)
+                  }
+                />
+                Seleccionar todo
+              </label>
+              <span className="text-xs text-gray-500">
+                (todas las filas visibles)
+              </span>
+            </div>
+          )}
 
         {/* Modal de exportación por rango de fechas */}
         <ExportDateRangeModal
@@ -1484,7 +1501,6 @@ const TransactionTable = forwardRef(function TransactionTable(
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
               borderRadius: '8px',
-              padding: '1rem',
             }}
           >
             <TransactionSearchRemote
@@ -1583,7 +1599,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                 Este día no tiene registros
               </div>
             ) : (
-              // --- NUEVO: Envuelve la tabla y header en un contenedor con scroll horizontal ---
+              // --- NUEVO: Envuelve la tabla y header en contenedor con scroll horizontal ---
               <div
                 ref={tableScrollContainerRef}
                 id="enhanced-table-scroll"
@@ -1636,12 +1652,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                           }
                           _getEmitidoPorClass={getEmitidoPorClass}
                           getTramiteColorClass={getTramiteColorClassForRow}
-                          coloresOptions={coloresOptions}
-                          tramiteOptions={tramiteOptions}
-                          emitidoPorWithColors={emitidoPorWithColors}
-                          onDeleteAsesorAction={handleDeleteAsesorAction}
-                          data-placa={row.placa?.toUpperCase() || ''}
-                          userRole={props.userRole} // NUEVO: pasa el rol
+                          userRole={props.userRole}
                         />
                       )
                     )}

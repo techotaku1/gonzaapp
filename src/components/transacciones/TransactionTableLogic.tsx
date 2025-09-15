@@ -788,37 +788,6 @@ export function useTransactionTableLogic(props: {
       setIsLoadingAsesorMode(false);
     }
   }, []);
-  // handleAsesorSelection: sin dependencias externas
-  const handleAsesorSelection = useCallback(
-    (_id: string, asesorName: string) => {
-      // Selecciona/deselecciona todas las filas que tengan el mismo nombre de asesor.
-      // Se respetan las filas ya pagadas (no se seleccionan).
-      setSelectedAsesores((prev) => {
-        const newSet = new Set(prev);
-        const normalized = (s?: string) => (s ?? '').toString().trim();
-        const target = normalized(asesorName);
-
-        // Obtener todos los ids del asesor en initialData (excluir pagados)
-        const idsForAsesor = props.initialData
-          .filter((r) => normalized(r.asesor) === target && !r.pagado)
-          .map((r) => r.id);
-
-        if (idsForAsesor.length === 0) return newSet;
-
-        const allSelected = idsForAsesor.every((i) => newSet.has(i));
-        if (allSelected) {
-          // quitar todos
-          idsForAsesor.forEach((i) => newSet.delete(i));
-        } else {
-          // agregar todos
-          idsForAsesor.forEach((i) => newSet.add(i));
-        }
-        return newSet;
-      });
-    },
-    [props.initialData]
-  );
-
   // Desestructura onAddAsesorAction fuera del useCallback para evitar warning de dependencias
   const { onAddAsesorAction } = props;
 
@@ -827,18 +796,17 @@ export function useTransactionTableLogic(props: {
     async (rowId: string, nombre: string) => {
       if (onAddAsesorAction) {
         await onAddAsesorAction(nombre);
-        // Selecciona el asesor recién creado y dispara guardado inmediato
         handleInputChange(rowId, 'asesor', nombre);
       }
     },
     [onAddAsesorAction, handleInputChange]
   );
-  // --- NUEVO: SWR para asesores, siempre datos frescos ---
+
+  // SWR para asesores, siempre datos frescos
   const { data: asesoresBD = [], mutate: mutateAsesoresBD } = useSWR<string[]>(
     '/api/asesores',
     async (url: string): Promise<string[]> => {
       const res = await fetch(url, { cache: 'no-store' });
-      // Tipar la respuesta para evitar acceso inseguro
       const data: unknown = await res.json();
       if (
         typeof data === 'object' &&
@@ -846,7 +814,6 @@ export function useTransactionTableLogic(props: {
         'asesores' in data &&
         Array.isArray((data as { asesores: unknown }).asesores)
       ) {
-        // Filtra solo strings
         return (data as { asesores: unknown[] }).asesores.filter(
           (a): a is string => typeof a === 'string'
         );
@@ -856,69 +823,88 @@ export function useTransactionTableLogic(props: {
     { refreshInterval: 60000, revalidateOnFocus: true }
   );
 
-  // --- NUEVO: Cuando se activa el modo selección por asesor, fuerza recarga de asesores ---
+  // Forzar recarga de asesores cuando se activa el modo selección por asesor
   useEffect(() => {
     if (isAsesorSelectionMode) {
       mutateAsesoresBD();
     }
   }, [isAsesorSelectionMode, mutateAsesoresBD]);
 
-  const renderAsesorSelect = useCallback(
-    (row: TransactionRecord) => {
-      if (!isAsesorSelectionMode) return null;
-      const asesorName = (row.asesor ?? '').toString().trim();
-      // ids para este asesor (excluyendo pagados)
-      const idsForAsesor = props.initialData
-        .filter(
-          (r) => (r.asesor ?? '').toString().trim() === asesorName && !r.pagado
-        )
-        .map((r) => r.id);
-      const allSelected =
-        idsForAsesor.length > 0 &&
-        idsForAsesor.every((i) => selectedAsesores.has(i));
-
-      return (
-        <div className="flex items-center gap-2">
-          <div className="table-checkbox-wrapper">
-            <label className="check-label">
-              <input
-                type="checkbox"
-                checked={allSelected}
-                onChange={() => handleAsesorSelection(row.id, row.asesor ?? '')}
-                className="sr-only"
-                aria-label={`Seleccionar asesor ${asesorName}`}
-              />
-              <div className="checkmark" />
-            </label>
-          </div>
-          {/* Mostrar el select de asesor junto al checkbox */}
-          <div className="min-w-[120px] flex-1">
-            <AsesorSelect
-              value={row.asesor ?? ''}
-              onChange={(newValue: string) =>
-                handleInputChange(row.id, 'asesor', newValue)
-              }
-              asesores={asesoresBD}
-              // Usa la función que selecciona y guarda el asesor nuevo
-              onAddAsesorAction={async (nombre: string) =>
-                handleAddAndSelectAsesor(row.id, nombre)
-              }
-              className="border-purple-400 bg-purple-200 text-purple-700"
-            />
-          </div>
-        </div>
-      );
-    },
-    [
-      isAsesorSelectionMode,
-      selectedAsesores,
-      handleAsesorSelection,
-      handleInputChange,
-      asesoresBD,
-      handleAddAndSelectAsesor,
-      props.initialData,
-    ]
+  // --- NUEVO: IDs visibles elegibles (incluye pagados ahora) ---
+  const visibleEligibleIds = useMemo(
+    () => paginatedDataFinal.map((r) => r.id),
+    [paginatedDataFinal]
   );
+
+  // --- NUEVO: ¿Todos los visibles están seleccionados? ---
+  const areAllVisibleAsesoresSelected = useMemo(() => {
+    return (
+      visibleEligibleIds.length > 0 &&
+      visibleEligibleIds.every((id) => selectedAsesores.has(id))
+    );
+  }, [visibleEligibleIds, selectedAsesores]);
+
+  // --- NUEVO: Selección por fila (sin restricción por pagado) ---
+  const handleAsesorSelection = useCallback(
+    (id: string, _asesorName: string) => {
+      setSelectedAsesores((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+          newSet.delete(id);
+        } else {
+          newSet.add(id);
+        }
+        return newSet;
+      });
+    },
+    []
+  );
+
+  // --- NUEVO: Seleccionar/Deseleccionar todos los visibles (incluye pagados)
+  const toggleSelectAllAsesorRows = useCallback(
+    (checked: boolean) => {
+      setSelectedAsesores(checked ? new Set(visibleEligibleIds) : new Set());
+    },
+    [visibleEligibleIds]
+  );
+
+  // Render del select de asesor + checkbox por fila (NO agrupa por nombre)
+  const renderAsesorSelect = (row: TransactionRecord) => {
+    if (!isAsesorSelectionMode) return null;
+    const isChecked = selectedAsesores.has(row.id);
+
+    return (
+      <div className="flex items-center gap-2">
+        <div className="table-checkbox-wrapper">
+          <label className="check-label">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => handleAsesorSelection(row.id, row.asesor ?? '')}
+              className="sr-only"
+              aria-label={`Seleccionar fila ${row.id}`}
+            />
+            <div className="checkmark" />
+          </label>
+        </div>
+        <div className="min-w-[120px] flex-1">
+          <AsesorSelect
+            value={row.asesor ?? ''}
+            onChange={(newValue: string) =>
+              handleInputChange(row.id, 'asesor', newValue)
+            }
+            asesores={asesoresBD}
+            // No uses async sin await para evitar require-await
+            onAddAsesorAction={(nombre: string) =>
+              handleAddAndSelectAsesor(row.id, nombre)
+            }
+            className="border-purple-400 bg-purple-200 text-purple-700"
+          />
+        </div>
+      </div>
+    );
+  };
+
   // handleFilterData: sin dependencias externas
   const handleFilterData = useCallback(
     (results: TransactionRecord[], searchValue?: string) => {
@@ -1253,5 +1239,8 @@ export function useTransactionTableLogic(props: {
     isTrulyLoadingPage,
     handlePagadoCheckbox,
     asesores: asesoresBD, // <-- expón la lista de asesores actualizada
+    // --- NUEVO: helpers para "Seleccionar todo" en modo asesor ---
+    areAllVisibleAsesoresSelected,
+    toggleSelectAllAsesorRows,
   };
 }
