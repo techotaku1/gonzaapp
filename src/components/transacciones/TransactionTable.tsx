@@ -1401,20 +1401,47 @@ const TransactionTable = forwardRef(function TransactionTable(
         {!props.showTotals &&
           !props.showMonthlyTotals &&
           logic.isAsesorSelectionMode && (
-            <div className="mb-2 flex items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-gray-800 select-none">
+            <div className="mb-2 flex items-center justify-end">
+              <label
+                className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium shadow-sm transition select-none ${
+                  logic.areAllVisibleAsesoresSelected
+                    ? 'border-purple-600 bg-purple-600 text-white'
+                    : 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
+                }`}
+                title="Seleccionar/Deseleccionar todo"
+              >
                 <input
                   type="checkbox"
                   checked={logic.areAllVisibleAsesoresSelected}
                   onChange={(e) =>
                     logic.toggleSelectAllAsesorRows(e.target.checked)
                   }
+                  className="sr-only"
                 />
-                Seleccionar todo
+                <span
+                  className={`inline-flex h-4 w-4 items-center justify-center rounded border text-white ${
+                    logic.areAllVisibleAsesoresSelected
+                      ? 'border-white'
+                      : 'border-gray-300'
+                  }`}
+                >
+                  {/* Check icon visible solo cuando está seleccionado */}
+                  {logic.areAllVisibleAsesoresSelected ? (
+                    <svg
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-3 w-3"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-7.364 7.364a1 1 0 01-1.414 0L3.293 9.435a1 1 0 011.414-1.414l3.03 3.03 6.657-6.657a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  ) : null}
+                </span>
+                <span>Seleccionar todo</span>
               </label>
-              <span className="text-xs text-gray-500">
-                (todas las filas visibles)
-              </span>
             </div>
           )}
 
