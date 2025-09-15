@@ -562,15 +562,37 @@ const TransactionTable = forwardRef(function TransactionTable(
     return Array.from(set).sort();
   }, [props.initialData]);
 
-  const minDate = allDates[0];
-  const maxDate = allDates[allDates.length - 1];
-
   // Determina si hay días anteriores o siguientes disponibles
-  const hasPreviousDay = logic.selectedDate > minDate;
-  const hasNextDay = logic.selectedDate < maxDate;
+  // --- CORREGIDO: Permitir navegar a días anteriores aunque la fecha seleccionada sea un día futuro ---
+  const selectedIndex = allDates.findIndex((d) => d === logic.selectedDate);
+  const hasPreviousDay =
+    allDates.length > 0 &&
+    (selectedIndex > 0 ||
+      (selectedIndex === -1 && logic.selectedDate > allDates[0]));
+  const hasNextDay =
+    allDates.length > 0 &&
+    (selectedIndex >= 0
+      ? selectedIndex < allDates.length - 1
+      : logic.selectedDate < allDates[allDates.length - 1]);
 
   // --- NUEVO: Calcula el índice del día actual y el total de días únicos ---
-  const currentDayIndex = allDates.findIndex((d) => d === logic.selectedDate);
+  const currentDayIndex = (() => {
+    if (allDates.length === 0) return 0;
+    const idx = allDates.findIndex((d) => d === logic.selectedDate);
+    if (idx !== -1) return idx;
+    // Si la fecha seleccionada está después del último día, mostrar el último índice
+    if (logic.selectedDate > allDates[allDates.length - 1])
+      return allDates.length - 1;
+    // Si está antes del primer día, mostrar el primero
+    if (logic.selectedDate < allDates[0]) return 0;
+    // Si está entre medias pero no coincide, usa el último día menor a la seleccionada
+    let nearest = 0;
+    for (let i = 0; i < allDates.length; i++) {
+      if (allDates[i] <= logic.selectedDate) nearest = i;
+      else break;
+    }
+    return nearest;
+  })();
   const totalDays = allDates.length;
 
   // --- SIEMPRE muestra la fecha arriba del botón agregar en formato largo ---

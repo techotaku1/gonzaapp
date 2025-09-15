@@ -99,23 +99,107 @@ export function useTransactionTableLogic(props: {
   // --- CORRECCIÓN DE PAGINACIÓN POR FECHA ---
   // Cuando el usuario cambia de página, debe cambiar la fecha seleccionada al día anterior/siguiente.
   // Agrega helpers para avanzar/retroceder días.
+  // --- Fechas únicas disponibles (YYYY-MM-DD) ordenadas asc ---
+  const allDates = useMemo(() => {
+    const set = new Set(
+      props.initialData
+        .map((r) =>
+          (r.fecha instanceof Date ? r.fecha : new Date(r.fecha))
+            .toISOString()
+            .slice(0, 10)
+        )
+        .filter(Boolean)
+    );
+    return Array.from(set).sort();
+  }, [props.initialData]);
+
+  // Helpers
+  const dateKeyToDate = useCallback((key: string) => {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }, []);
+
   const goToPreviousDay = useCallback(() => {
-    const current = dateFilter.startDate
-      ? new Date(dateFilter.startDate)
-      : new Date();
-    current.setDate(current.getDate() - 1);
-    setDateFilter({ startDate: current, endDate: null });
+    const currKey = selectedDate;
+    const keys = allDates; // sorted asc
+    const idx = keys.indexOf(currKey);
+    let targetKey: string | null = null;
+
+    if (idx > 0) {
+      targetKey = keys[idx - 1];
+    } else if (idx === -1) {
+      // No está en la lista: tomar la mayor fecha menor al currKey
+      const firstGreaterIdx = keys.findIndex((k) => k > currKey);
+      if (firstGreaterIdx > 0) {
+        targetKey = keys[firstGreaterIdx - 1];
+      } else if (
+        firstGreaterIdx === -1 &&
+        keys.length &&
+        currKey > keys[keys.length - 1]
+      ) {
+        targetKey = keys[keys.length - 1];
+      }
+    }
+
+    const targetDate =
+      targetKey != null
+        ? dateKeyToDate(targetKey)
+        : (() => {
+            const base = dateFilter.startDate
+              ? new Date(dateFilter.startDate)
+              : new Date();
+            base.setDate(base.getDate() - 1);
+            return base;
+          })();
+
+    setDateFilter({ startDate: targetDate, endDate: null });
     setCurrentPage(1);
-  }, [dateFilter.startDate]);
+  }, [
+    allDates,
+    selectedDate,
+    dateFilter.startDate,
+    dateKeyToDate,
+    setDateFilter,
+  ]);
 
   const goToNextDay = useCallback(() => {
-    const current = dateFilter.startDate
-      ? new Date(dateFilter.startDate)
-      : new Date();
-    current.setDate(current.getDate() + 1);
-    setDateFilter({ startDate: current, endDate: null });
+    const currKey = selectedDate;
+    const keys = allDates; // sorted asc
+    const idx = keys.indexOf(currKey);
+    let targetKey: string | null = null;
+
+    if (idx >= 0 && idx < keys.length - 1) {
+      targetKey = keys[idx + 1];
+    } else if (idx === -1) {
+      // No está en la lista: tomar la menor fecha mayor al currKey
+      const firstGreaterIdx = keys.findIndex((k) => k > currKey);
+      if (firstGreaterIdx >= 0) {
+        targetKey = keys[firstGreaterIdx];
+      } else if (keys.length && currKey < keys[0]) {
+        targetKey = keys[0];
+      }
+    }
+
+    const targetDate =
+      targetKey != null
+        ? dateKeyToDate(targetKey)
+        : (() => {
+            const base = dateFilter.startDate
+              ? new Date(dateFilter.startDate)
+              : new Date();
+            base.setDate(base.getDate() + 1);
+            return base;
+          })();
+
+    setDateFilter({ startDate: targetDate, endDate: null });
     setCurrentPage(1);
-  }, [dateFilter.startDate]);
+  }, [
+    allDates,
+    selectedDate,
+    dateFilter.startDate,
+    dateKeyToDate,
+    setDateFilter,
+  ]);
 
   // Hook para obtener los datos paginados del backend
   const {
@@ -1005,18 +1089,39 @@ export function useTransactionTableLogic(props: {
       paginatedData.length === 0 &&
       dateFilter.startDate
     ) {
-      // Busca el día anterior con registros
-      const prevDay = new Date(dateFilter.startDate);
-      prevDay.setDate(prevDay.getDate() - 1);
-      setDateFilter({ startDate: prevDay, endDate: null });
-      setCurrentPage(1);
+      const currKey = getDateKey(dateFilter.startDate);
+      const keys = allDates;
+      let targetKey: string | null = null;
+
+      const idx = keys.indexOf(currKey);
+      if (idx > 0) {
+        targetKey = keys[idx - 1];
+      } else if (idx === -1) {
+        const firstGreaterIdx = keys.findIndex((k) => k > currKey);
+        if (firstGreaterIdx > 0) {
+          targetKey = keys[firstGreaterIdx - 1];
+        } else if (
+          firstGreaterIdx === -1 &&
+          keys.length &&
+          currKey > keys[keys.length - 1]
+        ) {
+          targetKey = keys[keys.length - 1];
+        }
+      }
+
+      if (targetKey) {
+        const [y, m, d] = targetKey.split('-').map(Number);
+        setDateFilter({ startDate: new Date(y, m - 1, d), endDate: null });
+        setCurrentPage(1);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     paginatedData.length,
     isAddingRow,
     isActuallySaving,
     debouncedSearchTerm,
+    dateFilter.startDate,
+    allDates,
   ]);
 
   // --- NUEVO: Limpia editValues SOLO si los datos remotos reflejan los edits Y no hay edits pendientes ---
