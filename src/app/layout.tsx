@@ -1,4 +1,4 @@
-import { type Metadata } from 'next';
+import { type Metadata, Viewport } from 'next';
 import { Delius, Lexend } from 'next/font/google';
 
 import { esMX } from '@clerk/localizations';
@@ -9,6 +9,13 @@ import ClientLayout from '~/components/ClientLayout';
 import Providers from './providers';
 
 import '~/styles/globals.css';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   title: 'GonzaApp',
@@ -36,7 +43,7 @@ export default function RootLayout({
   return (
     <ClerkProvider localization={esMX}>
       <html lang="es" className={`${delius.variable} ${lexend.variable}`}>
-        <body>
+        <body className="min-h-screen bg-gray-50">
           <Providers>
             <ClientLayout>{children}</ClientLayout>
           </Providers>
