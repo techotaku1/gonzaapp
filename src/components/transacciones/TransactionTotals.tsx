@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
@@ -222,40 +222,54 @@ export default function TransactionTotals({
     );
   }, [filteredTotals]);
 
+  // --- NUEVO: Detectar si es pantalla pequeña (mobile) ---
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div className="font-display container mx-auto px-6">
       {/* Texto Totales Generales fuera del rectángulo */}
       <h3 className="mb-2 text-4xl font-semibold">Totales Diarios</h3>
       {/* Totales generales con colores e iconos */}
       <div className="mb-6 rounded-lg bg-gray-100 p-6">
-        <div className="grid grid-cols-2 gap-4 font-bold md:grid-cols-5">
-          <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
+        {/* Layout responsive: grid en desktop, columna en mobile */}
+        <div
+          className={
+            isMobile ? 'space-y-4' : 'grid grid-cols-2 gap-4 lg:grid-cols-5'
+          }
+        >
+          <div className="rounded-lg border-l-4 border-blue-500 bg-white p-4 shadow">
             <div className="text-sm text-gray-800">Total Transacciones</div>
             <div className="text-xl font-bold text-blue-600">
               {grandTotals.transactionCount}
             </div>
           </div>
-          <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
+          <div className="rounded-lg border-l-4 border-green-500 bg-white p-4 shadow">
             <div className="text-sm text-gray-800">Precio Neto Total</div>
             <div className="text-xl font-bold text-green-600">
               {formatCurrency(grandTotals.precioNetoTotal)}
             </div>
           </div>
-          <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
+          <div className="rounded-lg border-l-4 border-purple-500 bg-white p-4 shadow">
             <div className="text-sm text-gray-800">Tarifa Servicio Total</div>
-            <div className="text-xl font-bold text-orange-600">
+            <div className="text-xl font-bold text-purple-600">
               {formatCurrency(grandTotals.tarifaServicioTotal)}
             </div>
           </div>
-          <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
+          <div className="rounded-lg border-l-4 border-red-500 bg-white p-4 shadow">
             <div className="text-sm text-gray-800">4x1000 Total</div>
             <div className="text-xl font-bold text-red-600">
               {formatCurrency(grandTotals.impuesto4x1000Total)}
             </div>
           </div>
-          <div className="rounded-lg bg-white p-4 shadow transition-transform hover:scale-105">
+          <div className="rounded-lg border-l-4 border-yellow-500 bg-white p-4 shadow">
             <div className="text-sm text-gray-800">Ganancia Bruta Total</div>
-            <div className="text-xl font-bold text-purple-600">
+            <div className="text-xl font-bold text-yellow-600">
               {formatCurrency(grandTotals.gananciaBrutaTotal)}
             </div>
           </div>
@@ -354,58 +368,85 @@ export default function TransactionTotals({
       </div>
 
       {/* Tabla mejorada con colores para los valores */}
-      <div className="overflow-x-auto">
-        <table className="w-full rounded-lg bg-white shadow-lg">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Fecha
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Transacciones
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Precio Neto
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Tarifa Servicio
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
-                4x1000
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Ganancia Bruta
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {paginatedTotals.map((total) => (
-              <tr
-                key={total.date}
-                className="transition-colors hover:bg-gray-50"
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {formatDate(total.date)}
-                </td>
-                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-blue-600">
-                  {total.transactionCount}
-                </td>
-                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-green-600">
-                  {formatCurrency(total.precioNetoTotal)}
-                </td>
-                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-orange-600">
-                  {formatCurrency(total.tarifaServicioTotal)}
-                </td>
-                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-red-600">
-                  {formatCurrency(total.impuesto4x1000Total)}
-                </td>
-                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-purple-600">
-                  {formatCurrency(total.gananciaBrutaTotal)}
-                </td>
+      <div className="totals-responsive-wrapper">
+        <div
+          className="mt-8 overflow-x-auto"
+          style={{
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <table className="w-full min-w-[700px] rounded-lg bg-white text-left text-sm text-gray-700 shadow">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-800 uppercase">
+                  Fecha
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                  Transacciones
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                  Precio Neto
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                  Tarifa Servicio
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                  4x1000
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                  Ganancia Bruta
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {paginatedTotals.map((total) => (
+                <tr
+                  key={total.date}
+                  className="transition-colors hover:bg-gray-50"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {formatDate(total.date)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-blue-600">
+                    {total.transactionCount}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-green-600">
+                    {formatCurrency(total.precioNetoTotal)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-orange-600">
+                    {formatCurrency(total.tarifaServicioTotal)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-red-600">
+                    {formatCurrency(total.impuesto4x1000Total)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-purple-600">
+                    {formatCurrency(total.gananciaBrutaTotal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <style>{`
+        @media (max-width: 767px) {
+          .totals-responsive-wrapper table {
+            table-layout: auto !important;
+            width: 100%;
+            min-width: 600px;
+          }
+          .totals-responsive-wrapper th,
+          .totals-responsive-wrapper td {
+            min-width: 120px;
+            padding-left: 10px;
+            padding-right: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+        }
+      `}</style>
       </div>
 
       {/* Paginación */}
