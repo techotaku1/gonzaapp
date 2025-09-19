@@ -50,7 +50,6 @@ export default function CuadreClientTable({
     800
   );
 
-  // Adaptar el handler para los nuevos campos y tipos
   const handleUpdateBancoReferencia = async (
     id: string,
     field: keyof CuadreData,
@@ -94,61 +93,53 @@ export default function CuadreClientTable({
     });
   };
 
-  // Agrupar registros por asesor y luego por fecha
+  // Agrupar registros por fecha de generación (createdAt)
   const groupedRecords = useMemo(() => {
-    const asesoresMap = new Map<
+    const map = new Map<
       string,
-      {
-        asesor: string;
-        fechas: Map<
-          string,
-          {
-            fecha: Date;
-            records: ExtendedSummaryRecord[];
-          }
-        >;
-      }
+      { fechaGeneracion: Date; records: ExtendedSummaryRecord[] }
     >();
+
+    // Evitar duplicados por id
     const seenIds = new Set<string>();
-    const uniqueSummaryData = summaryData.filter((rec) => {
+    const unique = summaryData.filter((rec) => {
       if (seenIds.has(rec.id)) return false;
       seenIds.add(rec.id);
       return true;
     });
-    uniqueSummaryData.sort((a, b) => {
-      const dateA =
-        a.fecha instanceof Date
-          ? a.fecha.getTime()
-          : new Date(a.fecha).getTime();
-      const dateB =
-        b.fecha instanceof Date
-          ? b.fecha.getTime()
-          : new Date(b.fecha).getTime();
-      if (dateA !== dateB) return dateB - dateA;
-      return (a.asesor ?? '').localeCompare(b.asesor ?? '');
-    });
-    uniqueSummaryData.forEach((record) => {
-      const asesor = record.asesor ?? 'Sin Asesor';
-      const fecha =
-        record.fecha instanceof Date ? record.fecha : new Date(record.fecha);
-      const fechaStr = fecha.toLocaleDateString('es-CO');
-      if (!asesoresMap.has(asesor)) {
-        asesoresMap.set(asesor, { asesor, fechas: new Map() });
+
+    unique.forEach((record) => {
+      const createdAt =
+        record.createdAt instanceof Date
+          ? record.createdAt
+          : new Date(record.createdAt as unknown as string);
+      if (isNaN(createdAt.getTime())) return;
+      const key = createdAt.toISOString().slice(0, 10); // YYYY-MM-DD
+      if (!map.has(key)) {
+        map.set(key, { fechaGeneracion: createdAt, records: [] });
       }
-      const asesorObj = asesoresMap.get(asesor)!;
-      if (!asesorObj.fechas.has(fechaStr)) {
-        asesorObj.fechas.set(fechaStr, { fecha, records: [] });
-      }
-      asesorObj.fechas.get(fechaStr)!.records.push(record);
+      map.get(key)!.records.push(record);
     });
-    return Array.from(asesoresMap.values())
-      .map((asesorObj) => ({
-        asesor: asesorObj.asesor,
-        fechas: Array.from(asesorObj.fechas.values()).sort(
-          (a, b) => b.fecha.getTime() - a.fecha.getTime()
-        ),
+
+    // Ordenar grupos por fecha desc y dentro del grupo por hora desc
+    return Array.from(map.values())
+      .map((g) => ({
+        ...g,
+        records: g.records.sort((a, b) => {
+          const ta =
+            (a.createdAt instanceof Date
+              ? a.createdAt.getTime()
+              : new Date(a.createdAt as unknown as string).getTime()) || 0;
+          const tb =
+            (b.createdAt instanceof Date
+              ? b.createdAt.getTime()
+              : new Date(b.createdAt as unknown as string).getTime()) || 0;
+          return tb - ta;
+        }),
       }))
-      .sort((a, b) => a.asesor.localeCompare(b.asesor));
+      .sort(
+        (a, b) => b.fechaGeneracion.getTime() - a.fechaGeneracion.getTime()
+      );
   }, [summaryData]);
 
   function getEmitidoPorClass(emitidoPor: string): string | undefined {
@@ -175,10 +166,8 @@ export default function CuadreClientTable({
   // Efecto para el estado indeterminado del checkbox de seleccionar todos
   React.useEffect(() => {
     if (selectAllRef.current && groupedRecords.length > 0) {
-      const allIds = groupedRecords.flatMap((asesorGroup) =>
-        asesorGroup.fechas.flatMap((fechaGroup) =>
-          fechaGroup.records.map((r) => r.id)
-        )
+      const allIds = groupedRecords.flatMap((group) =>
+        group.records.map((r) => r.id)
       );
       selectAllRef.current.indeterminate =
         rowsToDelete.size > 0 && rowsToDelete.size < allIds.length;
@@ -307,11 +296,8 @@ export default function CuadreClientTable({
                           type="checkbox"
                           ref={selectAllRef}
                           checked={(() => {
-                            const allIds = groupedRecords.flatMap(
-                              (asesorGroup) =>
-                                asesorGroup.fechas.flatMap((fechaGroup) =>
-                                  fechaGroup.records.map((r) => r.id)
-                                )
+                            const allIds = groupedRecords.flatMap((group) =>
+                              group.records.map((r) => r.id)
                             );
                             return (
                               rowsToDelete.size === allIds.length &&
@@ -320,10 +306,8 @@ export default function CuadreClientTable({
                           })()}
                           onChange={() =>
                             handleSelectAll(
-                              groupedRecords.flatMap((asesorGroup) =>
-                                asesorGroup.fechas.flatMap((fechaGroup) =>
-                                  fechaGroup.records.map((r) => r.id)
-                                )
+                              groupedRecords.flatMap((group) =>
+                                group.records.map((r) => r.id)
                               )
                             )
                           }
