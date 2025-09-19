@@ -321,7 +321,10 @@ export default function SearchFilters({
         }
       >
         {/* Fecha inicial */}
-        <div className="relative w-full">
+        <div
+          className="relative"
+          style={{ width: isMobile ? '100%' : '170px', minWidth: 0 }}
+        >
           <DatePicker
             selected={startDate}
             onChange={(date: Date | null) => setStartDate(date)}
@@ -329,7 +332,7 @@ export default function SearchFilters({
             startDate={startDate}
             endDate={endDate}
             placeholderText="Fecha inicial"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 pr-8"
+            className="w-full rounded-md border border-gray-300 px-2 py-2 pr-8 text-sm"
             dateFormat="dd/MM/yyyy"
             locale={es}
           />
@@ -351,7 +354,10 @@ export default function SearchFilters({
           </span>
         </div>
         {/* Fecha final */}
-        <div className="relative w-full">
+        <div
+          className="relative"
+          style={{ width: isMobile ? '100%' : '170px', minWidth: 0 }}
+        >
           <DatePicker
             selected={endDate}
             onChange={(date: Date | null) => setEndDate(date)}
@@ -360,7 +366,7 @@ export default function SearchFilters({
             endDate={endDate}
             minDate={minDateValue}
             placeholderText="Fecha final"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 pr-8"
+            className="w-full rounded-md border border-gray-300 px-2 py-2 pr-8 text-sm"
             dateFormat="dd/MM/yyyy"
             locale={es}
           />
@@ -384,7 +390,7 @@ export default function SearchFilters({
         <button
           onClick={handleDateRangeFilter}
           disabled={isLoading || !startDate || !endDate}
-          className={`flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-50 ${
+          className={`flex items-center gap-2 rounded-md bg-indigo-500 px-3 py-2 text-sm text-white hover:bg-indigo-600 disabled:opacity-50 md:whitespace-nowrap ${
             isMobile ? 'w-full' : ''
           }`}
         >
@@ -414,7 +420,7 @@ export default function SearchFilters({
         {(filteredStartDate ?? filteredEndDate) && !isLoading ? (
           <button
             onClick={handleClearDateFilter}
-            className={`ml-0 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 ${
+            className={`ml-0 rounded-md bg-gray-500 px-3 py-2 text-sm text-white hover:bg-gray-600 md:whitespace-nowrap ${
               isMobile ? 'w-full' : ''
             }`}
           >
