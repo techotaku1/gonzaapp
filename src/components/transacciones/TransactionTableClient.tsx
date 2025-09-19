@@ -309,19 +309,42 @@ export default function TransactionTableClient({
   const { user } = useUser();
   const role = user?.publicMetadata?.role === 'admin' ? 'admin' : 'empleado';
 
+  // --- NUEVO: Detectar si es pantalla pequeña (mobile) ---
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <SWRProvider active={isActive}>
-      <div ref={containerRef} className="fixed top-0 left-0 z-50 w-full">
+      {/* Contenedor para el header y la campana en pantallas grandes */}
+      <div
+        ref={containerRef}
+        className="fixed top-0 left-0 z-50 w-full"
+        style={
+          isMobile
+            ? {
+                width: '100vw',
+                minWidth: 0,
+                maxWidth: '100vw',
+                overflowX: 'hidden',
+              }
+            : {}
+        }
+      >
         {/* <Header /> */}
-        {/* --- Notificación con campanita, badge y lista tipo hamburguesa --- */}
-        {showNotification && (
+
+        {/* Campanita de notificación (solo visible en pantallas grandes) */}
+        {!isMobile && showNotification && (
           <div
             style={{
               position: 'absolute',
               top: 12,
               right: 24,
               zIndex: 100,
-              // Elimina background y padding aquí para evitar doble fondo blanco
               borderRadius: 24,
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
               display: 'flex',
@@ -329,182 +352,55 @@ export default function TransactionTableClient({
               gap: 8,
             }}
           >
-            {/* Botón expandido y blanco para la campanita y su padding */}
-            <button
-              type="button"
-              onClick={handleNotificationClick}
-              style={{
-                position: 'relative',
-                background: 'white',
-                border: 'none',
-                borderRadius: 32,
-                padding: 12,
-                minWidth: 44,
-                minHeight: 44,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                transition: 'background 0.2s',
-              }}
-              title="Faltan boletas o pagos"
-              tabIndex={0}
-            >
-              {/* Badge más abajo y a la derecha de la campana */}
-              {notificationList.length > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 1, // más abajo
-                    right: 2, // más a la derecha
-                    background: '#f59e42',
-                    color: 'white',
-                    borderRadius: '50%',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    minWidth: 22,
-                    minHeight: 22,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 6px',
-                    border: '2px solid #fff',
-                    zIndex: 2,
-                  }}
-                >
-                  {notificationList.length}
-                </span>
-              )}
-              <Bell
-                className={
-                  notificationOpen
-                    ? 'animate-bounce text-yellow-500'
-                    : 'text-yellow-500'
-                }
-                size={22}
-                style={{ transition: 'transform 0.2s' }}
-              />
-            </button>
-            {/* --- Menú hamburguesa debajo de la campana --- */}
-            {notificationOpen && (
-              <div
-                id="notification-bell-list"
-                style={{
-                  position: 'absolute',
-                  top: 48, // antes 32, ahora más abajo
-                  right: 0,
-                  minWidth: 260,
-                  background: 'white',
-                  border: '1px solid #fbbf24',
-                  borderRadius: 8,
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                  padding: '12px 8px',
-                  zIndex: 9999,
-                }}
-              >
-                {notificationLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Icons.spinner className="h-8 w-8 text-yellow-500" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-2 font-bold text-yellow-700">
-                      Placas Por Pagar:
-                    </div>
-                    <ul className="max-h-64 overflow-y-auto">
-                      {notificationList.map((item, idx) => (
-                        <li
-                          key={(item.placa || item.tramite) + idx}
-                          className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
-                          onClick={() =>
-                            handleGoToPlaca(item.placa, item.fecha)
-                          }
-                          tabIndex={0}
-                          style={{ outline: 'none' }}
-                        >
-                          <span className="flex items-center justify-between text-base font-bold text-gray-900">
-                            {/* Mostrar tramite si no es SOAT, si no mostrar placa */}
-                            {item.tramite &&
-                            item.tramite.toUpperCase() !== 'SOAT'
-                              ? (item.tramite ?? '(Sin trámite)')
-                              : item.placa}
-                            <button
-                              className="ml-2 text-xs text-red-500 underline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleIgnorePlaca(item.placa);
-                              }}
-                              title="Ignorar esta placa"
-                            >
-                              Ignorar
-                            </button>
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {(() => {
-                              let fecha: Date | undefined;
-                              if (
-                                item.fecha instanceof Date &&
-                                !isNaN(item.fecha.getTime())
-                              ) {
-                                fecha = item.fecha;
-                              } else if (
-                                typeof item.fecha === 'string' ||
-                                typeof item.fecha === 'number'
-                              ) {
-                                const f = new Date(item.fecha);
-                                if (!isNaN(f.getTime())) fecha = f;
-                              }
-                              if (!fecha) return '';
-                              // Sumar 5 horas a la fecha para ajustar el horario
-                              const fechaAjustada = new Date(
-                                fecha.getTime() + 5 * 60 * 60 * 1000
-                              );
-                              return fechaAjustada.toLocaleString('es-CO', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true,
-                                timeZone: 'America/Bogota',
-                              });
-                            })()}
-                          </span>
-                          <span className="text-xs text-gray-700">
-                            Asesor: <b>{item.asesor}</b>
-                          </span>
-                          <span className="text-xs text-gray-700">
-                            Precio Neto:{' '}
-                            <b>${item.precioNeto.toLocaleString('es-CO')}</b>
-                          </span>
-                          <span className="text-xs text-gray-700">
-                            Emitido Por: <b>{item.emitidoPor}</b>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      className="mt-3 w-full rounded bg-yellow-400 py-1 font-semibold text-white hover:bg-yellow-500"
-                      onClick={() => setNotificationOpen(false)}
-                    >
-                      Cerrar
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+            {renderNotificationBell()}
           </div>
         )}
       </div>
+
       <main
         className="container mx-auto min-h-screen px-4 pt-32"
         style={{
           height: 'auto',
           minHeight: '100vh',
-          overflow: 'visible',
+          // Reemplazo: no usar 'overflow' shorthand junto con overflowX/overflowY
+          overflowX: 'visible',
+          overflowY: 'visible',
+          ...(isMobile
+            ? {
+                minWidth: 0,
+                width: '100vw',
+                maxWidth: '100vw',
+                // Mantener solo longhand en mobile
+                overflowX: 'hidden',
+                overflowY: 'visible',
+              }
+            : {}),
         }}
       >
+        {/* Campanita de notificación en móviles (centrada y más grande) */}
+        {isMobile && showNotification && (
+          <div
+            className="mb-4 flex w-full justify-center"
+            style={{
+              marginTop: -24,
+              marginBottom: 16,
+            }}
+          >
+            <div
+              style={{
+                zIndex: 100,
+                borderRadius: 32,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {renderNotificationBell()}
+            </div>
+          </div>
+        )}
+
         <TransactionTable
           ref={tableRef}
           initialData={data ?? []}
@@ -521,10 +417,195 @@ export default function TransactionTableClient({
             }
           }}
           isLoading={isLoading}
-          // NUEVO: Pasa el rol como prop
           userRole={role}
+          // Pasar la fecha actual como prop
+          currentDate={currentDate}
+          // Pasar la bandera isMobile como prop
+          isMobile={isMobile}
         />
       </main>
     </SWRProvider>
   );
+
+  // Helper function para evitar duplicación de código
+  function renderNotificationBell() {
+    return (
+      <>
+        {/* Botón campanita */}
+        <button
+          type="button"
+          onClick={handleNotificationClick}
+          style={{
+            position: 'relative',
+            background: 'white',
+            border: 'none',
+            borderRadius: 32,
+            padding: isMobile ? 12 : 12,
+            minWidth: isMobile ? 48 : 44,
+            minHeight: isMobile ? 48 : 44,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.2s',
+            maxWidth: isMobile ? 56 : undefined,
+          }}
+          title="Faltan boletas o pagos"
+          tabIndex={0}
+        >
+          {/* Badge de notificaciones */}
+          {notificationList.length > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: isMobile ? 2 : 1,
+                right: isMobile ? 4 : 2,
+                background: '#f59e42',
+                color: 'white',
+                borderRadius: '50%',
+                fontSize: isMobile ? 14 : 12,
+                fontWeight: 700,
+                minWidth: isMobile ? 22 : 18,
+                minHeight: isMobile ? 22 : 18,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 4px',
+                border: '2px solid #fff',
+                zIndex: 2,
+              }}
+            >
+              {notificationList.length}
+            </span>
+          )}
+          <Bell
+            className={
+              notificationOpen
+                ? 'animate-bounce text-yellow-500'
+                : 'text-yellow-500'
+            }
+            size={isMobile ? 28 : 22}
+            style={{ transition: 'transform 0.2s' }}
+          />
+        </button>
+
+        {/* Menú desplegable de notificaciones */}
+        {notificationOpen && (
+          <div
+            id="notification-bell-list"
+            style={{
+              position: 'absolute',
+              top: isMobile ? 56 : 48,
+              right: 0,
+              minWidth: isMobile ? 280 : 260,
+              maxWidth: isMobile ? '95vw' : 340,
+              background: 'white',
+              border: '1px solid #fbbf24',
+              borderRadius: 8,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              padding: isMobile ? '12px 8px' : '12px 8px',
+              zIndex: 9999,
+              overflowX: 'hidden',
+            }}
+          >
+            {notificationLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Icons.spinner className="h-8 w-8 text-yellow-500" />
+              </div>
+            ) : (
+              <>
+                <div className="mb-2 font-bold text-yellow-700">
+                  Placas Por Pagar:
+                </div>
+                <ul
+                  className="max-h-64 overflow-y-auto"
+                  style={isMobile ? { maxWidth: '88vw' } : {}}
+                >
+                  {notificationList.map((item, idx) => (
+                    <li
+                      key={(item.placa || item.tramite) + idx}
+                      className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
+                      onClick={() => handleGoToPlaca(item.placa, item.fecha)}
+                      tabIndex={0}
+                      style={{
+                        outline: 'none',
+                        fontSize: isMobile ? 13 : undefined,
+                        maxWidth: isMobile ? '85vw' : undefined,
+                      }}
+                    >
+                      <span className="flex items-center justify-between text-base font-bold text-gray-900">
+                        {/* Mostrar tramite si no es SOAT, si no mostrar placa */}
+                        {item.tramite && item.tramite.toUpperCase() !== 'SOAT'
+                          ? (item.tramite ?? '(Sin trámite)')
+                          : item.placa}
+                        <button
+                          className="ml-2 text-xs text-red-500 underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleIgnorePlaca(item.placa);
+                          }}
+                          title="Ignorar esta placa"
+                        >
+                          Ignorar
+                        </button>
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {(() => {
+                          let fecha: Date | undefined;
+                          if (
+                            item.fecha instanceof Date &&
+                            !isNaN(item.fecha.getTime())
+                          ) {
+                            fecha = item.fecha;
+                          } else if (
+                            typeof item.fecha === 'string' ||
+                            typeof item.fecha === 'number'
+                          ) {
+                            const f = new Date(item.fecha);
+                            if (!isNaN(f.getTime())) fecha = f;
+                          }
+                          if (!fecha) return '';
+                          // Sumar 5 horas a la fecha para ajustar el horario
+                          const fechaAjustada = new Date(
+                            fecha.getTime() + 5 * 60 * 60 * 1000
+                          );
+                          return fechaAjustada.toLocaleString('es-CO', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                            timeZone: 'America/Bogota',
+                          });
+                        })()}
+                      </span>
+                      <span className="text-xs text-gray-700">
+                        Asesor: <b>{item.asesor}</b>
+                      </span>
+                      <span className="text-xs text-gray-700">
+                        Precio Neto:{' '}
+                        <b>${item.precioNeto.toLocaleString('es-CO')}</b>
+                      </span>
+                      <span className="text-xs text-gray-700">
+                        Emitido Por: <b>{item.emitidoPor}</b>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="mt-3 w-full rounded bg-yellow-400 py-1 font-semibold text-white hover:bg-yellow-500"
+                  onClick={() => setNotificationOpen(false)}
+                  style={isMobile ? { fontSize: 14 } : {}}
+                >
+                  Cerrar
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </>
+    );
+  }
 }

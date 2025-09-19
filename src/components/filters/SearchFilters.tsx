@@ -282,9 +282,31 @@ export default function SearchFilters({
     onFilterAction(data, '');
   }, [setSearchTermAction, data, onFilterAction]);
 
+  // --- NUEVO: Detectar si es pantalla pequeña (mobile) ---
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-white p-4 shadow-md">
-      <div className="flex flex-1 items-center gap-2">
+    <div
+      className={`mb-4 rounded-lg bg-white p-4 shadow-md ${
+        isMobile
+          ? 'flex w-full flex-col items-stretch gap-4'
+          : 'flex flex-wrap items-center gap-4'
+      }`}
+      style={isMobile ? { minWidth: 0, width: '100%' } : {}}
+    >
+      <div
+        className={
+          isMobile
+            ? 'flex w-full flex-col gap-2'
+            : 'flex flex-1 items-center gap-2'
+        }
+      >
         <RemoteSearchInput
           value={remoteSearch}
           onChange={setRemoteSearch}
@@ -293,9 +315,13 @@ export default function SearchFilters({
           onClear={handleClearSearch}
         />
       </div>
-      <div className="flex items-center gap-2">
+      <div
+        className={
+          isMobile ? 'flex w-full flex-col gap-2' : 'flex items-center gap-2'
+        }
+      >
         {/* Fecha inicial */}
-        <div className="relative">
+        <div className="relative w-full">
           <DatePicker
             selected={startDate}
             onChange={(date: Date | null) => setStartDate(date)}
@@ -303,7 +329,7 @@ export default function SearchFilters({
             startDate={startDate}
             endDate={endDate}
             placeholderText="Fecha inicial"
-            className="w-36 rounded-md border border-gray-300 px-3 py-2 pr-8" // ancho reducido
+            className="w-full rounded-md border border-gray-300 px-3 py-2 pr-8"
             dateFormat="dd/MM/yyyy"
             locale={es}
           />
@@ -325,7 +351,7 @@ export default function SearchFilters({
           </span>
         </div>
         {/* Fecha final */}
-        <div className="relative">
+        <div className="relative w-full">
           <DatePicker
             selected={endDate}
             onChange={(date: Date | null) => setEndDate(date)}
@@ -334,7 +360,7 @@ export default function SearchFilters({
             endDate={endDate}
             minDate={minDateValue}
             placeholderText="Fecha final"
-            className="w-36 rounded-md border border-gray-300 px-3 py-2 pr-8" // ancho reducido
+            className="w-full rounded-md border border-gray-300 px-3 py-2 pr-8"
             dateFormat="dd/MM/yyyy"
             locale={es}
           />
@@ -358,7 +384,9 @@ export default function SearchFilters({
         <button
           onClick={handleDateRangeFilter}
           disabled={isLoading || !startDate || !endDate}
-          className="-mr-2 flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-50"
+          className={`flex items-center gap-2 rounded-md bg-indigo-500 px-4 py-2 text-white hover:bg-indigo-600 disabled:opacity-50 ${
+            isMobile ? 'w-full' : ''
+          }`}
         >
           {isLoading ? (
             <>
@@ -386,13 +414,21 @@ export default function SearchFilters({
         {(filteredStartDate ?? filteredEndDate) && !isLoading ? (
           <button
             onClick={handleClearDateFilter}
-            className="-mr-2 ml-2 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
+            className={`ml-0 rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 ${
+              isMobile ? 'w-full' : ''
+            }`}
           >
             Limpiar Filtro
           </button>
         ) : null}
       </div>
-      <div className="ml-auto flex items-center gap-2">
+      <div
+        className={
+          isMobile
+            ? 'flex w-full flex-col gap-2'
+            : 'ml-auto flex items-center gap-2'
+        }
+      >
         {/* SOLO mostrar estos botones si el rol NO es empleado */}
         {userRole !== 'empleado' && (
           <>
@@ -403,7 +439,7 @@ export default function SearchFilters({
                 hasSearchResults
                   ? 'bg-yellow-500 hover:bg-yellow-600'
                   : 'cursor-not-allowed bg-gray-400'
-              }`}
+              } ${isMobile ? 'w-full' : ''}`}
             >
               {isLoadingAsesorMode ? (
                 <>
@@ -422,7 +458,9 @@ export default function SearchFilters({
             <button
               onClick={handleGenerateCuadre}
               disabled={!hasSelectedAsesores || isGeneratingCuadre}
-              className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50"
+              className={`flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 disabled:opacity-50 ${
+                isMobile ? 'w-full' : ''
+              }`}
             >
               {isGeneratingCuadre ? (
                 <>

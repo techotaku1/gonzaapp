@@ -49,7 +49,10 @@ interface TransactionTableProps {
   isLoading?: boolean;
   showMonthlyTotals?: boolean;
   onToggleMonthlyTotalsAction?: () => void;
-  userRole?: 'admin' | 'empleado'; // <-- Agrega este prop
+  userRole?: 'admin' | 'empleado';
+  // Nuevas props para manejar fecha y visualización móvil
+  currentDate?: string;
+  isMobile?: boolean;
 }
 
 function formatLongDate(date: Date) {
@@ -961,11 +964,22 @@ const TransactionTable = forwardRef(function TransactionTable(
   // Determina si el usuario es admin
   const isAdmin = props.userRole === 'admin';
 
+  // --- NUEVO: Detectar si es pantalla pequeña (mobile) ---
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   return (
     <div className="relative">
-      {/* Mostrar SIEMPRE la fecha en formato largo arriba del botón agregar */}
+      {/* Mostrar la fecha en formato largo arriba del botón agregar (OCULTA en mobile) */}
       {!props.showTotals && !props.showMonthlyTotals && (
-        <div className="mb-3 flex items-center justify-between">
+        <div
+          className={`mb-3 flex items-center justify-between ${isMobile ? 'hidden' : ''}`}
+        >
           <time
             id="current-date-display"
             className="font-display text-3xl font-bold tracking-tight text-black"
@@ -974,10 +988,21 @@ const TransactionTable = forwardRef(function TransactionTable(
           </time>
         </div>
       )}
-      <div className="mb-4">
+
+      {/* --- Responsive wrapper para controles principales --- */}
+      <div className={`mb-4 ${isMobile ? 'flex flex-col gap-2' : ''}`}>
         {/* Fecha actual de la página, arriba del grupo de botones */}
-        <div className="mb-4 flex w-full items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+        <div
+          className={`mb-4 w-full items-center justify-between gap-4 ${
+            isMobile ? 'flex flex-col gap-2' : 'flex'
+          }`}
+        >
+          {/* --- Responsive: Agrupa los botones principales en columna en mobile --- */}
+          <div
+            className={`items-center gap-4 ${
+              isMobile ? 'flex w-full flex-col' : 'flex'
+            }`}
+          >
             {/* --- Mostrar SIEMPRE los botones de Agregar y Eliminar para todos los roles --- */}
             {!props.showTotals && !props.showMonthlyTotals && (
               <>
@@ -1065,7 +1090,9 @@ const TransactionTable = forwardRef(function TransactionTable(
             )}
             {/* --- Mostrar SOLO para admin los botones de Totales, Exportar, Cuadre en totales --- */}
             {(props.showTotals || props.showMonthlyTotals) && isAdmin && (
-              <div className="flex gap-4 pl-6">
+              <div
+                className={`gap-4 pl-6 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
+              >
                 {/* Botón Ver Totales / Ver Registros */}
                 <button
                   onClick={() => {
@@ -1321,7 +1348,9 @@ const TransactionTable = forwardRef(function TransactionTable(
             )}
             {/* --- Mostrar SIEMPRE los controles de guardado y zoom para ambos roles --- */}
             {!props.showTotals && !props.showMonthlyTotals && (
-              <div className="flex items-center gap-4">
+              <div
+                className={`items-center gap-4 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
+              >
                 {/* Indicador de auto-guardado */}
                 <div className="flex h-10 items-center gap-4">
                   {logic.isActuallySaving ? (
@@ -1359,7 +1388,6 @@ const TransactionTable = forwardRef(function TransactionTable(
             )}
           </div>
         </div>
-
         {/* Moved: Delete confirmation button now appears below all buttons when delete mode is active */}
         {logic.isDeleteMode && logic.rowsToDelete.size > 0 && (
           <div className="mb-4 flex items-center justify-start">
@@ -1419,6 +1447,15 @@ const TransactionTable = forwardRef(function TransactionTable(
             setSearchTermAction={logic.setSearchTermAction}
             userRole={props.userRole}
           />
+        )}
+
+        {/* --- NUEVO: Fecha responsive justo arriba de la tabla en mobile (ANTES de la tabla) --- */}
+        {!props.showTotals && !props.showMonthlyTotals && isMobile && (
+          <div className="mb-3 flex items-center justify-center">
+            <time className="font-display text-center text-xl font-bold tracking-tight text-black">
+              {formatLongDate(selectedDateObj)}
+            </time>
+          </div>
         )}
 
         {/* --- NUEVO: Checkbox "Seleccionar todo" cuando está activo el modo asesor --- */}
@@ -1596,7 +1633,9 @@ const TransactionTable = forwardRef(function TransactionTable(
 
         {!props.showTotals && !props.showMonthlyTotals && !props.searchTerm ? (
           <div
-            className="enhanced-table-container"
+            className={`enhanced-table-container ${
+              isMobile ? 'overflow-x-auto' : ''
+            }`}
             style={{
               backgroundImage: 'url("/background-table.jpg")',
               backgroundSize: 'cover',
@@ -1605,6 +1644,15 @@ const TransactionTable = forwardRef(function TransactionTable(
               borderRadius: '8px',
               padding: '1rem',
               position: 'relative',
+              ...(isMobile
+                ? {
+                    minWidth: 0,
+                    width: '100vw',
+                    marginLeft: '-16px',
+                    marginRight: '-16px',
+                    padding: '0.5rem 0',
+                  }
+                : {}),
             }}
           >
             {/* --- SIEMPRE visible: Barra de scroll horizontal superior sincronizada --- */}
@@ -1657,11 +1705,19 @@ const TransactionTable = forwardRef(function TransactionTable(
                 className="enhanced-table-scroll"
                 style={{
                   transform: `scale(${logic.zoom})`,
+
                   transformOrigin: 'left top',
                   width: `${(1 / logic.zoom) * 100}%`,
                   height: `${(1 / logic.zoom) * 100}%`,
                   overflowX: logic.zoom === 1 ? 'auto' : 'scroll',
                   overflowY: 'auto',
+                  ...(isMobile
+                    ? {
+                        minWidth: '600px',
+                        maxWidth: '100vw',
+                        overflowX: 'auto',
+                      }
+                    : {}),
                 }}
                 onScroll={(e) => {
                   const top = topScrollBarRef.current;
@@ -1670,7 +1726,11 @@ const TransactionTable = forwardRef(function TransactionTable(
                   }
                 }}
               >
-                <table className="w-full text-left text-sm text-gray-600">
+                <table
+                  className={`w-full text-left text-sm text-gray-600 ${
+                    isMobile ? 'min-w-[600px]' : ''
+                  }`}
+                >
                   <HeaderTitles
                     isDeleteMode={logic.isDeleteMode}
                     _isAsesorSelectionMode={logic.isAsesorSelectionMode}
