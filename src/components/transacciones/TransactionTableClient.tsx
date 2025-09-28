@@ -138,6 +138,7 @@ export default function TransactionTableClient({
       fecha: Date;
       asesor: string;
       precioNeto: number;
+      tarifaServicio: number; // <-- NUEVO
       emitidoPor: string;
       tramite: string;
       novedad: string;
@@ -202,6 +203,7 @@ export default function TransactionTableClient({
         fecha: row.fecha instanceof Date ? row.fecha : new Date(row.fecha),
         asesor: row.asesor ?? '',
         precioNeto: row.precioNeto ?? 0,
+        tarifaServicio: row.tarifaServicio ?? 0, // <-- NUEVO
         emitidoPor: row.emitidoPor ?? '',
         tramite: row.tramite ?? '',
         novedad: row.novedad ?? '',
@@ -620,6 +622,10 @@ export default function TransactionTableClient({
                       </span>
                       <span className="text-xs text-gray-700">
                         Emitido Por: <b>{item.emitidoPor}</b>
+                      </span>
+                      <span className="text-xs text-gray-700">
+                        Tarifa Servicio:{' '}
+                        <b>${item.tarifaServicio.toLocaleString('es-CO')}</b>
                       </span>
                     </li>
                   ))}
