@@ -571,16 +571,19 @@ export default function TransactionTableClient({
                         {item.tramite && item.tramite.toUpperCase() !== 'SOAT'
                           ? (item.tramite ?? '(Sin trámite)')
                           : item.placa}
-                        <button
-                          className="ml-2 text-xs text-red-500 underline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleIgnorePlaca(item.placa);
-                          }}
-                          title="Ignorar esta placa"
-                        >
-                          Ignorar
-                        </button>
+                        {/* El botón Ignorar solo es visible para admins */}
+                        {role !== 'empleado' && (
+                          <button
+                            className="ml-2 text-xs text-red-500 underline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleIgnorePlaca(item.placa);
+                            }}
+                            title="Ignorar esta placa"
+                          >
+                            Ignorar
+                          </button>
+                        )}
                       </span>
                       <span className="text-xs text-gray-500">
                         {(() => {
