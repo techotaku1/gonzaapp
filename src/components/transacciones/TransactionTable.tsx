@@ -2,6 +2,7 @@
 
 import React, {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -130,7 +131,13 @@ function DatePagination({
 
 const TransactionTable = forwardRef(function TransactionTable(
   props: TransactionTableProps,
-  ref: React.Ref<{ scrollToPlaca: (placa: string) => void }>
+  ref: React.Ref<{
+    scrollToPlaca: (
+      placa: string,
+      id?: string,
+      options?: { retry?: boolean; retries?: number; interval?: number }
+    ) => Promise<boolean>;
+  }>
 ) {
   const logic = useTransactionTableLogic(props);
   // Crear una referencia para el contenedor de scroll de la tabla
@@ -885,29 +892,62 @@ const TransactionTable = forwardRef(function TransactionTable(
     };
   }, [dragging]);
 
-  // --- NUEVO: Scroll y selección por placa ---
+  // --- NUEVO: Scroll y selección por placa o por id (para notificaciones sin placa) ---
   useImperativeHandle(ref, () => ({
-    scrollToPlaca: (placa: string) => {
-      // Busca la fila por placa (mayúsculas)
-      const row = logic.paginatedData.find(
-        (r) => r.placa && r.placa.toUpperCase() === placa.toUpperCase()
-      );
-      if (!row) return;
-      // Selecciona la fila
-      logic.setSelectedRows(new Set([row.id]));
-      // Busca el elemento en el DOM
-      setTimeout(() => {
-        const el = document.querySelector(
-          `tr[data-placa="${row.placa.toUpperCase()}"]`
-        ) as HTMLTableRowElement | null;
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.classList.add('ring-4', 'ring-yellow-400');
-          setTimeout(() => {
-            el.classList.remove('ring-4', 'ring-yellow-400');
-          }, 1600);
+    // async, retrying scrollToPlaca: intenta hasta `retries` veces esperar a que la fila
+    // esté disponible en logic.paginatedData (útil cuando se cambia la fecha/página)
+    scrollToPlaca: async (
+      placa: string,
+      id?: string,
+      options: { retry?: boolean; retries?: number; interval?: number } = {
+        retry: true,
+        retries: 20,
+        interval: 250,
+      }
+    ): Promise<boolean> => {
+      const { retry = true, retries = 20, interval = 250 } = options;
+
+      const findRow = () => {
+        if (id) {
+          return logic.paginatedData.find((r) => r.id === id);
         }
-      }, 100);
+        return logic.paginatedData.find(
+          (r) => r.placa && r.placa.toUpperCase() === placa.toUpperCase()
+        );
+      };
+
+      // Try immediately and then retry if needed
+      for (let attempt = 0; attempt <= (retry ? retries : 0); attempt++) {
+        const row = findRow();
+        if (row) {
+          // Selecciona la fila para que aparezca el payBox (la UI de pago depende de selectedRows)
+          logic.setSelectedRows(new Set([row.id]));
+          // Intenta scrollear al elemento cuando exista en el DOM
+          setTimeout(() => {
+            const el = document.querySelector(
+              `tr[data-placa="${row.placa ? row.placa.toUpperCase() : ''}"]`
+            ) as HTMLTableRowElement | null;
+            if (el) {
+              try {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('ring-4', 'ring-yellow-400');
+                setTimeout(() => {
+                  el.classList.remove('ring-4', 'ring-yellow-400');
+                }, 1600);
+              } catch {
+                // ignore DOM errors
+              }
+            }
+          }, 80);
+
+          return true;
+        }
+        if (!retry) break;
+        // Espera antes del siguiente intento
+
+        await new Promise((res) => setTimeout(res, interval));
+      }
+      return false;
     },
   }));
 
@@ -972,6 +1012,99 @@ const TransactionTable = forwardRef(function TransactionTable(
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Sincronizar la fecha externa (YYYY-MM-DD) con la lógica interna
+  // Extraemos los setters estables desde `logic` para evitar que el efecto
+  // dependa del objeto `logic` recreado en cada render.
+  const { setDateFilter, setCurrentPage } = logic;
+  useEffect(() => {
+    if (!props.currentDate) return;
+    // Parse YYYY-MM-DD into a local Date (no timezone suffix) to avoid shifting days
+    try {
+      const parts = props.currentDate.split('-').map(Number);
+      if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+        const [y, m, d] = parts;
+        const targetDate = new Date(y, m - 1, d);
+        if (!isNaN(targetDate.getTime())) {
+          // Usar los setters estables extraídos arriba
+          setDateFilter({ startDate: targetDate, endDate: null });
+          setCurrentPage(1);
+        }
+      }
+    } catch (err) {
+      console.warn('Error sincronizando currentDate en TransactionTable:', err);
+    }
+    // Solo depende de la prop currentDate y de los setters estables
+  }, [props.currentDate, setDateFilter, setCurrentPage]);
+
+  // Memoiza currentDate para evitar cambios innecesarios
+  const _currentDate = useMemo(() => {
+    if (props.currentDate) return props.currentDate;
+    if (props.initialData.length > 0) {
+      const fecha = props.initialData[0].fecha;
+      return fecha instanceof Date
+        ? fecha.toISOString().slice(0, 10)
+        : new Date(fecha).toISOString().slice(0, 10);
+    }
+    return undefined;
+  }, [props.currentDate, props.initialData]);
+
+  // Envuelve callbacks en useCallback para estabilidad
+  const handleFilterData = useCallback(
+    (filteredData: TransactionRecord[]) => {
+      logic.handleFilterData(filteredData);
+    },
+    [logic]
+  );
+
+  const handleDateFilterChange = useCallback(
+    (startDate: Date | null, endDate: Date | null) => {
+      logic.handleDateFilterChange(startDate, endDate);
+    },
+    [logic]
+  );
+
+  const handleToggleAsesorMode = useCallback(async (): Promise<void> => {
+    await logic.handleToggleAsesorMode();
+  }, [logic]);
+
+  const generateCuadre = useCallback(
+    async (_records: TransactionRecord[]) => {
+      // CORREGIDO: Usar SOLO los seleccionados en modo asesor
+      const selectedIds = logic.selectedAsesores;
+      const selectedRecords = props.initialData.filter((r) =>
+        selectedIds.has(r.id)
+      );
+      if (selectedRecords.length > 0) {
+        await Promise.all(
+          selectedRecords.map((record) =>
+            createCuadreRecord(record.id, {
+              banco: '',
+              monto: 0,
+              pagado: false,
+              fechaCliente: null,
+              referencia: '',
+            })
+          )
+        );
+        localStorage.setItem('cuadreRecords', JSON.stringify(selectedRecords));
+        // Abre /cuadre en una nueva pestaña
+        if (typeof window !== 'undefined') {
+          window.open('/cuadre', '_blank');
+        }
+        return true;
+      }
+      return false;
+    },
+    [logic, props.initialData]
+  );
+
+  const setSearchTermAction = useCallback(
+    (term: string) => {
+      logic.setSearchTermAction(term);
+    },
+    [logic]
+  );
 
   return (
     <div className="relative">
@@ -1406,45 +1539,16 @@ const TransactionTable = forwardRef(function TransactionTable(
         {!props.showTotals && !props.showMonthlyTotals && (
           <SearchFilters
             data={props.initialData}
-            onFilterAction={logic.handleFilterData}
-            onDateFilterChangeAction={logic.handleDateFilterChange}
-            onToggleAsesorSelectionAction={logic.handleToggleAsesorMode}
-            onGenerateCuadreAction={async (_records) => {
-              // CORREGIDO: Usar SOLO los seleccionados en modo asesor
-              const selectedIds = logic.selectedAsesores;
-              const selectedRecords = props.initialData.filter((r) =>
-                selectedIds.has(r.id)
-              );
-              if (selectedRecords.length > 0) {
-                await Promise.all(
-                  selectedRecords.map((record) =>
-                    createCuadreRecord(record.id, {
-                      banco: '',
-                      monto: 0,
-                      pagado: false,
-                      fechaCliente: null,
-                      referencia: '',
-                    })
-                  )
-                );
-                localStorage.setItem(
-                  'cuadreRecords',
-                  JSON.stringify(selectedRecords)
-                );
-                // Abre /cuadre en una nueva pestaña
-                if (typeof window !== 'undefined') {
-                  window.open('/cuadre', '_blank');
-                }
-                return true;
-              }
-              return false;
-            }}
+            onFilterAction={handleFilterData}
+            onDateFilterChangeAction={handleDateFilterChange}
+            onToggleAsesorSelectionAction={handleToggleAsesorMode}
+            onGenerateCuadreAction={generateCuadre}
             hasSearchResults={logic.hasSearchResults}
             isAsesorSelectionMode={logic.isAsesorSelectionMode}
             hasSelectedAsesores={logic.selectedAsesores.size > 0}
             isLoadingAsesorMode={logic.isLoadingAsesorMode}
             searchTerm={props.searchTerm ?? ''}
-            setSearchTermAction={logic.setSearchTermAction}
+            setSearchTermAction={setSearchTermAction}
             userRole={props.userRole}
           />
         )}

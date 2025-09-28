@@ -10,6 +10,7 @@ import { Icons } from '~/components/icons'; // Asegúrate de importar los iconos
 import { SWRProvider } from '~/components/swr/SWRProvider';
 import TransactionTable from '~/components/transacciones/TransactionTable';
 import { useAppData } from '~/hooks/useAppData';
+import { getDateKey } from '~/utils/dateUtils';
 
 import type { TransactionRecord } from '~/types';
 
@@ -132,6 +133,7 @@ export default function TransactionTableClient({
   const [showNotification, setShowNotification] = useState(false);
   const [notificationList, setNotificationList] = useState<
     {
+      id: string; // Agregado para llevar a la fila exacta
       placa: string;
       fecha: Date;
       asesor: string;
@@ -170,38 +172,24 @@ export default function TransactionTableClient({
       .filter((row) => {
         const fecha =
           row.fecha instanceof Date ? row.fecha : new Date(row.fecha);
-        // --- DEBUG: Mostrar valores y tipos de boleta y pagado ---
-        if (
-          row.placa &&
-          typeof row.placa === 'string' &&
-          row.placa.trim() !== '' &&
-          fecha >= minDate &&
-          !ignoredPlates.includes(
-            typeof row.placa === 'string' ? row.placa.toUpperCase() : ''
-          )
-        ) {
-          console.log(
-            '[NOTIF DEBUG]',
-            row.placa,
-            'boleta:',
-            row.boleta,
-            typeof row.boleta,
-            'pagado:',
-            row.pagado,
-            typeof row.pagado
+        const isNotPagado = row.boleta !== true || row.pagado !== true;
+        const hasPlaca =
+          row.placa && typeof row.placa === 'string' && row.placa.trim() !== '';
+        const isSOAT =
+          typeof row.tramite === 'string' &&
+          row.tramite.trim().toUpperCase() === 'SOAT';
+
+        if (isSOAT) {
+          return (
+            isNotPagado &&
+            hasPlaca &&
+            fecha >= minDate &&
+            !ignoredPlates.includes(row.placa.toUpperCase())
           );
+        } else {
+          // Para otros trámites, mostrar aunque placa esté vacía
+          return isNotPagado && fecha >= minDate;
         }
-        // --- CORREGIDO: Solo mostrar si boleta !== true o pagado !== true (comparación estricta) ---
-        return (
-          (row.boleta !== true || row.pagado !== true) &&
-          row.placa &&
-          typeof row.placa === 'string' &&
-          row.placa.trim() !== '' &&
-          fecha >= minDate &&
-          !ignoredPlates.includes(
-            typeof row.placa === 'string' ? row.placa.toUpperCase() : ''
-          )
-        );
       })
       .sort((a, b) => {
         const fechaA = a.fecha instanceof Date ? a.fecha : new Date(a.fecha);
@@ -209,6 +197,7 @@ export default function TransactionTableClient({
         return fechaB.getTime() - fechaA.getTime();
       })
       .map((row) => ({
+        id: row.id,
         placa: typeof row.placa === 'string' ? row.placa.toUpperCase() : '',
         fecha: row.fecha instanceof Date ? row.fecha : new Date(row.fecha),
         asesor: row.asesor ?? '',
@@ -218,10 +207,8 @@ export default function TransactionTableClient({
         novedad: row.novedad ?? '',
       }));
 
-    // Solo actualiza si cambia el length o el contenido
     setShowNotification(pendientes.length > 0);
     setNotificationList((prev) => {
-      // Evita update infinito: compara shallow por JSON.stringify
       if (
         prev.length === pendientes.length &&
         JSON.stringify(prev) === JSON.stringify(pendientes)
@@ -258,10 +245,14 @@ export default function TransactionTableClient({
     }
   };
 
-  // Ref para exponer función de scroll/select a la tabla principal
-  const tableRef = useRef<{ scrollToPlaca: (placa: string) => void } | null>(
-    null
-  );
+  // Ref para exponer función de scroll/select a la tabla principal (async)
+  const tableRef = useRef<{
+    scrollToPlaca: (
+      placa: string,
+      id?: string,
+      options?: { retry?: boolean; retries?: number; interval?: number }
+    ) => Promise<boolean>;
+  } | null>(null);
 
   // NUEVO: Estado para la fecha actual de la paginación y función para cambiarla
   const [paginaActualFecha, setPaginaActualFecha] = useState(currentDate);
@@ -277,21 +268,58 @@ export default function TransactionTableClient({
   };
 
   // Handler para ir a la placa en la tabla principal
-  const handleGoToPlaca = (placa: string, fechaPlaca?: Date) => {
+  const handleGoToPlaca = async (
+    placa: string,
+    fechaPlaca?: Date,
+    id?: string
+  ) => {
     const fechaStr =
-      fechaPlaca instanceof Date
-        ? fechaPlaca.toISOString().slice(0, 10)
-        : undefined;
+      fechaPlaca instanceof Date ? getDateKey(fechaPlaca) : undefined;
+    let success = false;
+
     if (fechaStr && fechaStr !== paginaActualFecha) {
       // Cambia la página a la fecha de la placa
       cambiarPaginaPorFecha(fechaStr);
-      // Espera a que la página cambie y luego selecciona la placa
-      setTimeout(() => {
-        tableRef.current?.scrollToPlaca(placa);
-      }, 500); // Ajusta el timeout si es necesario
+      // Llama a la función solo si existe y await su promesa
+      const fn = tableRef.current?.scrollToPlaca;
+      if (fn) {
+        try {
+          success = await fn(placa, id, {
+            retry: true,
+            retries: 20,
+            interval: 300,
+          });
+        } catch (_err) {
+          success = false;
+        }
+      } else {
+        success = false;
+      }
     } else {
-      tableRef.current?.scrollToPlaca(placa);
+      const fn = tableRef.current?.scrollToPlaca;
+      if (fn) {
+        try {
+          success = await fn(placa, id, {
+            retry: true,
+            retries: 6,
+            interval: 150,
+          });
+        } catch (_err) {
+          success = false;
+        }
+      } else {
+        success = false;
+      }
     }
+
+    // Si se seleccionó la fila, la tabla abrirá automáticamente el payBox
+    // porque el imperative handler marca la fila en selectedRows.
+    if (!success) {
+      // fallback: intenta seleccionar sin esperar y sin await (fire-and-forget)
+      const fn = tableRef.current?.scrollToPlaca;
+      if (fn) void fn(placa, id, { retry: false });
+    }
+
     setNotificationOpen(false);
   };
 
@@ -419,7 +447,7 @@ export default function TransactionTableClient({
           isLoading={isLoading}
           userRole={role}
           // Pasar la fecha actual como prop
-          currentDate={currentDate}
+          currentDate={paginaActualFecha}
           // Pasar la bandera isMobile como prop
           isMobile={isMobile}
         />
@@ -524,9 +552,11 @@ export default function TransactionTableClient({
                 >
                   {notificationList.map((item, idx) => (
                     <li
-                      key={(item.placa || item.tramite) + idx}
+                      key={item.id || (item.placa || item.tramite) + idx}
                       className="flex cursor-pointer flex-col rounded px-2 py-1 font-mono text-gray-800 hover:bg-yellow-50"
-                      onClick={() => handleGoToPlaca(item.placa, item.fecha)}
+                      onClick={() =>
+                        handleGoToPlaca(item.placa, item.fecha, item.id)
+                      }
                       tabIndex={0}
                       style={{
                         outline: 'none',
