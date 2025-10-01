@@ -546,7 +546,7 @@ export default function TransactionTableClient({
             ) : (
               <>
                 <div className="mb-2 font-bold text-yellow-700">
-                  Placas Por Pagar:
+                  Tramites Por Pagar:
                 </div>
                 <ul
                   className="max-h-64 overflow-y-auto"
