@@ -102,15 +102,18 @@ export default function TransactionTableClient({
     };
   }, [userInteracted]);
 
-  // Obtener la fecha de la primera fila (día actual de la página)
+  // Obtener la fecha de la ÚLTIMA fila (día más reciente) para que la UI abra en la última página
   const currentDate =
     initialData.length > 0
-      ? (initialData[0].fecha instanceof Date
-          ? initialData[0].fecha
-          : new Date(initialData[0].fecha)
-        )
-          .toISOString()
-          .slice(0, 10)
+      ? (() => {
+          // Buscar la fecha máxima entre las filas
+          const dates = initialData
+            .map((r) => (r.fecha instanceof Date ? r.fecha : new Date(r.fecha)))
+            .filter((d) => !isNaN(d.getTime()));
+          if (dates.length === 0) return undefined;
+          const max = new Date(Math.max(...dates.map((d) => d.getTime())));
+          return max.toISOString().slice(0, 10);
+        })()
       : undefined;
 
   // Usa useAppData para obtener los datos optimizados y actualizados SOLO para la fecha actual

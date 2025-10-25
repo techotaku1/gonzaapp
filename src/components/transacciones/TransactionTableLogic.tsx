@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useProgress } from '@bprogress/next';
 import { useRouter } from '@bprogress/next/app';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import * as XLSX from 'xlsx';
 
 import { useDebouncedCallback } from '~/hooks/useDebouncedCallback';
@@ -51,6 +51,9 @@ export function useTransactionTableLogic(props: {
     showTotals: _showTotals, // <-- mark as unused
     searchTerm: searchTermProp,
   } = props;
+
+  // Obtener mutate de SWR de forma simple (evita tipados redundantes que causaban errores)
+  const { mutate: swrMutate } = useSWRConfig();
 
   const router = useRouter();
   const progress = useProgress();
@@ -246,7 +249,7 @@ export function useTransactionTableLogic(props: {
   // Nuevo: para evitar limpiar edits si el usuario editó hace poco
   const lastEditTimestampRef = useRef<number>(0);
 
-  // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving
+  // handleInputChange: depende de initialData, debouncedSave, setIsActuallySaving, swrMutate
   const handleInputChange: HandleInputChange = useCallback(
     (id, field, value) => {
       setEditValues((prev: EditValues) => {
@@ -343,27 +346,26 @@ export function useTransactionTableLogic(props: {
           })
         );
         // --- SOLO muta la fila editada y la página actual ---
-        // Si usas SWR, puedes mutar la clave de la página actual aquí
         if (typeof window !== 'undefined') {
-          import('swr').then(({ mutate }) => {
-            // Mutar solo la clave de la página actual (por fecha)
-            const dateKey =
-              initialData.find((r) => r.id === id)?.fecha instanceof Date
-                ? initialData
-                    .find((r) => r.id === id)!
-                    .fecha.toISOString()
-                    .slice(0, 10)
-                : undefined;
-            if (dateKey) {
-              mutate(`/api/transactions?date=${dateKey}&limit=50&offset=0`);
-            }
-          });
+          const dateKey =
+            initialData.find((r) => r.id === id)?.fecha instanceof Date
+              ? initialData
+                  .find((r) => r.id === id)!
+                  .fecha.toISOString()
+                  .slice(0, 10)
+              : undefined;
+          if (dateKey) {
+            // Fire-and-forget: revalidar/actualizar la clave de la página actual
+            void swrMutate(
+              `/api/transactions?date=${dateKey}&limit=50&offset=0`
+            );
+          }
         }
         return updated;
       });
       // ...existing code...
     },
-    [initialData, debouncedSave, setIsActuallySaving]
+    [initialData, debouncedSave, setIsActuallySaving, swrMutate]
   );
   const handleRowSelect = (id: string, _precioNeto: number) => {
     const newSelected = new Set(selectedRows);
@@ -443,28 +445,52 @@ export function useTransactionTableLogic(props: {
         // NO pongas createdByInitial aquí
       };
       const result = await createRecord({ ...newRow, id: newRowId });
+      const dateKey = getDateKey(fechaColombia);
       if (result.success) {
-        if (typeof window !== 'undefined') {
-          const { mutate } = await import('swr');
-          const dateKey = getDateKey(fechaColombia);
+        // Optimistic update: insertar la nueva fila en el cache de la página/día inmediatamente
+        const optimisticRow = { ...newRow, id: newRowId } as TransactionRecord;
+        type CurrentType =
+          | { data?: TransactionRecord[]; total?: number }
+          | TransactionRecord[]
+          | undefined;
+        try {
+          // Actualiza cache localmente (prepend) sin revalidar inmediatamente
+          await swrMutate(
+            `/api/transactions?date=${dateKey}&limit=50&offset=0`,
+            (current?: CurrentType) => {
+              if (!current) {
+                return { data: [optimisticRow], total: 1 };
+              }
+              const dataArr = Array.isArray(current)
+                ? current
+                : (current.data ?? []);
+              const total = Array.isArray(current)
+                ? dataArr.length + 1
+                : (current.total ?? dataArr.length) + 1;
+              return { data: [optimisticRow, ...dataArr], total };
+            },
+            false
+          );
 
-          // --- NO agregues la fila localmente aquí ---
-          // Solo espera la revalidación del backend
-          await mutate(
+          // Revalidar en background las claves relacionadas
+          void swrMutate(
             `/api/transactions?date=${dateKey}&limit=50&offset=0`,
             undefined,
-            { revalidate: true }
+            true
           );
-          await mutate('transactions', undefined, { revalidate: true });
-
-          // --- Espera hasta que la nueva fila esté en initialData (máx 2 segundos) ---
-          let attempts = 0;
-          while (!initialData.some((r) => r.id === newRowId) && attempts < 20) {
-            await new Promise((res) => setTimeout(res, 100));
-            attempts++;
-          }
+          void swrMutate('transactions-summary', undefined, true);
+          void swrMutate('transactions', undefined, true);
+        } catch {
+          // fallback: revalidar si el optimistic update falla
+          void swrMutate(
+            `/api/transactions?date=${dateKey}&limit=50&offset=0`,
+            undefined,
+            true
+          );
         }
-        setDateFilter({ startDate: new Date(), endDate: null });
+
+        // Cambia la vista al día donde se agregó la fila (última acción)
+        setDateFilter({ startDate: fechaColombia, endDate: null });
         setCurrentPage(1);
       } else {
         console.error('Error creating new record:', result.error);
@@ -1253,7 +1279,7 @@ export function useTransactionTableLogic(props: {
     // Si algún registro seleccionado ya está pagado, quítalo de la selección
     const toRemove = Array.from(selectedRows).filter((id) => {
       const row = props.initialData.find((r) => r.id === id);
-      return row && row.pagado === true;
+      return row?.pagado === true;
     });
     if (toRemove.length > 0) {
       const newSelected = new Set(selectedRows);

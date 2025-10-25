@@ -10,6 +10,7 @@ import React, {
   useState,
 } from 'react';
 
+import { AiFillCalculator } from 'react-icons/ai';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
@@ -1235,7 +1236,8 @@ const TransactionTable = forwardRef(function TransactionTable(
                       }}
                       className="relative flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-[8px] bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
                     >
-                      TOTALES
+                      <AiFillCalculator className="h-6 w-6 text-white" />
+                      <span className="mr-1">TOTALES</span>
                     </button>
                     {totalsModeVisible && (
                       <div

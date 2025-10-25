@@ -11,9 +11,13 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-
       timeoutRef.current = setTimeout(() => {
-        callback(...args);
+        try {
+          callback(...args);
+        } finally {
+          // cleanup reference after call
+          timeoutRef.current = null;
+        }
       }, delay);
     },
     [callback, delay]
