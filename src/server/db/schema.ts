@@ -109,3 +109,15 @@ export const ignoredPlates = pgTable('ignored_plates', {
   placa: varchar('placa', { length: 20 }).notNull().unique(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
+
+export const boletaPayments = pgTable('boleta_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fecha: timestamp('fecha').notNull().defaultNow(),
+  boletaReferencia: varchar('boleta_referencia', { length: 100 }).notNull(),
+  placas: varchar('placas', { length: 1000 }).notNull(), // Mantener como string, parsear en el frontend
+  totalPrecioNeto: decimal('total_precio_neto', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
+  createdByInitial: varchar('created_by_initial'),
+});

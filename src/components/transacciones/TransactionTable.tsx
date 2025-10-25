@@ -10,8 +10,6 @@ import React, {
   useState,
 } from 'react';
 
-import { BiWorld } from 'react-icons/bi';
-import { MdOutlineTableChart } from 'react-icons/md';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
@@ -25,6 +23,7 @@ import ColorPickerModal from '../modals/ColorPickerModal';
 import EmitidoPorColorModal from '../modals/EmitidoPorColorModal';
 
 import HeaderTitles from './HeaderTitles';
+import TransactionBoletaTotals from './TransactionBoletaTotals';
 import TransactionMonthlyTotals from './TransactionMonthlyTotals';
 import TransactionSearchRemote from './TransactionSearchRemote';
 import {
@@ -144,10 +143,10 @@ const TransactionTable = forwardRef(function TransactionTable(
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
   const topScrollBarRef = useRef<HTMLDivElement>(null);
 
-  // --- NUEVO: Estado para ancho de la tabla para el scroll superior ---
+  // --- NUEVO: Estado para el scroll de la tabla ---
   const [tableScrollWidth, setTableScrollWidth] = useState<number>(0);
 
-  // --- NUEVO: Actualiza el ancho del scroll superior cada vez que cambian los datos, zoom o paginación ---
+  // --- NUEVO: Actualiza el ancho del scroll cada vez que cambian los datos, zoom o paginación ---
   useEffect(() => {
     const updateScrollWidth = () => {
       if (tableScrollContainerRef.current) {
@@ -171,6 +170,14 @@ const TransactionTable = forwardRef(function TransactionTable(
   const [pendingEmitidoPorRowId, setPendingEmitidoPorRowId] = useState<
     string | null
   >(null);
+
+  // --- NUEVO: Estado para vista de boletas ---
+  const [showBoletaTotals, setShowBoletaTotals] = useState(false);
+  // Estado para mostrar el panel de Totales (Diarios / Mensuales / Boletas)
+  const [totalsModeVisible, setTotalsModeVisible] = useState(false);
+
+  // --- NUEVO: Estado para referencia de boleta en el modal ---
+  const [boletaReferencia, setBoletaReferencia] = useState('');
 
   // Usa SWR para asesores con pooling cada 60 segundos (antes 2 segundos)
   const { data: asesores = [], mutate: mutateAsesores } = useSWR<string[]>(
@@ -658,7 +665,7 @@ const TransactionTable = forwardRef(function TransactionTable(
     // Si algún registro seleccionado ya está pagado, quítalo de la selección
     const pagados = Array.from(logic.selectedRows).filter((id) => {
       const row = logic.paginatedData.find((r) => r.id === id);
-      return row && row.pagado === true;
+      return row?.pagado === true;
     });
     if (pagados.length > 0) {
       const newSelected = new Set(logic.selectedRows);
@@ -744,7 +751,24 @@ const TransactionTable = forwardRef(function TransactionTable(
 
     if (toUpdate.length > 0) {
       await logic.onUpdateRecordAction(toUpdate);
+
+      // --- NUEVO: Insertar en boletaPayments ---
+      const placas = allSelectedRecords.map((r) => r.placa.toUpperCase());
+      // usar el rol que viene por props (fuente de permisos), no clerkRole indefinido
+      const createdByInitial = props.userRole === 'admin' ? 'A' : 'E';
+      await fetch('/api/boleta-payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          boletaReferencia,
+          placas,
+          totalPrecioNeto: totalSelected,
+          createdByInitial,
+        }),
+      });
+
       logic.setSelectedRows(new Set());
+      setBoletaReferencia(''); // Limpiar el input
     }
     logic.setIsActuallySaving(false);
     setIsPaying(false);
@@ -958,50 +982,7 @@ const TransactionTable = forwardRef(function TransactionTable(
     }
   }, [logic.isAsesorSelectionMode, mutateAsesores]);
 
-  // --- NUEVO: Detectar rol del usuario Clerk (pero NO usar para permisos de botones) ---
-  const [_userRole, setUserRole] = useState<string | null>(null);
-  useEffect(() => {
-    // Tipado seguro para evitar 'any' y acceso inseguro
-    interface ClerkUser {
-      publicMetadata?: { role?: unknown };
-      unsafeMetadata?: { role?: unknown };
-    }
-    interface ClerkWindow {
-      Clerk?: { user?: ClerkUser };
-    }
-    function getRole() {
-      try {
-        let role: unknown = null;
-        // 1. Intenta obtener el rol desde Clerk (producción)
-        if (typeof window !== 'undefined') {
-          const w = window as unknown as ClerkWindow;
-          if (w.Clerk?.user?.publicMetadata?.role != null) {
-            role = w.Clerk.user.publicMetadata.role;
-          } else if (w.Clerk?.user?.unsafeMetadata?.role != null) {
-            role = w.Clerk.user.unsafeMetadata.role;
-          }
-        }
-        // 2. Si no hay Clerk, intenta desde localStorage (para localhost/desarrollo)
-        if (!role && typeof window !== 'undefined') {
-          const localRole =
-            window.localStorage.getItem('userRole') ??
-            window.localStorage.getItem('role');
-          if (localRole) role = localRole;
-        }
-        // 3. Si sigue sin rol, intenta desde una cookie (opcional)
-        if (!role && typeof document !== 'undefined') {
-          const match = /(?:^|;\s*)role=([^;]+)/.exec(document.cookie);
-          if (match) role = decodeURIComponent(match[1]);
-        }
-        setUserRole(typeof role === 'string' ? role : null);
-      } catch {
-        setUserRole(null);
-      }
-    }
-    getRole();
-  }, []);
-
-  // Determina si el usuario es admin
+  // Determina si el usuario es admin (usa la prop para permisos)
   const isAdmin = props.userRole === 'admin';
 
   // --- NUEVO: Detectar si es pantalla pequeña (mobile) ---
@@ -1108,8 +1089,8 @@ const TransactionTable = forwardRef(function TransactionTable(
 
   return (
     <div className="relative">
-      {/* Mostrar la fecha en formato largo arriba del botón agregar (OCULTA en mobile) */}
-      {!props.showTotals && !props.showMonthlyTotals && (
+      {/* Mostrar la fecha en formato largo arriba del botón agregar (OCULTA en mobile y en Totales Boletas) */}
+      {!props.showTotals && !props.showMonthlyTotals && !showBoletaTotals && (
         <div
           className={`mb-3 flex items-center justify-between ${isMobile ? 'hidden' : ''}`}
         >
@@ -1137,388 +1118,294 @@ const TransactionTable = forwardRef(function TransactionTable(
             }`}
           >
             {/* --- Mostrar SIEMPRE los botones de Agregar y Eliminar para todos los roles --- */}
-            {!props.showTotals && !props.showMonthlyTotals && (
-              <>
-                {/* Botón Agregar */}
-                <button
-                  onClick={logic.addNewRow}
-                  disabled={logic.isAddingRow}
-                  className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500 disabled:opacity-50"
-                >
-                  <span
-                    className={`ml-8 transform font-semibold text-white transition-all duration-300 ${
-                      logic.isAddingRow
-                        ? 'opacity-0'
-                        : 'group-hover:translate-x-20'
-                    }`}
-                  >
-                    Agregar
-                  </span>
-                  <span
-                    className={`absolute right-0 flex h-full items-center justify-center rounded-lg bg-green-500 transition-all duration-300 ${
-                      logic.isAddingRow
-                        ? 'w-full translate-x-0'
-                        : 'w-10 group-hover:w-full group-hover:translate-x-0'
-                    }`}
-                  >
-                    {logic.isAddingRow ? (
-                      <div className="button-spinner">
-                        {Array.from({ length: 12 }).map((_, i) => (
-                          <div key={i} className="spinner-blade" />
-                        ))}
-                      </div>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="w-8 text-white group-active:scale-[0.8]"
-                        fill="none"
-                        height="24"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        viewBox="0 0 24 24"
-                        width="24"
-                      >
-                        <line x1="12" x2="12" y1="5" y2="19" />
-                        <line x1="5" x2="19" y1="12" y2="12" />
-                      </svg>
-                    )}
-                  </span>
-                </button>
-
-                {/* Botón Eliminar */}
-                <div className="flex items-center">
+            {!props.showTotals &&
+              !props.showMonthlyTotals &&
+              !showBoletaTotals && (
+                <>
+                  {/* Botón Agregar */}
                   <button
-                    onClick={logic.handleDeleteModeToggle}
-                    className="delete-button"
+                    onClick={logic.addNewRow}
+                    disabled={logic.isAddingRow}
+                    className="group relative flex h-10 w-36 cursor-pointer items-center overflow-hidden rounded-lg border border-green-500 bg-green-500 hover:bg-green-500 active:border-green-500 active:bg-green-500 disabled:opacity-50"
                   >
-                    <span className="text">
-                      {logic.isDeleteMode ? 'Cancelar' : 'Eliminar'}
+                    <span
+                      className={`ml-8 transform font-semibold text-white transition-all duration-300 ${
+                        logic.isAddingRow
+                          ? 'opacity-0'
+                          : 'group-hover:translate-x-20'
+                      }`}
+                    >
+                      Agregar
                     </span>
-                    <span className="icon">
-                      {logic.isDeleteMode ? (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z" />
-                        </svg>
+                    <span
+                      className={`absolute right-0 flex h-full items-center justify-center rounded-lg bg-green-500 transition-all duration-300 ${
+                        logic.isAddingRow
+                          ? 'w-full translate-x-0'
+                          : 'w-10 group-hover:w-full group-hover:translate-x-0'
+                      }`}
+                    >
+                      {logic.isAddingRow ? (
+                        <div className="button-spinner">
+                          {Array.from({ length: 12 }).map((_, i) => (
+                            <div key={i} className="spinner-blade" />
+                          ))}
+                        </div>
                       ) : (
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          width="24"
+                          className="w-8 text-white group-active:scale-[0.8]"
+                          fill="none"
                           height="24"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
                           viewBox="0 0 24 24"
+                          width="24"
                         >
-                          <path d="M3 6v18h18v-18h-18zm5 14c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm4-18v2h-20v-2h5.711c.9 0 1.631-1.099 1.631-2h5.315c0 .901.73 2 1.631 2h5.712z" />
+                          <line x1="12" x2="12" y1="5" y2="19" />
+                          <line x1="5" x2="19" y1="12" y2="12" />
                         </svg>
                       )}
                     </span>
                   </button>
-                </div>
-              </>
-            )}
-            {/* --- Mostrar SOLO para admin los botones de Totales, Exportar, Cuadre en totales --- */}
-            {(props.showTotals || props.showMonthlyTotals) && isAdmin && (
-              <div
-                className={`gap-4 pl-6 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
-              >
-                {/* Botón Ver Totales / Ver Registros */}
-                <button
-                  onClick={() => {
-                    // CORREGIDO: Activar loading para todas las transiciones
-                    logic.setIsTotalsButtonLoading?.(true);
 
-                    setTimeout(() => {
-                      // CORREGIDO: Si estamos en vista de totales mensuales, ir directamente a registros
-                      if (props.showMonthlyTotals) {
-                        // Solo apagar monthly totals, no encender daily totals
-                        props.onToggleMonthlyTotalsAction?.();
-                      } else if (props.showTotals) {
-                        // Si estamos en daily totals, ir a registros
-                        logic.handleToggleTotals();
-                      } else {
-                        // Si estamos en registros, ir a daily totals
-                        logic.handleToggleTotals();
-                      }
-
-                      // Desactivar loading después de la transición
-                      setTimeout(() => {
-                        logic.setIsTotalsButtonLoading?.(false);
-                      }, 100);
-                    }, 400);
-                  }}
-                  disabled={logic.isTotalsButtonLoading}
-                  className="relative flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-6 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
-                >
-                  <span className="flex w-full items-center justify-center">
-                    {logic.isTotalsButtonLoading ? (
-                      <span className="relative block w-full">
-                        <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-                          <Icons.spinner2 className="h-5 w-5 fill-white" />
-                        </span>
-                        <span className="invisible flex items-center">
-                          {props.showTotals || props.showMonthlyTotals ? (
-                            <span className="flex items-center">
-                              <MdOutlineTableChart className="mr-1 h-5 w-5" />
-                              Ver Registros
-                            </span>
-                          ) : (
-                            <span className="flex items-center">
-                              <BiWorld className="mr-1 h-5 w-5" />
-                              Totales Diarios
-                            </span>
-                          )}
-                        </span>
+                  {/* Botón Eliminar */}
+                  <div className="flex items-center">
+                    <button
+                      onClick={logic.handleDeleteModeToggle}
+                      className="delete-button"
+                      type="button"
+                    >
+                      <span className="text">
+                        {logic.isDeleteMode ? 'Cancelar' : 'Eliminar'}
                       </span>
-                    ) : props.showTotals || props.showMonthlyTotals ? (
-                      <span className="flex items-center">
-                        <MdOutlineTableChart className="mr-1 h-5 w-5" />
-                        Ver Registros
+                      <span className="icon">
+                        {logic.isDeleteMode ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M24 20.188l-8.315-8.209 8.2-8.282-3.697-3.697-8.212 8.318-8.31-8.203-3.666 3.666 8.321 8.24-8.206 8.313 3.666 3.666 8.237-8.318 8.285 8.203z" />
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M3 6v18h18v-18h-18zm5 14c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm5 0c0 .552-.448 1-1 1s-1-.448-1-1v-10c0-.552.448-1 1-1s1 .448 1 1v10zm4-18v2h-20v-2h5.711c.9 0 1.631-1.099 1.631-2h5.315c0 .901.73 2 1.631 2h5.712z" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </>
+              )}
+
+            {/* --- ADMIN: botón único "TOTALES" que abre panel con Totales Diarios / Mensuales / Boletas --- */}
+            {isAdmin &&
+              !props.showTotals &&
+              !props.showMonthlyTotals &&
+              !showBoletaTotals && (
+                <div
+                  className={`flex items-center gap-4 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
+                >
+                  {/* Botón TOTALES (abre panel) */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const willOpen = !totalsModeVisible;
+                        setTotalsModeVisible(willOpen);
+                        if (willOpen) {
+                          // Abrir panel: activar Totales Diarios por defecto en el padre
+                          if (!props.showTotals) props.onToggleTotalsAction();
+                          // Asegurar que monthly esté apagado al abrir (si existe)
+                          if (
+                            props.showMonthlyTotals &&
+                            props.onToggleMonthlyTotalsAction
+                          )
+                            props.onToggleMonthlyTotalsAction();
+                          setShowBoletaTotals(false);
+                        }
+                      }}
+                      className="relative flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-[8px] bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+                    >
+                      TOTALES
+                    </button>
+                    {totalsModeVisible && (
+                      <div
+                        className={`mt-2 flex gap-2 ${isMobile ? 'flex-col' : ''}`}
+                      >
+                        {/* Totales Diarios */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Asegurar que solo Totales Diarios quede activo
+                            if (
+                              props.showMonthlyTotals &&
+                              props.onToggleMonthlyTotalsAction
+                            )
+                              props.onToggleMonthlyTotalsAction();
+                            if (!props.showTotals) props.onToggleTotalsAction();
+                            setShowBoletaTotals(false);
+                          }}
+                          className={`h-10 rounded border px-4 py-2 font-semibold ${props.showTotals ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`}
+                        >
+                          Totales Diarios
+                        </button>
+                        {/* Totales Mensuales */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Asegurar que solo Mensuales quede activo
+                            if (props.showTotals && props.onToggleTotalsAction)
+                              props.onToggleTotalsAction();
+                            if (props.onToggleMonthlyTotalsAction)
+                              props.onToggleMonthlyTotalsAction();
+                            setShowBoletaTotals(false);
+                          }}
+                          className={`h-10 rounded border px-4 py-2 font-semibold ${props.showMonthlyTotals ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}
+                        >
+                          Totales Mensuales
+                        </button>
+                        {/* Totales Boletas */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Activar vista Boletas (local) y desactivar otras vistas si es necesario
+                            if (props.showTotals && props.onToggleTotalsAction)
+                              props.onToggleTotalsAction();
+                            if (
+                              props.showMonthlyTotals &&
+                              props.onToggleMonthlyTotalsAction
+                            )
+                              props.onToggleMonthlyTotalsAction();
+                            setShowBoletaTotals(true);
+                          }}
+                          className={`h-10 rounded border px-4 py-2 font-semibold ${showBoletaTotals ? 'bg-green-600 text-white' : 'bg-white text-gray-800'}`}
+                        >
+                          Totales Boletas
+                        </button>
+                        {/* Volver */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            // Volver: desactivar todas las vistas de totales y cerrar panel
+                            if (props.showTotals && props.onToggleTotalsAction)
+                              props.onToggleTotalsAction();
+                            if (
+                              props.showMonthlyTotals &&
+                              props.onToggleMonthlyTotalsAction
+                            )
+                              props.onToggleMonthlyTotalsAction();
+                            setShowBoletaTotals(false);
+                            setTotalsModeVisible(false);
+                          }}
+                          className="h-10 rounded border bg-white px-4 py-2 font-semibold text-gray-800"
+                        >
+                          Volver a la tabla principal
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Exportar a Excel (solo admin en vista principal) */}
+                  <button
+                    onClick={() => logic.setIsExportModalOpen(true)}
+                    className="export-excel-button h-10 px-12"
+                    type="button"
+                  >
+                    <svg
+                      fill="#fff"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 50 50"
+                    >
+                      <path d="M28.8125 .03125L.8125 5.34375C.339844 5.433594 0 5.863281 0 6.34375L0 43.65625C0 44.136719 .339844 44.566406 .8125 44.65625L28.8125 49.96875C28.875 49.980469 28.9375 50 29 50C29.230469 50 29.445313 49.929688 29.625 49.78125C29.855469 49.589844 30 49.296875 30 49L30 1C30 .703125 29.855469 .410156 29.625 .21875C29.394531 .0273438 29.105469 -.0234375 28.8125 .03125ZM32 6L32 13L34 13L34 15L32 15L32 20L34 20L34 22L32 22L32 27L34 27L34 29L32 29L32 35L34 35L34 37L32 37L32 44L47 44C48.101563 44 49 43.101563 49 42L49 8C49 6.898438 48.101563 6 47 6ZM6.6875 15.6875L11.8125 15.6875L14.5 21.28125C14.710938 21.722656 14.898438 22.265625 15.0625 22.875L15.09375 22.875C15.199219 22.511719 15.402344 21.941406 15.6875 21.21875L18.65625 15.6875L23.34375 15.6875L17.75 24.9375L23.5 34.375L18.53125 34.375L15.28125 28.28125C15.160156 28.054688 15.035156 27.636719 14.90625 27.03125L14.875 27.03125C14.8125 27.316406 14.664063 27.761719 14.4375 28.34375L11.1875 34.375L6.1875 34.375L12.15625 25.03125ZM36 20L44 20L44 22L36 22ZM36 27L44 27L44 29L36 29ZM36 35L44 35L44 37L36 37Z" />
+                    </svg>
+                    Exportar a Excel
+                  </button>
+
+                  {/* Ir al Cuadre (solo admin en vista principal) */}
+                  <button
+                    onClick={logic.handleNavigateToCuadre}
+                    disabled={logic.isNavigatingToCuadre}
+                    className="flex h-10 items-center gap-2 rounded-lg bg-orange-500 px-6 py-2 font-bold text-white hover:bg-orange-600 disabled:opacity-50"
+                    type="button"
+                  >
+                    {logic.isNavigatingToCuadre ? (
+                      <>
+                        <Icons.spinner className="h-5 w-5" />
+                        <span>Redirigiendo...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 100 2h4a1 1 0 100-2H8z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <span>Ir al Cuadre</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            {/* --- Mostrar SIEMPRE los botones de Guardar y Zoom --- */}
+            {!props.showTotals &&
+              !props.showMonthlyTotals &&
+              !showBoletaTotals && (
+                <div
+                  className={`items-center gap-4 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
+                >
+                  {/* Indicador de auto-guardado */}
+                  <div className="flex h-10 items-center gap-4">
+                    {logic.isActuallySaving ? (
+                      <span className="flex h-10 items-center gap-2 rounded-md bg-blue-300 px-4 py-2 text-sm font-bold text-blue-800">
+                        <Icons.spinner3 className="h-4 w-4" />
+                        Guardando cambios...
                       </span>
                     ) : (
-                      <span className="flex items-center">
-                        <BiWorld className="mr-1 h-5 w-5" />
-                        Totales Diarios
+                      <span className="flex h-10 items-center rounded-md bg-green-300 px-4 py-2 text-sm font-bold text-green-800">
+                        ✓ Todos los cambios guardados
                       </span>
                     )}
-                  </span>
-                </button>
-
-                {/* Botón alternar entre Totales Diarios y Mensuales */}
-                {props.onToggleMonthlyTotalsAction && (
-                  <button
-                    onClick={() => {
-                      // CORREGIDO: El botón debe llevar a la vista que indica su texto
-                      if (props.showMonthlyTotals) {
-                        // Si estamos en vista mensual y el botón dice "Ver Totales Diarios"
-                        // Apagar monthly totals y encender daily totals
-                        props.onToggleMonthlyTotalsAction?.(); // Apaga monthly
-                        props.onToggleTotalsAction(); // Enciende daily
-                      } else if (props.showTotals) {
-                        // Si estamos en vista diaria y el botón dice "Ver Totales Mensuales"
-                        // Apagar daily totals y encender monthly totals
-                        props.onToggleTotalsAction(); // Apaga daily
-                        props.onToggleMonthlyTotalsAction?.(); // Enciende monthly
-                      }
-                    }}
-                    className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-6 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
-                  >
-                    {props.showMonthlyTotals
-                      ? 'Totales Diarios'
-                      : 'Totales Mensuales'}
-                  </button>
-                )}
-
-                {/* Botón Exportar a Excel */}
-                <button
-                  onClick={() => logic.setIsExportModalOpen(true)}
-                  className="export-excel-button h-10 px-12"
-                >
-                  <svg
-                    fill="#fff"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 50 50"
-                  >
-                    <path d="M28.8125 .03125L.8125 5.34375C.339844 5.433594 0 5.863281 0 6.34375L0 43.65625C0 44.136719 .339844 44.566406 .8125 44.65625L28.8125 49.96875C28.875 49.980469 28.9375 50 29 50C29.230469 50 29.445313 49.929688 29.625 49.78125C29.855469 49.589844 30 49.296875 30 49L30 1C30 .703125 29.855469 .410156 29.625 .21875C29.394531 .0273438 29.105469 -.0234375 28.8125 .03125ZM32 6L32 13L34 13L34 15L32 15L32 20L34 20L34 22L32 22L32 27L34 27L34 29L32 29L32 35L34 35L34 37L32 37L32 44L47 44C48.101563 44 49 43.101563 49 42L49 8C49 6.898438 48.101563 6 47 6ZM6.6875 15.6875L11.8125 15.6875L14.5 21.28125C14.710938 21.722656 14.898438 22.265625 15.0625 22.875L15.09375 22.875C15.199219 22.511719 15.402344 21.941406 15.6875 21.21875L18.65625 15.6875L23.34375 15.6875L17.75 24.9375L23.5 34.375L18.53125 34.375L15.28125 28.28125C15.160156 28.054688 15.035156 27.636719 14.90625 27.03125L14.875 27.03125C14.8125 27.316406 14.664063 27.761719 14.4375 28.34375L11.1875 34.375L6.1875 34.375L12.15625 25.03125ZM36 20L44 20L44 22L36 22ZM36 27L44 27L44 29L36 29ZM36 35L44 35L44 37L36 37Z" />
-                  </svg>
-                  Exportar a Excel
-                </button>
-                {/* Botón Ir al Cuadre */}
-                <button
-                  onClick={logic.handleNavigateToCuadre}
-                  disabled={logic.isNavigatingToCuadre}
-                  className="flex items-center gap-2 rounded-lg bg-orange-500 px-6 py-2 font-bold text-white hover:bg-orange-600 active:scale-95 disabled:opacity-50"
-                >
-                  {logic.isNavigatingToCuadre ? (
-                    <>
-                      <Icons.spinner className="h-5 w-5" />
-                      <span>Redirigiendo...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 100 2h4a1 1 0 100-2H8z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>Ir al Cuadre</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-            {/* --- Mostrar SOLO para admin los botones de Totales, Exportar, Cuadre en vista de registros --- */}
-            {!props.showTotals && !props.showMonthlyTotals && isAdmin && (
-              <>
-                {/* Botón Ver Totales / Ver Registros */}
-                <button
-                  onClick={logic.handleToggleTotals}
-                  disabled={logic.isTotalsButtonLoading}
-                  className="relative flex h-10 min-w-[150px] items-center justify-center gap-2 rounded-[8px] bg-blue-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-blue-600"
-                >
-                  <span className="flex w-full items-center justify-center">
-                    {logic.isTotalsButtonLoading ? (
-                      <span className="relative block w-full">
-                        <span className="absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
-                          <Icons.spinner2 className="h-5 w-5 fill-white" />
-                        </span>
-                        <span className="invisible flex items-center">
-                          {props.showTotals ? (
-                            <span className="flex items-center">
-                              <MdOutlineTableChart className="mr-1 h-5 w-5" />
-                              Ver Registros
-                            </span>
-                          ) : (
-                            <span className="flex items-center">
-                              <BiWorld className="mr-1 h-5 w-5" />
-                              Totales Diarios
-                            </span>
-                          )}
-                        </span>
-                      </span>
-                    ) : props.showTotals ? (
-                      <span className="flex items-center">
-                        <MdOutlineTableChart className="mr-1 h-5 w-5" />
-                        Ver Registros
-                      </span>
-                    ) : (
-                      <span className="flex items-center">
-                        <BiWorld className="mr-1 h-5 w-5" />
-                        Totales Diarios
-                      </span>
-                    )}
-                  </span>
-                </button>
-
-                {/* Botón Totales Mensuales */}
-                {props.onToggleMonthlyTotalsAction && (
-                  <button
-                    onClick={() => {
-                      // CORREGIDO: Al hacer click desde la vista de registros, ir directamente a mensuales
-                      props.onToggleMonthlyTotalsAction?.();
-                    }}
-                    className="relative flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-[8px] bg-indigo-500 px-4 py-2 font-bold text-white transition-transform duration-300 hover:bg-indigo-600"
-                  >
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-1 h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                        />
-                      </svg>
-                      Totales Mensuales
-                    </>
-                  </button>
-                )}
-
-                {/* Botón Exportar a Excel */}
-                <button
-                  onClick={() => logic.setIsExportModalOpen(true)}
-                  className="export-excel-button h-10 px-8"
-                >
-                  <svg
-                    fill="#fff"
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 50 50"
-                  >
-                    <path d="M28.8125 .03125L.8125 5.34375C.339844 5.433594 0 5.863281 0 6.34375L0 43.65625C0 44.136719 .339844 44.566406 .8125 44.65625L28.8125 49.96875C28.875 49.980469 28.9375 50 29 50C29.230469 50 29.445313 49.929688 29.625 49.78125C29.855469 49.589844 30 49.296875 30 49L30 1C30 .703125 29.855469 .410156 29.625 .21875C29.394531 .0273438 29.105469 -.0234375 28.8125 .03125ZM32 6L32 13L34 13L34 15L32 15L32 20L34 20L34 22L32 22L32 27L34 27L34 29L32 29L32 35L34 35L34 37L32 37L32 44L47 44C48.101563 44 49 43.101563 49 42L49 8C49 6.898438 48.101563 6 47 6ZM6.6875 15.6875L11.8125 15.6875L14.5 21.28125C14.710938 21.722656 14.898438 22.265625 15.0625 22.875L15.09375 22.875C15.199219 22.511719 15.402344 21.941406 15.6875 21.21875L18.65625 15.6875L23.34375 15.6875L17.75 24.9375L23.5 34.375L18.53125 34.375L15.28125 28.28125C15.160156 28.054688 15.035156 27.636719 14.90625 27.03125L14.875 27.03125C14.8125 27.316406 14.664063 27.761719 14.4375 28.34375L11.1875 34.375L6.1875 34.375L12.15625 25.03125ZM36 20L44 20L44 22L36 22ZM36 27L44 27L44 29L36 29ZM36 35L44 35L44 37L36 37Z" />
-                  </svg>
-                  Exportar a Excel
-                </button>
-                {/* Botón Ir al Cuadre */}
-                <button
-                  onClick={logic.handleNavigateToCuadre}
-                  disabled={logic.isNavigatingToCuadre}
-                  className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 font-bold text-white hover:bg-orange-600 active:scale-95 disabled:opacity-50"
-                >
-                  {logic.isNavigatingToCuadre ? (
-                    <>
-                      <Icons.spinner className="h-5 w-5" />
-                      <span>Redirigiendo...</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm2 10a1 1 0 100 2h4a1 1 0 100-2H8z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>Ir al Cuadre</span>
-                    </>
-                  )}
-                </button>
-              </>
-            )}
-            {/* --- Mostrar SIEMPRE los controles de guardado y zoom para ambos roles --- */}
-            {!props.showTotals && !props.showMonthlyTotals && (
-              <div
-                className={`items-center gap-4 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
-              >
-                {/* Indicador de auto-guardado */}
-                <div className="flex h-10 items-center gap-4">
-                  {logic.isActuallySaving ? (
-                    <span className="flex h-10 items-center gap-2 rounded-md bg-blue-300 px-4 py-2 text-sm font-bold text-blue-800">
-                      <Icons.spinner3 className="h-4 w-4" />
-                      Guardando cambios...
+                  </div>
+                  {/* Controles de zoom */}
+                  <div className="flex h-10 items-center gap-1">
+                    <button
+                      onClick={logic.handleZoomOut}
+                      className="flex h-8 w-8 items-center justify-center rounded bg-gray-600 text-white hover:bg-gray-600"
+                      title="Reducir zoom"
+                    >
+                      -
+                    </button>
+                    <span className="w-16 text-center text-sm font-medium text-black">
+                      {Math.round(logic.zoom * 100)}%
                     </span>
-                  ) : (
-                    <span className="flex h-10 items-center rounded-md bg-green-300 px-4 py-2 text-sm font-bold text-green-800">
-                      ✓ Todos los cambios guardados
-                    </span>
-                  )}
+                    <button
+                      onClick={logic.handleZoomIn}
+                      className="flex h-8 w-8 items-center justify-center rounded bg-gray-500 text-white hover:bg-gray-600"
+                      title="Aumentar zoom"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                {/* Controles de zoom */}
-                <div className="flex h-10 items-center gap-1">
-                  <button
-                    onClick={logic.handleZoomOut}
-                    className="flex h-8 w-8 items-center justify-center rounded bg-gray-600 text-white hover:bg-gray-600"
-                    title="Reducir zoom"
-                  >
-                    -
-                  </button>
-                  <span className="w-16 text-center text-sm font-medium text-black">
-                    {Math.round(logic.zoom * 100)}%
-                  </span>
-                  <button
-                    onClick={logic.handleZoomIn}
-                    className="flex h-8 w-8 items-center justify-center rounded bg-gray-500 text-white hover:bg-gray-600"
-                    title="Aumentar zoom"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
           </div>
         </div>
         {/* Moved: Delete confirmation button now appears below all buttons when delete mode is active */}
@@ -1536,7 +1423,7 @@ const TransactionTable = forwardRef(function TransactionTable(
         )}
 
         {/* Mover SearchFilters aquí, justo debajo de los botones principales y arriba de la tabla */}
-        {!props.showTotals && !props.showMonthlyTotals && (
+        {!props.showTotals && !props.showMonthlyTotals && !showBoletaTotals && (
           <SearchFilters
             data={props.initialData}
             onFilterAction={handleFilterData}
@@ -1554,13 +1441,16 @@ const TransactionTable = forwardRef(function TransactionTable(
         )}
 
         {/* --- NUEVO: Fecha responsive justo arriba de la tabla en mobile (ANTES de la tabla) --- */}
-        {!props.showTotals && !props.showMonthlyTotals && isMobile && (
-          <div className="mb-3 flex items-center justify-center">
-            <time className="font-display text-center text-xl font-bold tracking-tight text-black">
-              {formatLongDate(selectedDateObj)}
-            </time>
-          </div>
-        )}
+        {!props.showTotals &&
+          !props.showMonthlyTotals &&
+          isMobile &&
+          !showBoletaTotals && (
+            <div className="mb-3 flex items-center justify-center">
+              <time className="font-display text-center text-xl font-bold tracking-tight text-black">
+                {formatLongDate(selectedDateObj)}
+              </time>
+            </div>
+          )}
 
         {/* --- NUEVO: Checkbox "Seleccionar todo" cuando está activo el modo asesor --- */}
         {!props.showTotals &&
@@ -1735,7 +1625,10 @@ const TransactionTable = forwardRef(function TransactionTable(
           </div>
         ) : null}
 
-        {!props.showTotals && !props.showMonthlyTotals && !props.searchTerm ? (
+        {!props.showTotals &&
+        !props.showMonthlyTotals &&
+        !showBoletaTotals &&
+        !props.searchTerm ? (
           <div
             className={`enhanced-table-container ${
               isMobile ? 'overflow-x-auto' : ''
@@ -1881,26 +1774,80 @@ const TransactionTable = forwardRef(function TransactionTable(
             )}
 
             {/* Añadir el componente de scroll horizontal fijo cuando hay datos */}
-            {logic.paginatedData.length > 0 &&
-              // <StickyHorizontalScroll
-              //   targetRef={
-              //     tableScrollContainerRef as React.RefObject<
-              //       HTMLElement | HTMLDivElement
-              //     >
-              //   }
-              //   height={12}
-              //   zIndex={50}
-              //   className="mx-1"
-              // />
-              null}
+            {/*
+              El StickyHorizontalScroll se ha deshabilitado temporalmente.
+              Evitamos insertar referencias/JSX malformado aquí que provocaba
+              errores de parsing y de tipo (RefObject usado como ReactNode).
+              Si quieres reactivar un componente de scroll fijo, renderízalo
+              correctamente así:
+
+              {logic.paginatedData.length > 0 && (
+                <StickyHorizontalScroll
+                  targetRef={tableScrollContainerRef as React.RefObject<HTMLElement>}
+                  height={12}
+                  zIndex={50}
+                  className="mx-1"
+                />
+              )}
+            */}
+            {null}
           </div>
         ) : null}
 
         {/* Solo mostrar SearchControls si NO estamos en la vista de totales */}
         {props.showTotals ? (
-          <TransactionTotals transactions={props.initialData} />
+          <TransactionTotals
+            transactions={props.initialData}
+            showTotals={props.showTotals}
+            onToggleTotalsAction={props.onToggleTotalsAction}
+            showMonthlyTotals={props.showMonthlyTotals}
+            onToggleMonthlyTotalsAction={props.onToggleMonthlyTotalsAction}
+            showBoletaTotals={showBoletaTotals}
+            onToggleBoletaTotalsAction={() => setShowBoletaTotals((v) => !v)}
+            onBackToTableAction={() => {
+              // Cierra todas las vistas de totales y el panel local
+              if (props.showTotals) props.onToggleTotalsAction();
+              if (props.showMonthlyTotals && props.onToggleMonthlyTotalsAction)
+                props.onToggleMonthlyTotalsAction();
+              setShowBoletaTotals(false);
+              setTotalsModeVisible(false);
+            }}
+          />
         ) : props.showMonthlyTotals ? (
-          <TransactionMonthlyTotals transactions={props.initialData} />
+          <TransactionMonthlyTotals
+            transactions={props.initialData}
+            showTotals={props.showTotals}
+            onToggleTotalsAction={props.onToggleTotalsAction}
+            showMonthlyTotals={props.showMonthlyTotals}
+            onToggleMonthlyTotalsAction={props.onToggleMonthlyTotalsAction}
+            showBoletaTotals={showBoletaTotals}
+            onToggleBoletaTotalsAction={() => setShowBoletaTotals((v) => !v)}
+            onBackToTableAction={() => {
+              // Cierra todas las vistas de totales y el panel local
+              if (props.showTotals) props.onToggleTotalsAction();
+              if (props.showMonthlyTotals && props.onToggleMonthlyTotalsAction)
+                props.onToggleMonthlyTotalsAction();
+              setShowBoletaTotals(false);
+              setTotalsModeVisible(false);
+            }}
+          />
+        ) : showBoletaTotals ? (
+          <TransactionBoletaTotals
+            showTotals={props.showTotals}
+            onToggleTotalsAction={props.onToggleTotalsAction}
+            showMonthlyTotals={props.showMonthlyTotals}
+            onToggleMonthlyTotalsAction={props.onToggleMonthlyTotalsAction}
+            showBoletaTotals={showBoletaTotals}
+            onToggleBoletaTotalsAction={() => setShowBoletaTotals((v) => !v)}
+            onBackToTableAction={() => {
+              // Cierra todas las vistas de totales y el panel local
+              if (props.showTotals) props.onToggleTotalsAction();
+              if (props.showMonthlyTotals && props.onToggleMonthlyTotalsAction)
+                props.onToggleMonthlyTotalsAction();
+              setShowBoletaTotals(false);
+              setTotalsModeVisible(false);
+            }}
+          />
         ) : null}
 
         {/* Add the payment UI */}
@@ -1946,6 +1893,14 @@ const TransactionTable = forwardRef(function TransactionTable(
               <div className="mb-2 font-semibold">
                 Total Seleccionado: ${logic.formatCurrency(totalSelected)}
               </div>
+              {/* --- NUEVO: Input para referencia de boleta --- */}
+              <input
+                type="text"
+                placeholder="Referencia de Boleta"
+                value={boletaReferencia}
+                onChange={(e) => setBoletaReferencia(e.target.value)}
+                className="mb-2 w-full rounded border px-2 py-1"
+              />
               <div className="flex flex-col gap-2 text-base">
                 <div>
                   Registros a pagar:{' '}
@@ -1961,7 +1916,8 @@ const TransactionTable = forwardRef(function TransactionTable(
               className="mt-2 flex w-full cursor-pointer items-center justify-center rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
               disabled={
                 selectedRowsArray.filter((row) => !row.pagado).length === 0 ||
-                isPaying
+                isPaying ||
+                !boletaReferencia.trim()
               }
               style={{
                 pointerEvents: 'auto',

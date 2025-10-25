@@ -23,8 +23,22 @@ interface TotalsByDate {
 
 export default function TransactionTotals({
   transactions,
+  showTotals,
+  onToggleTotalsAction,
+  showMonthlyTotals,
+  onToggleMonthlyTotalsAction,
+  showBoletaTotals,
+  onToggleBoletaTotalsAction,
+  onBackToTableAction,
 }: {
   transactions: TransactionRecord[];
+  showTotals?: boolean;
+  onToggleTotalsAction?: () => void;
+  showMonthlyTotals?: boolean;
+  onToggleMonthlyTotalsAction?: () => void;
+  showBoletaTotals?: boolean;
+  onToggleBoletaTotalsAction?: () => void;
+  onBackToTableAction?: () => void;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -231,9 +245,68 @@ export default function TransactionTotals({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Handler consistente para volver a la tabla principal
+  const handleBack = () => {
+    if (onBackToTableAction) {
+      onBackToTableAction();
+      return;
+    }
+    if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
+    if (showMonthlyTotals && onToggleMonthlyTotalsAction)
+      onToggleMonthlyTotalsAction();
+    if (showBoletaTotals && onToggleBoletaTotalsAction)
+      onToggleBoletaTotalsAction();
+  };
+
   return (
     <div className="font-display container mx-auto px-6">
-      {/* Texto Totales Generales fuera del rectángulo */}
+      {/* Botones de navegación entre totales */}
+      <div className="mb-6 flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (onToggleTotalsAction) onToggleTotalsAction();
+            if (showMonthlyTotals && onToggleMonthlyTotalsAction)
+              onToggleMonthlyTotalsAction();
+            if (showBoletaTotals && onToggleBoletaTotalsAction)
+              onToggleBoletaTotalsAction();
+          }}
+          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${showTotals ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'} hover:bg-blue-700 hover:text-white`}
+        >
+          Totales Diarios
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
+            if (onToggleMonthlyTotalsAction) onToggleMonthlyTotalsAction();
+            if (showBoletaTotals && onToggleBoletaTotalsAction)
+              onToggleBoletaTotalsAction();
+          }}
+          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${showMonthlyTotals ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800'} hover:bg-indigo-700 hover:text-white`}
+        >
+          Totales Mensuales
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
+            if (showMonthlyTotals && onToggleMonthlyTotalsAction)
+              onToggleMonthlyTotalsAction();
+            if (onToggleBoletaTotalsAction) onToggleBoletaTotalsAction();
+          }}
+          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${showBoletaTotals ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'} hover:bg-green-700 hover:text-white`}
+        >
+          Totales Boletas
+        </button>
+        <button
+          type="button"
+          onClick={handleBack}
+          className="h-10 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
+        >
+          Volver a la tabla principal
+        </button>
+      </div>
       <h3 className="mb-2 text-4xl font-semibold">Totales Diarios</h3>
       {/* Totales generales con colores e iconos */}
       <div className="mb-6 rounded-lg bg-gray-100 p-6">

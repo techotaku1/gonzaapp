@@ -109,3 +109,12 @@ export interface IgnoredPlateRecord {
   placa: string;
   createdAt: Date;
 }
+
+export interface BoletaPaymentRecord {
+  id: string;
+  fecha: Date | string;
+  boletaReferencia: string;
+  placas: string[]; // Cambiar a array
+  totalPrecioNeto: number;
+  createdByInitial?: string;
+}
