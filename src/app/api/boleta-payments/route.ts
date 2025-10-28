@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { currentUser } from '@clerk/nextjs/server';
+import { sql } from 'drizzle-orm';
 
 import { db } from '~/server/db';
 import { boletaPayments } from '~/server/db/schema';
@@ -52,11 +53,13 @@ export async function POST(req: NextRequest) {
       : (clerkUser?.firstName ?? clerkUser?.username ?? 'A');
 
   try {
+    // Pasamos totalPrecioNeto como SQL literal (Drizzle acepta SQL | string | Placeholder)
+    // y aseguramos que los demás campos sean strings.
     await db.insert(boletaPayments).values({
-      boletaReferencia,
+      boletaReferencia: String(boletaReferencia),
       placas: placas.join(','),
-      totalPrecioNeto,
-      createdByInitial, // <-- ahora lo asigna el backend
+      totalPrecioNeto: sql`${totalPrecioNeto.toFixed(2)}`,
+      createdByInitial: createdByInitial ?? null,
     });
     return NextResponse.json({ success: true });
   } catch (_error) {
