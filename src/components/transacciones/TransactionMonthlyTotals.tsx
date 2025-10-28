@@ -11,6 +11,8 @@ import { calculateFormulas } from '~/utils/formulas';
 
 import type { TransactionRecord } from '~/types';
 
+import "react-datepicker/dist/react-datepicker.css";
+
 interface TotalsByMonth {
   month: string; // YYYY-MM format
   precioNetoTotal: number;

@@ -76,8 +76,11 @@ async function _getCuadreRecords(): Promise<ExtendedSummaryRecord[]> {
       };
     });
   } catch (error) {
+    // Log the DB error for diagnostics but DO NOT rethrow during build/prerender.
+    // Returning an empty array avoids breaking Next.js prerender when DB is unreachable
+    // (e.g. wrong credentials in build environment).
     console.error('Error fetching cuadre records:', error);
-    throw error;
+    return [];
   }
 }
 

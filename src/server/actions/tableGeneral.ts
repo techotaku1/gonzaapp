@@ -319,11 +319,16 @@ export async function searchTransactions(
 
 // Elimina el cache para asesores, solo consulta directo
 export async function getAllAsesores(): Promise<string[]> {
-  const results = await db.select().from(asesores);
-  return results
-    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-    .filter((a) => a.length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es'));
+  try {
+    const results = await db.select().from(asesores);
+    return results
+      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+      .filter((a) => a.length > 0)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  } catch (error) {
+    console.error('Error fetching asesores:', error);
+    return [];
+  }
 }
 
 export async function createRecord(
@@ -557,15 +562,20 @@ export async function getTransactionsByIds(
 
 // Nuevas funciones para tramites, novedades y emitidoPor
 export async function getAllTramites(): Promise<TramiteRecord[]> {
-  const results = await db.select().from(tramites);
-  return results
-    .map((row) => ({
-      id: row.id,
-      nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
-      color: row.color ?? undefined, // Cambiar || por ??
-    }))
-    .filter((a) => a.nombre.length > 0)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  try {
+    const results = await db.select().from(tramites);
+    return results
+      .map((row) => ({
+        id: row.id,
+        nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
+        color: row.color ?? undefined,
+      }))
+      .filter((a) => a.nombre.length > 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  } catch (error) {
+    console.error('Error fetching tramites:', error);
+    return [];
+  }
 }
 
 export async function addTramite(
@@ -589,11 +599,16 @@ export async function addTramite(
 }
 
 export async function getAllNovedades(): Promise<string[]> {
-  const results = await db.select().from(novedades);
-  return results
-    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-    .filter((a) => a.length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es'));
+  try {
+    const results = await db.select().from(novedades);
+    return results
+      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+      .filter((a) => a.length > 0)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  } catch (error) {
+    console.error('Error fetching novedades:', error);
+    return [];
+  }
 }
 
 export async function addNovedad(
@@ -615,25 +630,35 @@ export async function addNovedad(
 }
 
 export async function getAllEmitidoPor(): Promise<string[]> {
-  const results = await db.select().from(emitidoPor);
-  return results
-    .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
-    .filter((a) => a.length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es'));
+  try {
+    const results = await db.select().from(emitidoPor);
+    return results
+      .map((row) => (typeof row.nombre === 'string' ? row.nombre.trim() : ''))
+      .filter((a) => a.length > 0)
+      .sort((a, b) => a.localeCompare(b, 'es'));
+  } catch (error) {
+    console.error('Error fetching emitidoPor:', error);
+    return [];
+  }
 }
 
 // Nueva función para obtener emitidoPor con colores
 export async function getAllEmitidoPorWithColors(): Promise<
   { nombre: string; color?: string }[]
 > {
-  const results = await db.select().from(emitidoPor);
-  return results
-    .map((row) => ({
-      nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
-      color: row.color ?? undefined,
-    }))
-    .filter((a) => a.nombre.length > 0)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  try {
+    const results = await db.select().from(emitidoPor);
+    return results
+      .map((row) => ({
+        nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
+        color: row.color ?? undefined,
+      }))
+      .filter((a) => a.nombre.length > 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  } catch (error) {
+    console.error('Error fetching emitidoPorWithColors:', error);
+    return [];
+  }
 }
 
 export async function deleteTramite(
@@ -670,16 +695,21 @@ export async function deleteEmitidoPor(
 
 // Nuevas funciones para colores
 export async function getAllColores(): Promise<ColorRecord[]> {
-  const results = await db.select().from(colores);
-  return results
-    .map((row) => ({
-      id: row.id,
-      nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
-      valor: typeof row.valor === 'string' ? row.valor.trim() : '',
-      intensidad: typeof row.intensidad === 'number' ? row.intensidad : 400,
-    }))
-    .filter((a) => a.nombre.length > 0)
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  try {
+    const results = await db.select().from(colores);
+    return results
+      .map((row) => ({
+        id: row.id,
+        nombre: typeof row.nombre === 'string' ? row.nombre.trim() : '',
+        valor: typeof row.valor === 'string' ? row.valor.trim() : '',
+        intensidad: typeof row.intensidad === 'number' ? row.intensidad : 400,
+      }))
+      .filter((a) => a.nombre.length > 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  } catch (error) {
+    console.error('Error fetching colores:', error);
+    return [];
+  }
 }
 
 export async function addColor(
