@@ -9,8 +9,6 @@ import { Icons } from '../icons';
 
 import type { TransactionRecord } from '~/types';
 
-import 'react-datepicker/dist/react-datepicker.css';
-
 interface SearchControlsProps {
   data: TransactionRecord[];
   onFilterAction: (results: TransactionRecord[], searchTerm?: string) => void;

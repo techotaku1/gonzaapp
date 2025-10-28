@@ -11,8 +11,6 @@ import { calculateFormulas } from '~/utils/formulas';
 
 import type { TransactionRecord } from '~/types';
 
-import 'react-datepicker/dist/react-datepicker.css';
-
 interface TotalsByDate {
   date: string;
   precioNetoTotal: number;
