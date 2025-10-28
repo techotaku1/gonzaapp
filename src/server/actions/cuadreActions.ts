@@ -111,7 +111,7 @@ export async function updateCuadreRecord(
       })
       .where(eq(cuadre.transactionId, transactionId));
 
-    revalidateTag('cuadre'); // Solo revalida el tag de cuadre
+    revalidateTag('cuadre', 'max'); // Solo revalida el tag de cuadre
     return { success: true };
   } catch (error) {
     console.error('Error updating cuadre record:', error);
@@ -144,7 +144,7 @@ export async function createCuadreRecord(
       createdAt: new Date(),
     });
 
-    revalidateTag('cuadre'); // Solo revalida el tag de cuadre
+    revalidateTag('cuadre', 'max'); // Solo revalida el tag de cuadre
     return { success: true };
   } catch (error) {
     console.error('Error creating cuadre record:', error);
@@ -163,7 +163,7 @@ export async function deleteCuadreRecords(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(cuadre).where(inArray(cuadre.id, ids));
-    revalidateTag('cuadre'); // Solo revalida el tag de cuadre
+    revalidateTag('cuadre', 'max'); // Solo revalida el tag de cuadre
     return { success: true };
   } catch (error) {
     console.error('Error deleting cuadre records:', error);

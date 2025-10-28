@@ -343,7 +343,7 @@ export async function createRecord(
     };
     console.log('DEBUG INSERT OBJ:', insertObj); // <--- Depuración
     await db.insert(transactions).values(insertObj);
-    revalidateTag('transactions');
+    revalidateTag('transactions', 'max');
     return { success: true };
   } catch (error) {
     console.error('Error creating record:', error);
@@ -463,7 +463,7 @@ export async function updateRecords(
           .where(eq(transactions.id, record.id));
       })
     );
-    revalidateTag('transactions');
+    revalidateTag('transactions', 'max');
     return { success: true };
   } catch (error) {
     console.error('Error updating records:', error);
@@ -480,7 +480,7 @@ export async function deleteRecords(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(transactions).where(inArray(transactions.id, ids));
-    revalidateTag('transactions'); // Solo revalida el tag de datos
+    revalidateTag('transactions', 'max'); // Solo revalida el tag de datos
     return { success: true };
   } catch (error) {
     console.error('Error deleting records:', error);
@@ -500,7 +500,7 @@ export async function addAsesor(
       id: randomUUID(),
       nombre: nombre.trim(),
     });
-    revalidateTag('asesores'); // Invalida solo el cache de asesores
+    revalidateTag('asesores', 'max'); // Invalida solo el cache de asesores
     return { success: true };
   } catch (error) {
     // Manejo específico para error de duplicado (Postgres code 23505)
@@ -578,7 +578,7 @@ export async function addTramite(
       nombre: nombre.trim(),
       color: color ?? null, // Cambiar || por ??
     });
-    revalidateTag('tramites');
+    revalidateTag('tramites', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -604,7 +604,7 @@ export async function addNovedad(
       id: randomUUID(),
       nombre: nombre.trim(),
     });
-    revalidateTag('novedades');
+    revalidateTag('novedades', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -641,7 +641,7 @@ export async function deleteTramite(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(tramites).where(eq(tramites.nombre, nombre));
-    revalidateTag('tramites');
+    revalidateTag('tramites', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -657,7 +657,7 @@ export async function deleteEmitidoPor(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(emitidoPor).where(eq(emitidoPor.nombre, nombre));
-    revalidateTag('emitidoPor');
+    revalidateTag('emitidoPor', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -694,7 +694,7 @@ export async function addColor(
       valor: valor.trim(),
       intensidad,
     });
-    revalidateTag('colores');
+    revalidateTag('colores', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -714,7 +714,7 @@ export async function addEmitidoPor(
       nombre: nombre.trim(),
       color: color ?? null,
     });
-    revalidateTag('emitidoPor');
+    revalidateTag('emitidoPor', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -735,7 +735,7 @@ export async function updateEmitidoPor(
       .update(emitidoPor)
       .set({ color: color ?? null })
       .where(eq(emitidoPor.nombre, nombre));
-    revalidateTag('emitidoPor');
+    revalidateTag('emitidoPor', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -756,7 +756,7 @@ export async function updateTramite(
       .update(tramites)
       .set({ color: color ?? null })
       .where(eq(tramites.nombre, nombre));
-    revalidateTag('tramites');
+    revalidateTag('tramites', 'max');
     return { success: true };
   } catch (error) {
     return {
@@ -773,7 +773,7 @@ export async function deleteAsesor(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await db.delete(asesores).where(eq(asesores.nombre, nombre.trim()));
-    revalidateTag('asesores');
+    revalidateTag('asesores', 'max');
     return { success: true };
   } catch (error) {
     return {

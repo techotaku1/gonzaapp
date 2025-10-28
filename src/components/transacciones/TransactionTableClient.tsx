@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { useUser } from '@clerk/nextjs'; // Agrega este import
+import { useUser } from '@clerk/nextjs';
 import { Bell } from 'lucide-react'; // Agrega este import para el icono de campana
 import useSWR from 'swr';
 
@@ -16,9 +16,11 @@ import type { TransactionRecord } from '~/types';
 
 export default function TransactionTableClient({
   initialData,
+  allDates,
   onUpdateRecordAction,
 }: {
   initialData: TransactionRecord[];
+  allDates: string[]; // <-- nuevo prop
   onUpdateRecordAction: (
     records: TransactionRecord[]
   ) => Promise<{ success: boolean; error?: string }>;
@@ -102,7 +104,7 @@ export default function TransactionTableClient({
     };
   }, [userInteracted]);
 
-  // Obtener la fecha de la ÚLTIMA fila (día más reciente) para que la UI abra en la última página
+  // --- CORREGIDO: Obtener la fecha del ÚLTIMO día (máxima) para la paginación inicial ---
   const currentDate =
     initialData.length > 0
       ? (() => {
@@ -351,6 +353,13 @@ export default function TransactionTableClient({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // --- NUEVO: Obtén el nombre del usuario logueado ---
+  const userName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.firstName ?? user?.username ?? 'A';
+
+  // Usa allDates para la paginación en TransactionTable
   return (
     <SWRProvider active={isActive}>
       {/* Contenedor para el header y la campana en pantallas grandes */}
@@ -437,6 +446,7 @@ export default function TransactionTableClient({
         <TransactionTable
           ref={tableRef}
           initialData={data ?? []}
+          allDates={allDates} // <-- pasa el prop
           onUpdateRecordAction={handleUpdateRecords}
           onToggleTotalsAction={() => {
             setShowTotals((prev) => !prev);
@@ -451,10 +461,10 @@ export default function TransactionTableClient({
           }}
           isLoading={isLoading}
           userRole={role}
-          // Pasar la fecha actual como prop
-          currentDate={paginaActualFecha}
-          // Pasar la bandera isMobile como prop
+          // --- CORREGIDO: Pasar la fecha del último día como prop ---
+          currentDate={currentDate}
           isMobile={isMobile}
+          userName={userName} // <-- pasa el nombre aquí
         />
       </main>
     </SWRProvider>

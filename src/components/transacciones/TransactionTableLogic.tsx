@@ -75,7 +75,7 @@ export function useTransactionTableLogic(props: {
   const [selectedAsesores, setSelectedAsesores] = useState<Set<string>>(
     new Set()
   );
-  // Estado para mostrar la fecha actual en la UI
+  // Estado para mostrar la fecha currente en la UI
   const [currentDateDisplay, setCurrentDateDisplay] = useState('');
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
@@ -94,10 +94,11 @@ export function useTransactionTableLogic(props: {
   const pendingEdits = useRef<EditValues>({});
   // Agrupación por fecha: solo agrupa por la fecha (YYYY-MM-DD) de cada registro, sin mezclar días distintos en la misma página
   // Obtén la fecha seleccionada (o la de hoy si no hay filtro)
+  const [initialDate] = useState(() => new Date()); // Fecha inicial estable
   const selectedDate = useMemo(() => {
     if (dateFilter.startDate) return getDateKey(dateFilter.startDate);
-    return getDateKey(new Date());
-  }, [dateFilter.startDate]);
+    return getDateKey(initialDate); // Usa fecha inicial en lugar de new Date()
+  }, [dateFilter.startDate, initialDate]);
 
   // --- CORRECCIÓN DE PAGINACIÓN POR FECHA ---
   // Cuando el usuario cambia de página, debe cambiar la fecha seleccionada al día anterior/siguiente.
@@ -609,12 +610,6 @@ export function useTransactionTableLogic(props: {
         endDate.setHours(23, 59, 59, 999);
         return recordDate >= startDate && recordDate <= endDate;
       });
-      // Ordenar por fecha y hora descendente (más reciente arriba)
-      filtered.sort((a, b) => {
-        const dateA = new Date(a.fecha).getTime();
-        const dateB = new Date(b.fecha).getTime();
-        return dateB - dateA;
-      });
     }
 
     // Luego, si hay término de búsqueda, filtra sobre el resultado anterior
@@ -657,6 +652,15 @@ export function useTransactionTableLogic(props: {
       } else {
         filtered = [];
       }
+    }
+
+    // --- CORREGIDO: Ordenar por fecha descendente (más reciente arriba) SIEMPRE que haya algún filtro aplicado (fecha o búsqueda)
+    if (debouncedSearchTerm || (dateFilter.startDate && dateFilter.endDate)) {
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.fecha).getTime();
+        const dateB = new Date(b.fecha).getTime();
+        return dateB - dateA;
+      });
     }
 
     setHasSearchResults(filtered.length > 0);
@@ -1047,29 +1051,22 @@ export function useTransactionTableLogic(props: {
       } else if (startStr) {
         setCurrentDateDisplay(`${startStr} - Actual`);
       } else {
-        // Mostrar la fecha actual si no hay filtro
-        if (paginatedData.length > 0 && paginatedData[0].fecha) {
-          const date =
-            paginatedData[0].fecha instanceof Date
-              ? paginatedData[0].fecha
-              : new Date(paginatedData[0].fecha);
-          setCurrentDateDisplay(
-            date
-              .toLocaleDateString('es-CO', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                timeZone: 'America/Bogota',
-              })
-              .toUpperCase()
-          );
-        } else {
-          setCurrentDateDisplay('Todas las fechas');
-        }
+        // Mostrar la fecha actual si no hay filtro: usa selectedDate en lugar de paginatedData para evitar dependencias inestables
+        const date = new Date(selectedDate);
+        setCurrentDateDisplay(
+          date
+            .toLocaleDateString('es-CO', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              timeZone: 'America/Bogota',
+            })
+            .toUpperCase()
+        );
       }
     },
-    [paginatedData]
+    [selectedDate] // Cambia de [paginatedData] a [selectedDate] para estabilidad
   );
 
   useEffect(() => {

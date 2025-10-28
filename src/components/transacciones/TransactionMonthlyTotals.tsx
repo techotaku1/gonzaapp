@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { es } from 'date-fns/locale';
 import DatePicker from 'react-datepicker';
+import { PiKeyReturnFill } from 'react-icons/pi';
 
 import { getColombiaDate } from '~/utils/dateUtils';
 import { calculateFormulas } from '~/utils/formulas';
@@ -281,8 +282,9 @@ export default function TransactionMonthlyTotals({
         <button
           type="button"
           onClick={handleBack}
-          className="h-10 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
+          className="flex h-10 items-center gap-2 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
         >
+          <PiKeyReturnFill className="text-xl" />
           Volver a la tabla principal
         </button>
       </div>

@@ -4,12 +4,12 @@
   "buildCommand": "next build",
   "devCommand": "next dev --turbopack",
   "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
-  "installCommand": "npm install",
+  "installCommand": "npm install --legacy-peer-deps",
   "public": true,
   "trailingSlash": false,
   "functions": {
     "app/api/**/*.ts": {
-       "memory": 1024,
+      "memory": 1024,
       "maxDuration": 60
     }
   },

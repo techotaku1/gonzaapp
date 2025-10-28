@@ -23,25 +23,37 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const {
+    boletaReferencia,
+    placas,
+    totalPrecioNeto,
+    createdByInitial, // <-- nombre del usuario logueado
+  } = body;
+
+  if (
+    !boletaReferencia ||
+    !Array.isArray(placas) ||
+    typeof totalPrecioNeto !== 'number' ||
+    !createdByInitial
+  ) {
+    return NextResponse.json(
+      { success: false, error: 'Datos requeridos' },
+      { status: 400 }
+    );
+  }
+
   try {
-    const { boletaReferencia, placas, totalPrecioNeto, createdByInitial } =
-      await req.json();
-    if (!boletaReferencia || !placas || totalPrecioNeto == null) {
-      return NextResponse.json(
-        { success: false, error: 'Datos requeridos faltantes' },
-        { status: 400 }
-      );
-    }
     await db.insert(boletaPayments).values({
       boletaReferencia,
-      placas: Array.isArray(placas) ? placas.join(',') : placas,
+      placas: placas.join(','),
       totalPrecioNeto,
-      createdByInitial,
+      createdByInitial, // <-- guarda el nombre aquí
     });
     return NextResponse.json({ success: true });
   } catch (_error) {
     return NextResponse.json(
-      { success: false, error: 'Error al crear boleta payment' },
+      { success: false, error: 'Error al guardar boleta' },
       { status: 500 }
     );
   }

@@ -11,6 +11,7 @@ import React, {
 } from 'react';
 
 import { AiFillCalculator } from 'react-icons/ai';
+import { PiKeyReturnFill } from 'react-icons/pi';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
@@ -43,6 +44,7 @@ import '~/styles/buttonSpinner.css';
 
 interface TransactionTableProps {
   initialData: TransactionRecord[];
+  allDates: string[]; // <-- nuevo prop
   onUpdateRecordAction: (records: TransactionRecord[]) => Promise<SaveResult>;
   showTotals: boolean;
   onToggleTotalsAction: () => void;
@@ -54,6 +56,7 @@ interface TransactionTableProps {
   // Nuevas props para manejar fecha y visualización móvil
   currentDate?: string;
   isMobile?: boolean;
+  userName?: string; // <-- nuevo prop para el nombre de usuario
 }
 
 function formatLongDate(date: Date) {
@@ -554,30 +557,8 @@ const TransactionTable = forwardRef(function TransactionTable(
     return new Date(y, m - 1, d);
   })();
 
-  // --- NUEVO: Determina los días únicos disponibles en los registros ---
-  const allDates = React.useMemo(() => {
-    const set = new Set(
-      props.initialData
-        .map((r) => {
-          // ARREGLO: Solo procesa fechas válidas y tipa correctamente
-          let d: Date;
-          if (r.fecha instanceof Date) {
-            d = r.fecha;
-          } else if (
-            typeof r.fecha === 'string' ||
-            typeof r.fecha === 'number'
-          ) {
-            d = new Date(r.fecha);
-          } else {
-            return null;
-          }
-          if (isNaN(d.getTime())) return null;
-          return d.toISOString().slice(0, 10);
-        })
-        .filter((d): d is string => !!d)
-    );
-    return Array.from(set).sort();
-  }, [props.initialData]);
+  // --- CORREGIDO: Usa el prop allDates para la paginación ---
+  const allDates = React.useMemo(() => props.allDates, [props.allDates]);
 
   // Determina si hay días anteriores o siguientes disponibles
   // --- CORREGIDO: Permitir navegar a días anteriores aunque la fecha seleccionada sea un día futuro ---
@@ -753,10 +734,8 @@ const TransactionTable = forwardRef(function TransactionTable(
     if (toUpdate.length > 0) {
       await logic.onUpdateRecordAction(toUpdate);
 
-      // --- NUEVO: Insertar en boletaPayments ---
+      // --- NUEVO: Insertar en boletaPayments con el nombre del usuario ---
       const placas = allSelectedRecords.map((r) => r.placa.toUpperCase());
-      // usar el rol que viene por props (fuente de permisos), no clerkRole indefinido
-      const createdByInitial = props.userRole === 'admin' ? 'A' : 'E';
       await fetch('/api/boleta-payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -764,7 +743,7 @@ const TransactionTable = forwardRef(function TransactionTable(
           boletaReferencia,
           placas,
           totalPrecioNeto: totalSelected,
-          createdByInitial,
+          createdByInitial: userName, // <-- aquí va el nombre
         }),
       });
 
@@ -996,28 +975,34 @@ const TransactionTable = forwardRef(function TransactionTable(
   }, []);
 
   // Sincronizar la fecha externa (YYYY-MM-DD) con la lógica interna
-  // Extraemos los setters estables desde `logic` para evitar que el efecto
-  // dependa del objeto `logic` recreado en cada render.
   const { setDateFilter, setCurrentPage } = logic;
+
+  // --- CORREGIDO: Solo inicializa la fecha seleccionada al último día disponible UNA VEZ al montar ---
   useEffect(() => {
-    if (!props.currentDate) return;
-    // Parse YYYY-MM-DD into a local Date (no timezone suffix) to avoid shifting days
-    try {
-      const parts = props.currentDate.split('-').map(Number);
-      if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
-        const [y, m, d] = parts;
-        const targetDate = new Date(y, m - 1, d);
-        if (!isNaN(targetDate.getTime())) {
-          // Usar los setters estables extraídos arriba
-          setDateFilter({ startDate: targetDate, endDate: null });
-          setCurrentPage(1);
+    // Solo ejecuta al montar
+    if (allDates.length > 0) {
+      // Si hay prop currentDate, úsala
+      if (props.currentDate) {
+        const parts = props.currentDate.split('-').map(Number);
+        if (parts.length === 3 && parts.every((n) => !Number.isNaN(n))) {
+          const [y, m, d] = parts;
+          const targetDate = new Date(y, m - 1, d);
+          if (!isNaN(targetDate.getTime())) {
+            setDateFilter({ startDate: targetDate, endDate: null });
+            setCurrentPage(1);
+          }
         }
+      } else {
+        // Si no hay prop, inicializa al último día
+        const lastDate = allDates[allDates.length - 1];
+        const [y, m, d] = lastDate.split('-').map(Number);
+        setDateFilter({ startDate: new Date(y, m - 1, d), endDate: null });
+        setCurrentPage(1);
       }
-    } catch (err) {
-      console.warn('Error sincronizando currentDate en TransactionTable:', err);
     }
-    // Solo depende de la prop currentDate y de los setters estables
-  }, [props.currentDate, setDateFilter, setCurrentPage]);
+    // Solo ejecuta al montar y cuando cambian los datos iniciales
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allDates.length]);
 
   // Memoiza currentDate para evitar cambios innecesarios
   const _currentDate = useMemo(() => {
@@ -1308,8 +1293,9 @@ const TransactionTable = forwardRef(function TransactionTable(
                             setShowBoletaTotals(false);
                             setTotalsModeVisible(false);
                           }}
-                          className="h-10 rounded border bg-white px-4 py-2 font-semibold text-gray-800"
+                          className="flex h-10 items-center gap-2 rounded border bg-white px-4 py-2 font-semibold text-gray-800"
                         >
+                          <PiKeyReturnFill className="text-xl" />
                           Volver a la tabla principal
                         </button>
                       </div>
@@ -1943,8 +1929,8 @@ const TransactionTable = forwardRef(function TransactionTable(
           </div>
         )}
       </div>
-      {/* Muestra SOLO UNA VEZ la paginación de días abajo de la tabla */}
-      {!props.showTotals && !props.showMonthlyTotals && (
+      {/* Muestra SOLO UNA VEZ la paginación de días abajo de la tabla principal, nunca en Totales Boletas */}
+      {!props.showTotals && !props.showMonthlyTotals && !showBoletaTotals && (
         <DatePagination
           currentPage={logic.currentPage}
           setCurrentPage={logic.setCurrentPage}

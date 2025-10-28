@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { PiKeyReturnFill } from 'react-icons/pi';
 import useSWR from 'swr';
 
 import type { BoletaPaymentRecord } from '~/types';
@@ -181,8 +182,9 @@ export default function TransactionBoletaTotals({
         <button
           type="button"
           onClick={handleBack}
-          className="h-10 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
+          className="flex h-10 items-center gap-2 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
         >
+          <PiKeyReturnFill className="text-xl" />
           Volver a la tabla principal
         </button>
       </div>
@@ -191,7 +193,7 @@ export default function TransactionBoletaTotals({
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-white p-4 shadow-md">
         <input
           type="text"
-          placeholder="Buscar (referencia, placa, creador)..."
+          placeholder="Buscar"
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -249,7 +251,13 @@ export default function TransactionBoletaTotals({
                 Placas
               </th>
               <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
-                Total Precio Neto
+                TOTAL EGRESOS
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                4x1000
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-bold tracking-wider text-gray-800 uppercase">
+                TOTAL EGRESOS NETO
               </th>
               <th className="px-6 py-3 text-left text-xs font-bold tracking-wider text-gray-800 uppercase">
                 Creador
@@ -257,30 +265,41 @@ export default function TransactionBoletaTotals({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {paginatedPayments.map((payment) => (
-              <tr
-                key={payment.id}
-                className="transition-colors hover:bg-gray-50"
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {new Date(payment.fecha).toLocaleDateString('es-CO')}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {payment.boletaReferencia}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {Array.isArray(payment.placas)
-                    ? payment.placas.join(', ')
-                    : String(payment.placas ?? '')}
-                </td>
-                <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-green-600">
-                  {formatCurrency(payment.totalPrecioNeto)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {payment.createdByInitial ?? ''}
-                </td>
-              </tr>
-            ))}
+            {paginatedPayments.map((payment) => {
+              const totalEgresos = Number(payment.totalPrecioNeto);
+              const impuesto4x1000 = Math.round(totalEgresos * 0.004);
+              const egresosNeto = totalEgresos - impuesto4x1000;
+              return (
+                <tr
+                  key={payment.id}
+                  className="transition-colors hover:bg-gray-50"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {new Date(payment.fecha).toLocaleDateString('es-CO')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {payment.boletaReferencia}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {Array.isArray(payment.placas)
+                      ? payment.placas.join(', ')
+                      : String(payment.placas ?? '')}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-green-600">
+                    {formatCurrency(payment.totalPrecioNeto)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-red-600">
+                    {formatCurrency(impuesto4x1000)}
+                  </td>
+                  <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-blue-600">
+                    {formatCurrency(egresosNeto)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {payment.createdByInitial ?? ''}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
