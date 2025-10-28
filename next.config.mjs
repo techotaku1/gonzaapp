@@ -10,7 +10,7 @@ jiti('./src/env.ts');
 const nextConfig = {
   reactStrictMode: true,
   cacheComponents: true, // <-- Habilita Cache Components (use cache)
-  turbopack: true,
+  turbopack: {}, // changed from `true` to an object to satisfy Next's config schema
   experimental: {
     turbopackFileSystemCacheForDev: true,
   },
