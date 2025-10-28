@@ -1,6 +1,3 @@
-/* Importar estilos globales de react-datepicker SOLO una vez desde globals.css */
-@import 'react-datepicker/dist/react-datepicker.css';
-
 @import 'tailwindcss';
 
 @theme inline {
