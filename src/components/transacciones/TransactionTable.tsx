@@ -333,7 +333,7 @@ const TransactionTable = forwardRef(function TransactionTable(
     }
   );
 
-  const { mutate: globalMutate } = useSWRConfig(); // <-- para mutate global
+  const { mutate: globalMutate } = useSWRConfig(); // <-- ya existe arriba en el archivo, reuse if present
 
   // Handler para agregar asesor y actualizar la lista local y global
   const handleAddAsesorAction = async (nombre: string) => {
@@ -734,7 +734,7 @@ const TransactionTable = forwardRef(function TransactionTable(
     if (toUpdate.length > 0) {
       await logic.onUpdateRecordAction(toUpdate);
 
-      // --- NUEVO: Insertar en boletaPayments con el nombre del usuario ---
+      // --- MODIFICADO: Elimina createdByInitial del body, lo asigna el backend ---
       const placas = allSelectedRecords.map((r) => r.placa.toUpperCase());
       await fetch('/api/boleta-payments', {
         method: 'POST',
@@ -743,7 +743,7 @@ const TransactionTable = forwardRef(function TransactionTable(
           boletaReferencia,
           placas,
           totalPrecioNeto: totalSelected,
-          createdByInitial: userName, // <-- aquí va el nombre
+          // NO enviar createdByInitial aquí
         }),
       });
 
@@ -1072,6 +1072,44 @@ const TransactionTable = forwardRef(function TransactionTable(
     },
     [logic]
   );
+
+  // Nuevo: eliminar una fila por id (confirm + backend + revalidar)
+  const handleDeleteRow = async (id: string) => {
+    if (!confirm('¿Eliminar este registro permanentemente? Esta acción no se puede deshacer.')) return;
+    try {
+      logic.setIsActuallySaving(true);
+      const res = await fetch('/api/transactions/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.success) {
+        alert(data?.error ?? 'Error al eliminar registro');
+      } else {
+        // Revalidar la página actual y resumen
+        try {
+          await globalMutate(
+            `/api/transactions?date=${logic.selectedDate}&limit=50&offset=0`,
+            undefined,
+            true
+          );
+          await globalMutate('transactions-summary', undefined, true);
+          await globalMutate('transactions', undefined, true);
+          // También puedes revalidar otras claves si las usas
+        } catch (e) {
+          // fallback: recargar la página si revalidación falla
+          console.warn('Revalidación fallida tras eliminar:', e);
+          if (typeof window !== 'undefined') window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting row:', error);
+      alert('Error al eliminar registro');
+    } finally {
+      logic.setIsActuallySaving(false);
+    }
+  };
 
   return (
     <div className="relative">
@@ -1753,6 +1791,7 @@ const TransactionTable = forwardRef(function TransactionTable(
                           coloresOptions={coloresOptions}
                           tramiteOptions={tramiteOptions}
                           emitidoPorWithColors={emitidoPorWithColors}
+                          onDeleteRow={handleDeleteRow} // <-- pasar handler de eliminación
                         />
                       )
                     )}
@@ -1796,45 +1835,6 @@ const TransactionTable = forwardRef(function TransactionTable(
               // Cierra todas las vistas de totales y el panel local
               if (props.showTotals) props.onToggleTotalsAction();
               if (props.showMonthlyTotals && props.onToggleMonthlyTotalsAction)
-                props.onToggleMonthlyTotalsAction();
-              setShowBoletaTotals(false);
-              setTotalsModeVisible(false);
-            }}
-          />
-        ) : props.showMonthlyTotals ? (
-          <TransactionMonthlyTotals
-            transactions={props.initialData}
-            showTotals={props.showTotals}
-            onToggleTotalsAction={props.onToggleTotalsAction}
-            showMonthlyTotals={props.showMonthlyTotals}
-            onToggleMonthlyTotalsAction={props.onToggleMonthlyTotalsAction}
-            showBoletaTotals={showBoletaTotals}
-            onToggleBoletaTotalsAction={() => setShowBoletaTotals((v) => !v)}
-            onBackToTableAction={() => {
-              // Cierra todas las vistas de totales y el panel local
-              if (props.showTotals) props.onToggleTotalsAction();
-              if (props.showMonthlyTotals && props.onToggleMonthlyTotalsAction)
-                props.onToggleMonthlyTotalsAction();
-              setShowBoletaTotals(false);
-              setTotalsModeVisible(false);
-            }}
-          />
-        ) : showBoletaTotals ? (
-          <TransactionBoletaTotals
-            showTotals={props.showTotals}
-            onToggleTotalsAction={props.onToggleTotalsAction}
-            showMonthlyTotals={props.showMonthlyTotals}
-            onToggleMonthlyTotalsAction={props.onToggleMonthlyTotalsAction}
-            showBoletaTotals={showBoletaTotals}
-            onToggleBoletaTotalsAction={() => setShowBoletaTotals((v) => !v)}
-            onBackToTableAction={() => {
-              // Cierra todas las vistas de totales y el panel local
-              if (props.showTotals) props.onToggleTotalsAction();
-              if (props.showMonthlyTotals && props.onToggleMonthlyTotalsAction)
-                props.onToggleMonthlyTotalsAction();
-              setShowBoletaTotals(false);
-              setTotalsModeVisible(false);
-            }}
           />
         ) : null}
 

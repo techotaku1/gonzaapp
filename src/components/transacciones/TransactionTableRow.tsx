@@ -45,6 +45,7 @@ interface TransactionTableRowProps {
   emitidoPorWithColors?: { nombre: string; color?: string }[];
   onDeleteAsesorAction?: (nombre: string) => void;
   userRole?: 'admin' | 'empleado'; // NUEVO
+  onDeleteRow?: (id: string) => Promise<void>; // NUEVO
 }
 
 const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
@@ -54,6 +55,8 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     isAsesorSelectionMode: _isAsesorSelectionMode,
     _selectedRows,
     rowsToDelete,
+    _selectedAsesores,
+    handleInputChange,
     _handleRowSelect,
     handleDeleteSelect,
     renderCheckbox,
@@ -66,6 +69,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     emitidoPorWithColors = [],
     onDeleteAsesorAction: _onDeleteAsesorAction,
     userRole,
+    onDeleteRow,
   }) => {
     // Determinar clase/estilo final de fila:
     // - Si está pagado: pintar toda la fila con el color de emitidoPor (dinámico si existe, si no el estático)
@@ -308,6 +312,49 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           renderInput={renderInput}
           isRowLocked={isRowLocked}
         />
+        {/* Botón eliminar fila (discreto, visible al hacer hover) */}
+        <td className="table-cell whitespace-nowrap px-2">
+          <button
+            type="button"
+            onClick={async () => {
+              if (isRowLocked) return;
+              if (!onDeleteRow) {
+                alert('No se puede eliminar (sin handler).');
+                return;
+              }
+              try {
+                await onDeleteRow(row.id);
+              } catch (err) {
+                console.error('Error deleting row:', err);
+              }
+            }}
+            disabled={isRowLocked}
+            className={`inline-flex items-center justify-center rounded px-2 py-1 text-xs font-semibold text-white transition ${
+              isRowLocked
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-red-600 hover:bg-red-700'
+            }`}
+            title={isRowLocked ? 'Fila bloqueada' : 'Eliminar fila'}
+          >
+            {/* Trash icon simple */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M3 6h18" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path d="M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </td>
       </tr>
     );
   }

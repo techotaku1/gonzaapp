@@ -25,7 +25,6 @@ export default function TransactionBoletaTotals({
   onBackToTableAction?: () => void;
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Local filter state (moved inside this component so buttons remain above this frontend)
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -62,10 +61,33 @@ export default function TransactionBoletaTotals({
     []
   );
 
-  // Filtrado local: por referencia, placas (any placa includes) y por rango de fechas (YYYY-MM-DD)
+  // Agrupa los pagos por fecha (YYYY-MM-DD)
+  const pagosPorFecha = useMemo(() => {
+    const map = new Map<string, BoletaPaymentRecord[]>();
+    for (const p of boletaPayments) {
+      const fechaObj = p.fecha instanceof Date ? p.fecha : new Date(p.fecha);
+      const key = fechaObj.toISOString().slice(0, 10);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    // Ordena las fechas descendente (más reciente primero)
+    const fechas = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    return { map, fechas };
+  }, [boletaPayments]);
+
+  // Paginación por día (un día por página)
+  const totalPages = pagosPorFecha.fechas.length || 1;
+  const currentDayIndex = Math.max(
+    0,
+    Math.min(currentPage - 1, totalPages - 1)
+  );
+  const selectedFecha = pagosPorFecha.fechas[currentDayIndex] ?? '';
+
+  // Filtrado local (aplicado solo sobre el día actual)
   const filteredPayments = useMemo(() => {
+    const pagosDelDia = pagosPorFecha.map.get(selectedFecha) ?? [];
     const s = (searchTerm ?? '').trim().toLowerCase();
-    return boletaPayments.filter((p) => {
+    return pagosDelDia.filter((p) => {
       // Fecha check
       if (startDate || endDate) {
         const fecha = p.fecha instanceof Date ? p.fecha : new Date(p.fecha);
@@ -97,21 +119,7 @@ export default function TransactionBoletaTotals({
       }
       return false;
     });
-  }, [boletaPayments, searchTerm, startDate, endDate]);
-
-  const paginatedPayments = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredPayments.slice(start, start + itemsPerPage);
-  }, [filteredPayments, currentPage, itemsPerPage]);
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredPayments.length / itemsPerPage)
-  );
-
-  if (error) {
-    return <div className="text-red-600">Error cargando datos de boletas.</div>;
-  }
+  }, [pagosPorFecha, selectedFecha, searchTerm, startDate, endDate]);
 
   // Handler unificado para "Volver a la tabla principal"
   const handleBack = () => {
@@ -126,6 +134,17 @@ export default function TransactionBoletaTotals({
     if (showBoletaTotals && onToggleBoletaTotalsAction)
       onToggleBoletaTotalsAction();
   };
+
+  // Handler para cambiar de día
+  // Ahora: "Día anterior" => fechas más antiguas (avanza en la lista)
+  //       "Día siguiente" => fechas más recientes (retrocede en la lista)
+  const handlePrevDay = () =>
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  const handleNextDay = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
+
+  if (error) {
+    return <div className="text-red-600">Error cargando datos de boletas.</div>;
+  }
 
   return (
     <div className="font-display container mx-auto px-6">
@@ -235,8 +254,15 @@ export default function TransactionBoletaTotals({
         </button>
       </div>
 
-      <h3 className="mb-2 text-4xl font-semibold">Totales Boletas Pagadas</h3>
+      {/* Título (la fecha ya aparece en la columna Fecha) */}
+      <h3 className="text-4xl font-semibold">Totales Boletas Pagadas</h3>
+      <div className="flex items-center justify-end">
+        <span className="text-sm text-gray-500">
+          Día {currentDayIndex + 1} de {totalPages}
+        </span>
+      </div>
 
+      {/* Tabla de boletas pagadas solo del día seleccionado */}
       <div className="overflow-x-auto">
         <table className="w-full rounded-lg bg-white shadow-lg">
           <thead className="bg-gray-50">
@@ -265,7 +291,7 @@ export default function TransactionBoletaTotals({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {paginatedPayments.map((payment) => {
+            {filteredPayments.map((payment) => {
               const totalEgresos = Number(payment.totalPrecioNeto);
               const impuesto4x1000 = Math.round(totalEgresos * 0.004);
               const egresosNeto = totalEgresos - impuesto4x1000;
@@ -289,7 +315,9 @@ export default function TransactionBoletaTotals({
                     {formatCurrency(payment.totalPrecioNeto)}
                   </td>
                   <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-red-600">
-                    {formatCurrency(impuesto4x1000)}
+                    {/* Mostrar el valor con signo menos */}
+                    {'$ -' +
+                      formatCurrency(impuesto4x1000).replace('$', '').trim()}
                   </td>
                   <td className="px-6 py-4 text-right font-medium whitespace-nowrap text-blue-600">
                     {formatCurrency(egresosNeto)}
@@ -304,26 +332,24 @@ export default function TransactionBoletaTotals({
         </table>
       </div>
 
-      {/* Paginación */}
+      {/* Paginación por día */}
       <div className="mt-4 flex items-center justify-center gap-4">
         <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-          className="rounded bg-purple-500 px-4 py-2 text-white hover:bg-purple-600 disabled:opacity-50"
-        >
-          Anterior
-        </button>
-        <span className="text-sm font-medium text-gray-700">
-          Página {currentPage} de {totalPages}
-        </span>
-        <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
+          onClick={handlePrevDay}
           disabled={currentPage === totalPages}
           className="rounded bg-purple-500 px-4 py-2 text-white hover:bg-purple-600 disabled:opacity-50"
         >
-          Siguiente
+          Día anterior
+        </button>
+        <span className="text-sm font-medium text-gray-700">
+          Día {currentDayIndex + 1} de {totalPages}
+        </span>
+        <button
+          onClick={handleNextDay}
+          disabled={currentPage === 1}
+          className="rounded bg-purple-500 px-4 py-2 text-white hover:bg-purple-600 disabled:opacity-50"
+        >
+          Día siguiente
         </button>
       </div>
     </div>

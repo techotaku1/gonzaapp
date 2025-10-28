@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { currentUser } from '@clerk/nextjs/server';
+
 import { db } from '~/server/db';
 import { boletaPayments } from '~/server/db/schema';
 
@@ -28,14 +30,13 @@ export async function POST(req: NextRequest) {
     boletaReferencia,
     placas,
     totalPrecioNeto,
-    createdByInitial, // <-- nombre del usuario logueado
+    // createdByInitial, // <-- ya no se recibe del frontend
   } = body;
 
   if (
     !boletaReferencia ||
     !Array.isArray(placas) ||
-    typeof totalPrecioNeto !== 'number' ||
-    !createdByInitial
+    typeof totalPrecioNeto !== 'number'
   ) {
     return NextResponse.json(
       { success: false, error: 'Datos requeridos' },
@@ -43,12 +44,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Obtiene el usuario actual desde Clerk en el backend
+  const clerkUser = await currentUser();
+  const createdByInitial =
+    clerkUser?.firstName && clerkUser?.lastName
+      ? `${clerkUser.firstName} ${clerkUser.lastName}`
+      : (clerkUser?.firstName ?? clerkUser?.username ?? 'A');
+
   try {
     await db.insert(boletaPayments).values({
       boletaReferencia,
       placas: placas.join(','),
       totalPrecioNeto,
-      createdByInitial, // <-- guarda el nombre aquí
+      createdByInitial, // <-- ahora lo asigna el backend
     });
     return NextResponse.json({ success: true });
   } catch (_error) {
