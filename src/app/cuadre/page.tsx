@@ -11,10 +11,10 @@ export default async function Page() {
 
   return (
     <SWRProvider>
-      <main className="mx-auto w-full max-w-7xl px-2 py-4 sm:px-4 lg:px-6">
+      <main className="mx-auto w-full max-w-7xl px-0 py-4">
         <div>
           {/* Wrapper responsive solo para móviles */}
-          <div className="cuadre-responsive -mx-2 sm:mx-0">
+          <div className="cuadre-responsive -mx-0 sm:mx-0">
             {/* Scroll horizontal solo en pantallas pequeñas */}
             <div
               className="overflow-x-auto"
@@ -25,7 +25,7 @@ export default async function Page() {
               }}
             >
               {/* Evita que la tabla se aplaste en móviles y da más ancho de columna */}
-              <div className="inline-block min-w-[1200px] align-middle sm:min-w-full">
+              <div className="inline-block min-w-[1600px] align-middle sm:min-w-full">
                 <CuadreClientTable initialData={initialData ?? []} />
               </div>
             </div>

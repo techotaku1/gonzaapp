@@ -653,12 +653,12 @@ select.table-select-base option {
 
 .cuadre-header {
   position: sticky;
-  height: 3.5rem;
+  height: 4rem;
   line-height: 1.2;
-  padding: 0.5rem; /* Reduced padding */
+  padding: 0.08rem; /* Much smaller padding for more horizontal space */
   font-family: var(--font-table-text);
   font-weight: 500;
-  font-size: 0.9rem; /* Reduced font size */
+  font-size: 0.9rem;
   color: black;
   text-align: center;
   vertical-align: middle;
@@ -667,8 +667,8 @@ select.table-select-base option {
   border-bottom: 2px solid #4a5565;
   z-index: 10;
   transition: background-color 0.2s;
-  min-width: 80px; /* Added minimum width */
-  max-width: 120px; /* Added maximum width */
+  min-width: 320px; /* Much wider columns */
+  max-width: none;
 }
 
 .cuadre-cell {
@@ -677,12 +677,12 @@ select.table-select-base option {
   justify-content: center;
   border-right: 1px solid var(--color-gray-600) !important;
   border-bottom: 1px solid var(--color-gray-600) !important;
-  min-height: 3rem;
-  padding: 0.5rem; /* Reduced padding */
+  min-height: 2rem;
+  padding: 0.08rem 0.15rem; /* Much smaller padding for more horizontal space */
   display: table-cell;
   vertical-align: middle;
   text-align: center;
-  font-size: 0.875rem; /* Reduced font size */
+  font-size: 0.875rem;
   line-height: 1.5;
   transition: background-color 0.2s;
 }
@@ -693,12 +693,12 @@ select.table-select-base option {
 
 .cuadre-select {
   @apply w-full rounded border border-gray-600;
-  height: 2.5rem;
-  font-size: 1rem;
+  height: 2.2rem;
+  font-size: 0.95rem;
   background-color: white;
   transition: all 0.2s;
   line-height: 1;
-  padding: 0.15rem 1.5rem 0.15rem 0.5rem;
+  padding: 0.1rem 1.2rem 0.1rem 0.4rem;
   color: black;
   margin: 0 auto;
   text-align: center;
@@ -726,9 +726,9 @@ select.cuadre-select option {
 
 .cuadre-input {
   @apply w-full rounded border border-gray-600;
-  height: 2.5rem;
-  font-size: 0.875rem;
-  padding: 0.5rem 0.75rem; /* Updated padding */
+  height: 2.2rem;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem; /* Reduced padding to allow more space */
   background-color: white;
   transition: all 0.2s;
   min-width: 0;

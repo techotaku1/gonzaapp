@@ -22,9 +22,9 @@ const fetcher = async <T>(key: string): Promise<T[]> => {
 };
 
 const config = {
-  revalidateOnFocus: true,
+  revalidateOnFocus: false, // Evitar revalidaciones al enfocar la ventana
   shouldRetryOnError: true,
-  dedupingInterval: 2000,
+  dedupingInterval: 5000, // Aumentar para reducir duplicaciones
   errorRetryCount: 3,
   errorRetryInterval: 5000,
   loadingTimeout: 30000,
@@ -36,7 +36,7 @@ export function useCuadreData(initialData?: ExtendedSummaryRecord[]) {
     fetcher<ExtendedSummaryRecord>,
     {
       ...config,
-      refreshInterval: 2000,
+      refreshInterval: 5000, // Reducir polling a cada 5 segundos para menos carga
       fallbackData: initialData,
     }
   );

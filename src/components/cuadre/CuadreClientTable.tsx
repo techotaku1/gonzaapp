@@ -4,13 +4,14 @@ import React, { useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 
+import { HiOutlineBell } from 'react-icons/hi';
 import { useDebouncedCallback } from 'use-debounce';
 
 import Header from '~/components/Header';
 import { useCuadreData } from '~/hooks/useCuadreData';
 import {
   deleteCuadreRecords,
-  updateCuadreRecord,
+  updateCuadreRecordsBatch,
 } from '~/server/actions/cuadreActions';
 
 import CuadreTableBody from './CuadreTableBody';
@@ -30,48 +31,60 @@ export default function CuadreClientTable({
   const [editValues, setEditValues] = useState<
     Record<string, Partial<CuadreData>>
   >({});
+  // bulkGroups maps a bulk source id to the set of target ids that were bulk-applied
+  const [bulkGroups, setBulkGroups] = useState<Record<string, Set<string>>>({});
+  // bulkApplyMap removed (no longer needed)
   const selectAllRef = useRef<HTMLInputElement>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
 
   const debouncedSave = useDebouncedCallback(
     async (pendingEdits: Record<string, Partial<CuadreData>>) => {
-      const updates = Object.entries(pendingEdits).map(
-        async ([id, changes]) => {
-          for (const [field, value] of Object.entries(changes)) {
-            await handleUpdateBancoReferencia(
-              id,
-              field as keyof CuadreData,
-              value as string | number | boolean | Date | null
-            );
-          }
+      setIsSaving(true);
+      try {
+        // Preparar el array de updates para el batch
+        const updates = Object.entries(pendingEdits).map(
+          ([transactionId, changes]) => ({
+            transactionId,
+            data: changes as CuadreData,
+          })
+        );
+
+        // Usar el batch para guardar todo en una sola llamada
+        const result = await updateCuadreRecordsBatch(updates);
+        if (!result.success) {
+          console.error('Error saving batch:', result.error);
         }
-      );
-      await Promise.all(updates);
+        // No llamar mutate() aquí, confiar en el polling de SWR
+      } catch (error) {
+        console.error('Error in debouncedSave:', error);
+      } finally {
+        setIsSaving(false);
+      }
     },
-    800
+    500 // Reducir delay a 500ms para guardar más rápido
   );
 
-  const handleUpdateBancoReferencia = async (
-    id: string,
-    field: keyof CuadreData,
-    value: string | number | boolean | Date | null
+  // Edición masiva: actualiza todos los editValues y dispara debouncedSave una sola vez
+  const handleBulkEdit = (
+    batchEdits: Record<string, Partial<CuadreData>>,
+    sourceId?: string | null
   ) => {
-    try {
-      const record = summaryData.find((r) => r.id === id);
-      if (!record) return;
+    setEditValues((prev) => {
+      const updated = {
+        ...prev,
+        ...batchEdits,
+      };
+      debouncedSave(updated);
+      return updated;
+    });
 
-      const cuadreData: Partial<CuadreData> = {};
-      if (field === 'banco') cuadreData.banco = value as string;
-      if (field === 'monto') cuadreData.monto = value as number;
-      if (field === 'pagado') cuadreData.pagado = value as boolean;
-      if (field === 'fechaCliente')
-        cuadreData.fechaCliente = value as Date | null;
-      if (field === 'referencia') cuadreData.referencia = value as string;
-
-      await updateCuadreRecord(id, cuadreData as CuadreData);
-
-      mutate(); // Actualiza el cache de SWR
-    } catch (error) {
-      console.error('Error updating record:', error);
+    // register bulk group so totals can count the payment once
+    if (sourceId) {
+      setBulkGroups((prev) => ({
+        ...prev,
+        [sourceId]: new Set(Object.keys(batchEdits)),
+      }));
     }
   };
 
@@ -93,14 +106,73 @@ export default function CuadreClientTable({
     });
   };
 
-  // Agrupar registros por fecha de generación (createdAt)
+  const asesorDeudas = useMemo(() => {
+    const map = new Map<string, number>();
+    summaryData.forEach((rec) => {
+      const key = rec.asesor ?? 'Sin Asesor';
+      const total = (rec.precioNeto ?? 0) + (rec.tarifaServicio ?? 0);
+      const paid = Number(editValues[rec.id]?.monto ?? rec.monto ?? 0);
+      const prev = map.get(key) ?? 0;
+      map.set(key, prev + (total - paid));
+    });
+    return Array.from(map.entries())
+      .map(([asesor, deuda]) => ({ asesor, deuda }))
+      .filter((x) => x.deuda > 0)
+      .sort((a, b) => b.deuda - a.deuda);
+  }, [summaryData, editValues]);
+  const [showDeudaList, setShowDeudaList] = useState(false);
+
+  // Calcular el total abonado teniendo en cuenta grupos bulk: cada grupo bulk cuenta una sola vez
+  const grandTotals = useMemo(() => {
+    const totalExpectedAcc = summaryData.reduce(
+      (acc, rec) => acc + ((rec.precioNeto ?? 0) + (rec.tarifaServicio ?? 0)),
+      0
+    );
+
+    // construir set de ids que pertenecen a un grupo bulk
+    const allBulkIds = new Set<string>();
+    Object.values(bulkGroups).forEach((s) =>
+      s.forEach((id) => allBulkIds.add(id))
+    );
+
+    let totalPaidAcc = 0;
+
+    // sumar montos de registros que no pertenecen a un bulk-group
+    summaryData.forEach((rec) => {
+      if (!allBulkIds.has(rec.id)) {
+        totalPaidAcc += Number(editValues[rec.id]?.monto ?? rec.monto ?? 0);
+      }
+    });
+
+    // para cada bulk group, sumar solo una vez (usar monto del sourceId si existe, sino el primer miembro)
+    Object.entries(bulkGroups).forEach(([sourceId, idSet]) => {
+      let repMonto: number | undefined;
+      // preferir monto del sourceId si está en editValues
+      if (sourceId && (editValues[sourceId]?.monto ?? null) != null) {
+        repMonto = Number(editValues[sourceId]?.monto ?? 0);
+      } else {
+        // tomar primer id del grupo
+        const firstId = Array.from(idSet)[0];
+        const rec = summaryData.find((r) => r.id === firstId);
+        if (rec)
+          repMonto = Number(editValues[firstId]?.monto ?? rec.monto ?? 0);
+      }
+      totalPaidAcc += Number(repMonto ?? 0);
+    });
+
+    return {
+      totalExpected: totalExpectedAcc,
+      totalPaid: totalPaidAcc,
+      faltante: Math.max(0, totalExpectedAcc - totalPaidAcc),
+    };
+  }, [summaryData, editValues, bulkGroups]);
+
   const groupedRecords = useMemo(() => {
     const map = new Map<
       string,
       { fechaGeneracion: Date; records: ExtendedSummaryRecord[] }
     >();
 
-    // Evitar duplicados por id
     const seenIds = new Set<string>();
     const unique = summaryData.filter((rec) => {
       if (seenIds.has(rec.id)) return false;
@@ -114,14 +186,12 @@ export default function CuadreClientTable({
           ? record.createdAt
           : new Date(record.createdAt as unknown as string);
       if (isNaN(createdAt.getTime())) return;
-      const key = createdAt.toISOString().slice(0, 10); // YYYY-MM-DD
-      if (!map.has(key)) {
+      const key = createdAt.toISOString().slice(0, 10);
+      if (!map.has(key))
         map.set(key, { fechaGeneracion: createdAt, records: [] });
-      }
       map.get(key)!.records.push(record);
     });
 
-    // Ordenar grupos por fecha desc y dentro del grupo por hora desc
     return Array.from(map.values())
       .map((g) => ({
         ...g,
@@ -156,19 +226,13 @@ export default function CuadreClientTable({
   }
 
   const handleSelectAll = (allIds: string[]) => {
-    if (rowsToDelete.size === allIds.length) {
-      setRowsToDelete(new Set());
-    } else {
-      setRowsToDelete(new Set(allIds));
-    }
+    if (rowsToDelete.size === allIds.length) setRowsToDelete(new Set());
+    else setRowsToDelete(new Set(allIds));
   };
 
-  // Efecto para el estado indeterminado del checkbox de seleccionar todos
   React.useEffect(() => {
     if (selectAllRef.current && groupedRecords.length > 0) {
-      const allIds = groupedRecords.flatMap((group) =>
-        group.records.map((r) => r.id)
-      );
+      const allIds = groupedRecords.flatMap((g) => g.records.map((r) => r.id));
       selectAllRef.current.indeterminate =
         rowsToDelete.size > 0 && rowsToDelete.size < allIds.length;
     }
@@ -181,11 +245,8 @@ export default function CuadreClientTable({
 
   const handleDeleteSelect = (id: string) => {
     const newSelected = new Set(rowsToDelete);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
+    if (newSelected.has(id)) newSelected.delete(id);
+    else newSelected.add(id);
     setRowsToDelete(newSelected);
   };
 
@@ -194,8 +255,8 @@ export default function CuadreClientTable({
       <div className="fixed top-0 left-0 z-50 w-full">
         <Header />
       </div>
-      <div className="container mx-auto min-h-screen p-4 pt-20">
-        <div className="p-8">
+      <div className="container mx-auto min-h-screen py-4 pt-20">
+        <div className="py-4">
           <div className="mb-6 flex items-center justify-between">
             <Link
               href="/"
@@ -215,17 +276,63 @@ export default function CuadreClientTable({
               </svg>
               Volver al Inicio
             </Link>
-            <h1 className="text-2xl font-bold">Gestión de Cuadres</h1>
+
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">Gestión de Cuadres</h1>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowDeudaList((v) => !v)}
+                  className="relative flex items-center gap-3 rounded-md bg-white px-2 py-1 text-gray-800 ring-1 ring-gray-200 hover:shadow-md"
+                  title="Asesores con deuda pendiente"
+                >
+                  <span className="inline-flex items-center justify-center rounded-full bg-amber-100 p-1">
+                    <HiOutlineBell className="h-5 w-5 text-amber-700" />
+                  </span>
+                  <span className="ml-0 text-sm font-bold text-gray-700">
+                    {asesorDeudas.length}
+                  </span>
+                  {asesorDeudas.length > 0 && (
+                    <span className="absolute -top-1 -right-2 inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                      {asesorDeudas.length}
+                    </span>
+                  )}
+                </button>
+
+                {showDeudaList && asesorDeudas.length > 0 && (
+                  <div className="absolute top-full right-0 mt-2 w-72 rounded bg-white p-3 shadow-lg">
+                    <h4 className="mb-2 text-sm font-semibold">
+                      Deudas por asesor
+                    </h4>
+                    <ul className="flex max-h-48 flex-col gap-1 overflow-auto">
+                      {asesorDeudas.map((a) => (
+                        <li
+                          key={a.asesor}
+                          className="flex justify-between text-sm"
+                        >
+                          <span className="font-medium">{a.asesor}</span>
+                          <span className="font-mono text-red-600">
+                            $ {a.deuda.toLocaleString('es-CO')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <button
               onClick={handleDeleteModeToggle}
-              className="rounded bg-red-500 px-4 py-2 font-semibold text-white transition-all hover:bg-red-600"
+              className="rounded bg-red-500 px-4 py-2 font-semibold text-white transition-all hover:bg-red-700"
             >
               {isDeleteMode ? 'Cancelar' : 'Eliminar Registros'}
             </button>
           </div>
-          {/* Auto-save status */}
+
           <div className="mb-4 flex items-center gap-4">
-            {debouncedSave.isPending?.() ? (
+            {isSaving ? (
               <span className="flex items-center gap-2 rounded-md bg-blue-300 px-3 py-2.5 text-sm font-bold text-blue-800">
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
                   <circle
@@ -249,7 +356,7 @@ export default function CuadreClientTable({
                 ✓ Todos los cambios guardados
               </span>
             )}
-            {/* Botón de confirmación de eliminación */}
+
             {isDeleteMode && rowsToDelete.size > 0 && (
               <button
                 onClick={async () => {
@@ -259,18 +366,16 @@ export default function CuadreClientTable({
                       `¿Está seguro de eliminar ${rowsToDelete.size} registros?`
                     )
                   ) {
-                    // Usar el id de la tabla cuadre (cuadreId) para eliminar
                     const ids = Array.from(rowsToDelete)
-                      .map((transactionId) => {
-                        const record = summaryData.find(
-                          (r) => r.id === transactionId
-                        );
-                        return record?.cuadreId;
-                      })
+                      .map(
+                        (transactionId) =>
+                          summaryData.find((r) => r.id === transactionId)
+                            ?.cuadreId
+                      )
                       .filter((id): id is string => Boolean(id));
                     const res = await deleteCuadreRecords(ids);
                     if (res.success) {
-                      mutate(); // Refresca el cache SWR tras eliminar
+                      mutate();
                       setRowsToDelete(new Set());
                       setIsDeleteMode(false);
                     } else {
@@ -284,7 +389,7 @@ export default function CuadreClientTable({
               </button>
             )}
           </div>
-          {/* Tabla de todos los grupos */}
+
           <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
             <table className="cuadre-table">
               <thead>
@@ -316,36 +421,75 @@ export default function CuadreClientTable({
                       </div>
                     </th>
                   )}
+
                   {[
-                    'Fecha',
-                    'Placa',
-                    'Emitido Por',
-                    'Asesor',
-                    'Tarifa Servicio',
-                    'Total (Precio + Tarifa)',
-                    'Banco',
-                    'Monto',
-                    'Fecha Cliente',
-                    'Referencia',
-                    'Pagado',
-                  ].map((header) => (
+                    { key: 'Fecha', className: 'min-w-[110px] w-[120px]' },
+                    { key: 'Placa', className: 'min-w-[90px] w-[100px]' },
+                    {
+                      key: 'Emitido Por',
+                      className: 'min-w-[110px] w-[120px]',
+                    },
+                    { key: 'Asesor', className: 'min-w-[110px] w-[120px]' },
+                    {
+                      key: 'Tarifa Servicio',
+                      className: 'min-w-[90px] w-[100px]',
+                    },
+                    {
+                      key: 'Total (Precio + Tarifa)',
+                      className: 'min-w-[110px] w-[120px]',
+                    },
+                    { key: 'Banco', className: 'min-w-[90px] w-[100px]' },
+                    { key: 'Monto', className: 'min-w-[90px] w-[100px]' },
+                    {
+                      key: 'Fecha Cliente',
+                      className: 'min-w-[120px] w-[130px]',
+                    },
+                    { key: 'Referencia', className: 'min-w-[120px] w-[130px]' },
+                    { key: 'Pagado', className: 'min-w-[60px] w-[70px]' },
+                  ].map(({ key, className }) => (
                     <th
-                      key={header}
-                      className={
-                        header === 'Pagado'
-                          ? 'cuadre-header font-lexend relative w-16 border-r bg-white font-semibold'
-                          : 'cuadre-header font-lexend relative border-r bg-white'
+                      key={key}
+                      className={`cuadre-header font-lexend relative border-r bg-white ${className} ${key === 'Pagado' ? 'font-semibold' : ''}`}
+                      style={
+                        key === 'Fecha Cliente' ? { minWidth: 200 } : undefined
                       }
                     >
-                      {header === 'Pagado' ? (
-                        <span
-                          className="font-lexend font-semibold"
-                          style={{ fontSize: '0.7rem' }}
-                        >
-                          {header}
-                        </span>
+                      {key === 'Pagado' ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="font-lexend font-semibold">
+                            {key}
+                          </span>
+                          <input
+                            type="checkbox"
+                            title="Seleccionar / Deseleccionar todos pagado"
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              const allIds = groupedRecords.flatMap((g) =>
+                                g.records.map((r) => r.id)
+                              );
+                              const updated: Record<
+                                string,
+                                Partial<CuadreData>
+                              > = {};
+                              allIds.forEach((id) => {
+                                updated[id] = {
+                                  ...(editValues[id] ?? {}),
+                                  pagado: checked,
+                                };
+                              });
+                              setEditValues((prev) => ({
+                                ...prev,
+                                ...updated,
+                              }));
+                              debouncedSave({
+                                ...(editValues ?? {}),
+                                ...updated,
+                              });
+                            }}
+                          />
+                        </div>
                       ) : (
-                        header
+                        key
                       )}
                     </th>
                   ))}
@@ -359,10 +503,38 @@ export default function CuadreClientTable({
                   editValues={editValues}
                   handleDeleteSelect={handleDeleteSelect}
                   handleLocalEdit={handleLocalEdit}
+                  handleBulkEdit={handleBulkEdit}
                   getEmitidoPorClass={getEmitidoPorClass}
                 />
               </tbody>
             </table>
+
+            <div className="p-4">
+              <div className="flex items-center justify-end gap-4">
+                <div className="text-right">
+                  <div className="text-sm text-gray-700">
+                    Total esperado (Precio+Tarifa)
+                  </div>
+                  <div className="text-xl font-bold">
+                    $ {grandTotals.totalExpected.toLocaleString('es-CO')}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-700">Total abonado</div>
+                  <div className="text-xl font-bold">
+                    $ {grandTotals.totalPaid.toLocaleString('es-CO')}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-700">Faltante</div>
+                  <div
+                    className={`text-xl font-bold ${grandTotals.faltante === 0 ? 'text-green-700' : 'text-red-700'}`}
+                  >
+                    $ {grandTotals.faltante.toLocaleString('es-CO')}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

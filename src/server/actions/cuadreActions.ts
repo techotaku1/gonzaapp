@@ -177,3 +177,46 @@ export async function deleteCuadreRecords(
     };
   }
 }
+
+export async function updateCuadreRecordsBatch(
+  updates: { transactionId: string; data: CuadreData }[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Ejecutar todas las updates en una transacción para atomicidad
+    await db.transaction(async (tx) => {
+      for (const { transactionId, data } of updates) {
+        await tx
+          .update(cuadre)
+          .set({
+            ...(data.banco !== undefined && { banco: data.banco }),
+            ...(data.monto !== undefined && { monto: data.monto?.toString() }),
+            ...(data.pagado !== undefined && { pagado: data.pagado }),
+            ...(data.fechaCliente !== undefined && {
+              fechaCliente:
+                data.fechaCliente == null
+                  ? null
+                  : data.fechaCliente instanceof Date
+                    ? data.fechaCliente
+                    : new Date(data.fechaCliente),
+            }),
+            ...(data.referencia !== undefined && {
+              referencia: data.referencia,
+            }),
+          })
+          .where(eq(cuadre.transactionId, transactionId));
+      }
+    });
+
+    revalidateTag('cuadre', 'max'); // Solo revalida el tag de cuadre
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating cuadre records batch:', error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Failed to update records batch',
+    };
+  }
+}
