@@ -56,7 +56,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     _selectedRows,
     rowsToDelete,
     _selectedAsesores,
-    handleInputChange,
+    handleInputChange: _handleInputChange,
     _handleRowSelect,
     handleDeleteSelect,
     renderCheckbox,
@@ -75,7 +75,29 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
     // - Si está pagado: pintar toda la fila con el color de emitidoPor (dinámico si existe, si no el estático)
     // - Si NO está pagado: usar color de trámite (si aplica y está configurado)
     const getRowClassAndStyle = () => {
+      // If the row is pagado, prefer keeping the tramite color when the tramite
+      // is NOT SOAT and a tramite color exists. Otherwise fall back to emitidoPor coloring.
       if (row.pagado) {
+        const tram = typeof row.tramite === 'string' ? row.tramite : '';
+        if (tram.toUpperCase() !== 'SOAT') {
+          const dynamicStyle = generateDynamicColorStyle(
+            tram,
+            tramiteOptions,
+            coloresOptions
+          );
+          const tramiteClass = getTramiteColorClass
+            ? getTramiteColorClass(tram)
+            : '';
+          // If we have a tramite color/class, use it even when pagado
+          if (
+            (dynamicStyle && Object.keys(dynamicStyle).length > 0) ||
+            tramiteClass
+          ) {
+            return { className: tramiteClass, style: dynamicStyle };
+          }
+        }
+
+        // Fallback: use emitidoPor coloring when no tramite color is present
         const { className, style } = getEmitidoPorStyleAndClass(
           row.emitidoPor ?? '',
           true,
@@ -92,9 +114,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
         tramiteOptions,
         coloresOptions
       );
-      const className = getTramiteColorClass
-        ? getTramiteColorClass(tram)
-        : '';
+      const className = getTramiteColorClass ? getTramiteColorClass(tram) : '';
       return { className, style: dynamicStyle };
     };
 
@@ -157,12 +177,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
         {/* Pagado */}
         <td className="table-checkbox-cell whitespace-nowrap">
           <div className="table-checkbox-wrapper">
-            {renderCheckbox(
-              row.id,
-              'pagado',
-              !!row.pagado,
-              isRowLocked
-            )}
+            {renderCheckbox(row.id, 'pagado', !!row.pagado, isRowLocked)}
           </div>
         </td>
         <TransactionTableCell
@@ -313,7 +328,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
           isRowLocked={isRowLocked}
         />
         {/* Botón eliminar fila (discreto, visible al hacer hover) */}
-        <td className="table-cell whitespace-nowrap px-2">
+        <td className="table-cell px-2 whitespace-nowrap">
           <button
             type="button"
             onClick={async () => {
@@ -331,7 +346,7 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
             disabled={isRowLocked}
             className={`inline-flex items-center justify-center rounded px-2 py-1 text-xs font-semibold text-white transition ${
               isRowLocked
-                ? 'bg-gray-300 cursor-not-allowed'
+                ? 'cursor-not-allowed bg-gray-300'
                 : 'bg-red-600 hover:bg-red-700'
             }`}
             title={isRowLocked ? 'Fila bloqueada' : 'Eliminar fila'}
@@ -351,7 +366,11 @@ const TransactionTableRow: React.FC<TransactionTableRowProps> = React.memo(
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
-              <path d="M10 11v6M14 11v6" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M10 11v6M14 11v6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </td>

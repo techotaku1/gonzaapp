@@ -1102,6 +1102,44 @@ export function useTransactionTableLogic(props: {
       router.push('/cuadre', { startPosition: 0.3 });
     }, 500);
   }, [router]);
+
+  // Si el usuario vuelve desde /cuadre (o cambia de ruta), asegúrate de limpiar
+  // el estado de navegación/zoom para que el botón no quede atascado en "Redirigiendo..."
+  // y la UI no se quede en 50%.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const resetIfNeeded = () => {
+      try {
+        const path = window.location.pathname || '';
+        // Si la ruta actual NO es /cuadre, restablece los flags si estaban activos
+        if (path !== '/cuadre') {
+          setIsNavigatingToCuadre(false);
+          setZoom(1);
+        }
+      } catch (_err) {
+        // no-op
+      }
+    };
+
+    // Ejecuta inmediatamente para cubrir el caso de volver mediante Link (client-side)
+    resetIfNeeded();
+
+    // Escucha 'popstate' (back/forward) y cambio de visibilidad (cuando vuelve a la pestaña)
+    const onPop = () => resetIfNeeded();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') resetIfNeeded();
+    };
+
+    window.addEventListener('popstate', onPop);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // isNavigatingToCuadre intentionally omitted to avoid re-subscribing on changes
+  }, []);
   // --- NUEVO: Mover automáticamente al día anterior si no hay registros ---
   useEffect(() => {
     // Solo si no está cargando, no está buscando, y no está agregando

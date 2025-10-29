@@ -3,6 +3,7 @@ import {
   decimal,
   integer,
   pgTable,
+  serial,
   timestamp,
   uuid,
   varchar,
@@ -111,13 +112,14 @@ export const ignoredPlates = pgTable('ignored_plates', {
 });
 
 export const boletaPayments = pgTable('boleta_payments', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  fecha: timestamp('fecha').notNull().defaultNow(),
-  boletaReferencia: varchar('boleta_referencia', { length: 100 }).notNull(),
-  placas: varchar('placas', { length: 1000 }).notNull(), // Mantener como string, parsear en el frontend
+  id: serial('id').primaryKey(),
+  fecha: timestamp('fecha', { withTimezone: true }).notNull().defaultNow(),
+  boletaReferencia: varchar('boleta_referencia', { length: 128 }).notNull(),
+  placas: varchar('placas', { length: 512 }).notNull(),
   totalPrecioNeto: decimal('total_precio_neto', {
-    precision: 12,
+    precision: 16,
     scale: 2,
   }).notNull(),
-  createdByInitial: varchar('created_by_initial'),
+  createdByInitial: varchar('created_by_initial', { length: 64 }),
+  tramites: varchar('tramites', { length: 512 }), // <-- nuevo campo
 });

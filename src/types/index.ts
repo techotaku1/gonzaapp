@@ -111,10 +111,11 @@ export interface IgnoredPlateRecord {
 }
 
 export interface BoletaPaymentRecord {
-  id: string;
+  id: number;
   fecha: Date | string;
   boletaReferencia: string;
-  placas: string[]; // Cambiar a array
+  placas: string[] | string;
   totalPrecioNeto: number;
   createdByInitial?: string;
+  tramites?: string[]; // <-- nuevo campo
 }

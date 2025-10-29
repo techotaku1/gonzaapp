@@ -75,7 +75,7 @@ function DatePagination({
   hasPreviousDay,
   hasNextDay,
   totalDays,
-  currentDayIndex,
+  currentDayNumber,
   isLoadingPage,
   onPaginate,
 }: {
@@ -89,7 +89,7 @@ function DatePagination({
   hasPreviousDay: boolean;
   hasNextDay: boolean;
   totalDays: number;
-  currentDayIndex: number;
+  currentDayNumber: number; // 1-based, where 1 = most recent day
   isLoadingPage: boolean;
   onPaginate: (direction: 'prev' | 'next') => void;
 }) {
@@ -114,7 +114,7 @@ function DatePagination({
           <span className="font-bold">&larr;</span> Día anterior
         </button>
         <span className="font-display flex items-center px-4 text-sm text-black">
-          Día {currentDayIndex + 1} de {totalDays}
+          Día {currentDayNumber} de {totalDays}
         </span>
         <button
           onClick={() => onPaginate('next')}
@@ -733,8 +733,9 @@ const TransactionTable = forwardRef(function TransactionTable(
     if (toUpdate.length > 0) {
       await logic.onUpdateRecordAction(toUpdate);
 
-      // --- MODIFICADO: Elimina createdByInitial del body, lo asigna el backend ---
+      // --- MODIFICADO: Enviar el campo tramites con los trámites seleccionados ---
       const placas = allSelectedRecords.map((r) => r.placa.toUpperCase());
+      const tramites = allSelectedRecords.map((r) => r.tramite);
       await fetch('/api/boleta-payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -742,7 +743,7 @@ const TransactionTable = forwardRef(function TransactionTable(
           boletaReferencia,
           placas,
           totalPrecioNeto: totalSelected,
-          // NO enviar createdByInitial aquí
+          tramites,
         }),
       });
 
@@ -1892,7 +1893,7 @@ const TransactionTable = forwardRef(function TransactionTable(
           hasPreviousDay={hasPreviousDay}
           hasNextDay={hasNextDay}
           totalDays={totalDays}
-          currentDayIndex={currentDayIndex}
+          currentDayNumber={currentDayIndex + 1}
           isLoadingPage={isLoadingPage || isPaginating}
           onPaginate={handlePaginate}
         />

@@ -15,6 +15,7 @@ export async function GET() {
     const parsedResults = results.map((r) => ({
       ...r,
       placas: r.placas.split(','),
+      tramites: r.tramites ? r.tramites.split(',') : [], // <-- parsea tramites como array
     }));
     return NextResponse.json({ boletaPayments: parsedResults });
   } catch (_error) {
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     boletaReferencia,
     placas,
     totalPrecioNeto,
+    tramites, // <-- nuevo campo
     // createdByInitial, // <-- ya no se recibe del frontend
   } = body;
 
@@ -38,6 +40,7 @@ export async function POST(req: NextRequest) {
     !boletaReferencia ||
     !Array.isArray(placas) ||
     typeof totalPrecioNeto !== 'number'
+    // tramites es opcional, pero si viene debe ser array
   ) {
     return NextResponse.json(
       { success: false, error: 'Datos requeridos' },
@@ -53,13 +56,12 @@ export async function POST(req: NextRequest) {
       : (clerkUser?.firstName ?? clerkUser?.username ?? 'A');
 
   try {
-    // Pasamos totalPrecioNeto como SQL literal (Drizzle acepta SQL | string | Placeholder)
-    // y aseguramos que los demás campos sean strings.
     await db.insert(boletaPayments).values({
       boletaReferencia: String(boletaReferencia),
       placas: placas.join(','),
       totalPrecioNeto: sql`${totalPrecioNeto.toFixed(2)}`,
       createdByInitial: createdByInitial ?? null,
+      tramites: Array.isArray(tramites) ? tramites.join(',') : null, // <-- guarda tramites como string
     });
     return NextResponse.json({ success: true });
   } catch (_error) {
