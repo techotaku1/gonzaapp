@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from 'next/cache';
 import { sql } from 'drizzle-orm';
 
 import Header from '~/components/Header';
@@ -12,9 +13,9 @@ import { transactions } from '~/server/db/schema';
 
 import type { TransactionRecord } from '~/types';
 
-export const dynamic = 'force-dynamic';
-
 export default async function HomePage() {
+  noStore();
+
   let dateStr: string;
   let initialData: TransactionRecord[] = [];
   let allDates: string[] = [];

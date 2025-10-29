@@ -10,7 +10,7 @@ jiti('./src/env.ts');
 const nextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
-  cacheComponents: false,
+  cacheComponents: true,
   images: {
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',

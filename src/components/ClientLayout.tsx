@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 
 import { SignedIn } from '@clerk/nextjs';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,7 +21,15 @@ export default function ClientLayout({
         <ActivityMonitor />
       </SignedIn>
       <div className="animated-background" />
-      {children}
+      <Suspense
+        fallback={
+          <div className="flex min-h-screen items-center justify-center bg-neutral-900 text-white">
+            Cargando...
+          </div>
+        }
+      >
+        {children}
+      </Suspense>
     </QueryClientProvider>
   );
 }

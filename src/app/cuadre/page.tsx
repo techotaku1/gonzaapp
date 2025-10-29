@@ -1,10 +1,12 @@
+import { unstable_noStore as noStore } from 'next/cache';
+
 import CuadreClientTable from '~/components/cuadre/CuadreClientTable';
 import { SWRProvider } from '~/components/swr/SWRProvider';
 import { getCuadreRecords } from '~/server/actions/cuadreActions';
 
-export const dynamic = 'force-dynamic';
-
 export default async function Page() {
+  noStore();
+
   const initialData = await getCuadreRecords();
 
   return (
