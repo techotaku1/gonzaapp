@@ -261,48 +261,87 @@ export default function TransactionTotals({
 
   return (
     <div className="font-display container mx-auto px-6">
-      {/* Botones de navegación entre totales */}
+      {/* Botones de navegación entre totales (proteger contra doble click).
+          Totales Diarios/Mensuales/Boletas ignoran multi-click; solo "Volver" navega atrás */}
       <div className="mb-6 flex flex-wrap gap-3">
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            if ((e as React.MouseEvent).detail > 1) return;
             if (onToggleTotalsAction) onToggleTotalsAction();
             if (showMonthlyTotals && onToggleMonthlyTotalsAction)
               onToggleMonthlyTotalsAction();
             if (showBoletaTotals && onToggleBoletaTotalsAction)
               onToggleBoletaTotalsAction();
           }}
-          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${showTotals ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'} hover:bg-blue-700 hover:text-white`}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${
+            showTotals ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'
+          } hover:bg-blue-700 hover:text-white`}
         >
           Totales Diarios
         </button>
+
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            if ((e as React.MouseEvent).detail > 1) return;
             if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
             if (onToggleMonthlyTotalsAction) onToggleMonthlyTotalsAction();
             if (showBoletaTotals && onToggleBoletaTotalsAction)
               onToggleBoletaTotalsAction();
           }}
-          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${showMonthlyTotals ? 'bg-indigo-600 text-white' : 'bg-indigo-100 text-indigo-800'} hover:bg-indigo-700 hover:text-white`}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${
+            showMonthlyTotals
+              ? 'bg-indigo-600 text-white'
+              : 'bg-indigo-100 text-indigo-800'
+          } hover:bg-indigo-700 hover:text-white`}
         >
           Totales Mensuales
         </button>
+
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            if ((e as React.MouseEvent).detail > 1) return;
             if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
             if (showMonthlyTotals && onToggleMonthlyTotalsAction)
               onToggleMonthlyTotalsAction();
             if (onToggleBoletaTotalsAction) onToggleBoletaTotalsAction();
           }}
-          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${showBoletaTotals ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800'} hover:bg-green-700 hover:text-white`}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${
+            showBoletaTotals
+              ? 'bg-green-600 text-white'
+              : 'bg-green-100 text-green-800'
+          } hover:bg-green-700 hover:text-white`}
         >
           Totales Boletas
         </button>
+
         <button
           type="button"
-          onClick={handleBack}
+          onClick={(e) => {
+            if ((e as React.MouseEvent).detail > 1) {
+              // Asegura que doble click no produce navegación múltiple; igualmente Volver solo responde a un click normal.
+              return;
+            }
+            handleBack();
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           className="flex h-10 items-center gap-2 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
         >
           <PiKeyReturnFill className="text-xl" />

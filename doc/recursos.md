@@ -1,5 +1,3 @@
-<!-- markdownlint-disable MD010 -->
-
 # Herramientas y Comandos
 
 ## GITHUB RECONECTARSE A OTROS REPOSITORIOS
@@ -89,9 +87,10 @@ Algunas opciones del CLI de npm para optimizar o reaprar tus librerias
 7. `npx tsc`: Ejecuta el compilador TypeScript localmente.
 8. `tsc`: Ejecuta el compilador TypeScript globalmente.
 9. `npm install next@latest react@latest react-dom@latest`: Actualizar Next
-10. `npm install --save-dev eslint @eslint/eslintrc typescript-eslint @eslint/js eslint-plugin-import eslint-config-prettier @types/react @types/node eslint-plugin-react eslint-plugin-react-hooks eslint-plugin-jsx-a11y eslint-plugin-simple-import-sort globals dotenv eslint-config-next @next/eslint-plugin-next eslint-plugin-drizzle eslint-import-resolver-alias eslint-import-resolver-typescript`: Dependencias para que funcione el archivo eslint.config.mjs
+10. `npm install --save-dev eslint typescript-eslint @eslint/js eslint-plugin-import eslint-config-prettier eslint-plugin-react eslint-plugin-react-hooks eslint-plugin-simple-import-sort globals`: Dependencias para que funcione el archivo eslint.config.mjs
 11. `npx eslint --debug .` : Debugear Eslint para cuando no quiera detectar errores
 12. `npm install eslint --save-dev`: Instala TypeScript localmente en el proyecto como una dependencia de desarrollo.
+13. `Remove-Item -Recurse -Force "C:\Users\Usuario\AppData\Local\npm-cache"` : remover cache npm
 
 ---
 
@@ -145,6 +144,7 @@ Tutorial UPDATE DEPENDENCIES:
 14. `npx @clerk/upgrade -g` // Instala la última versión de Clerk para Next.js 2
 15. `npm install drizzle-orm@latest` // Instala la última versión de Drizzle ORM
 16. `npx @next/codemod@canary upgrade latest` // Ayuda a actualizar tu código para que sea compatible con la última versión de Next.js
+17. `npm i next@latest react@latest react-dom@latest` // Este comando instala las últimas versiones estables de los paquetes core necesarios para Next.js
 
 ---
 
@@ -164,7 +164,7 @@ Forzar Dependencias
 
 ---
 
-Tutorial de Comandos Para El Formateo Eslint, Prettier y Typescript:
+Tutorial de Comandos Para El Fomateo Eslint, Prettier y Typescript:
 
 1. `npm run lint`: Ejecuta ESLint para identificar problemas en el código sin corregirlos.|
 2. `npm run lint:fix`: Ejecuta ESLint y corrige automáticamente los problemas que pueda solucionar.
@@ -214,6 +214,38 @@ git config user.email "artiefy4@gmail.com"
 
 ---
 
+## Configurar usuario de Git por proyecto
+
+Para que cada proyecto use una cuenta de Git diferente:
+
+1. Abre la carpeta del proyecto (por ejemplo, `gonzaapp`).
+2. Ejecuta:
+
+```bash
+git config user.name "techotaku1"
+git config user.email "correo@trabajo.com"
+```
+
+En otro proyecto (por ejemplo, personal con artiefy):
+
+```bash
+git config user.name "artiefy"
+git config user.email "correo@personal.com"
+```
+
+Esto asegura que cada commit dentro de ese repositorio use la cuenta correcta.
+
+### Ver la configuración local de Git
+
+Dentro de un repositorio, puedes ver la configuración local con:
+
+```bash
+git config --list --local
+git remote -v
+```
+
+---
+
 ## Precommit config
 
 - pip install pre-commit
@@ -236,28 +268,23 @@ git config user.email "artiefy4@gmail.com"
 
 ## .releaserc
 
-### branches: ["main"]: Indica que solo se publicarán versiones desde la rama main
-
-#### "plugins": Lista de plugins que definen el flujo de publicación
-
-- @semantic-release/npm / "Publica el paquete en npm (en tu caso, con \"npmPublish\": false, solo actualiza la versión en package.json, no publica)."
-- @semantic-release/release-notes-generator / "Genera notas de la versión automáticamente."
-- @semantic-release/github / "Crea un release en GitHub."
-- @semantic-release/commit-analyzer / "Analiza los commits para decidir el tipo de versión."
-- @semantic-release/git / "Hace commits automáticos de los archivos generados (como el changelog)."
-- @semantic-release/changelog / "Actualiza el archivo CHANGELOG.md con los cambios."
+- branches: ["main"]: Indica que solo se publicarán versiones desde la rama main.
+- "plugins": Lista de plugins que definen el flujo de publicación:
+- @semantic-release/npm: Publica el paquete en npm (en tu caso, con "npmPublish": false, solo actualiza la versión en package.json, no publica).
+- @semantic-release/release-notes-generator: Genera notas de la versión automáticamente.
+- @semantic-release/github: Crea un release en GitHub.
+- @semantic-release/commit-analyzer: Analiza los commits para decidir el tipo de versión.
+- @semantic-release/git: Hace commits automáticos de los archivos generados (como el changelog).
+- @semantic-release/changelog: Actualiza el archivo CHANGELOG.md con los cambios.
 
 ### Plugins a instalar
 
-```bash
-npm install --save-dev \
-  @semantic-release/commit-analyzer \
-  @semantic-release/release-notes-generator \
-  @semantic-release/changelog \
-  @semantic-release/npm \
-  @semantic-release/git \
-  @semantic-release/github
-```
+- "@semantic-release/commit-analyzer",
+- "@semantic-release/release-notes-generator",
+- "@semantic-release/changelog",
+- "@semantic-release/npm",
+- "@semantic-release/git"
+- "@semantic-release/github"
 
 En resumen:
 Este archivo automatiza y estandariza el proceso de lanzar nuevas versiones de tu proyecto, generando changelogs y releases en GitHub de forma automática según tus commits.
@@ -306,29 +333,27 @@ Facilita el mantenimiento y la calidad del proyecto a largo plazo.
 
 ```css
 - @layer base {
-	input::placeholder,
-	textarea::placeholder {
-		color: var(--color-gray-400);
-	}
-}
+  input::placeholder,
+  textarea::placeholder {
+  color: var(--color-gray-400);
+  }
+  }
 
 - @layer base {
-	button:not(:disabled),
-	[role='button']:not(:disabled) {
-		cursor: pointer;
-	}
-}
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+  cursor: pointer;
+  }
+  }
 
 - @theme inline {
-	--font-display: var(--font-delius);
-	--font-table-text: var(--font-lexend);
-}
+  --font-display: var(--font-delius);
+  --font-table-text: var(--font-lexend);
+  }
+
 ```
 
----
+## Comando CLAVE para Github Copilot
 
-## Chekear ruta de donde tienes instalado node
-
-```bash
-node --v
-```
+- `@workspace /fix #problems` /Para solucionar problemas
+- `@workspace /new #new` /Para añadir nuevos archivos

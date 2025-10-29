@@ -11,7 +11,6 @@ import React, {
 } from 'react';
 
 import { AiFillCalculator } from 'react-icons/ai';
-import { PiKeyReturnFill } from 'react-icons/pi';
 import useSWR, { useSWRConfig } from 'swr';
 
 import { createCuadreRecord } from '~/server/actions/cuadreActions';
@@ -178,7 +177,7 @@ const TransactionTable = forwardRef(function TransactionTable(
   // --- NUEVO: Estado para vista de boletas ---
   const [showBoletaTotals, setShowBoletaTotals] = useState(false);
   // Estado para mostrar el panel de Totales (Diarios / Mensuales / Boletas)
-  const [totalsModeVisible, setTotalsModeVisible] = useState(false);
+  const [_totalsModeVisible, setTotalsModeVisible] = useState(false);
 
   // --- NUEVO: Estado para referencia de boleta en el modal ---
   const [boletaReferencia, setBoletaReferencia] = useState('');
@@ -1200,111 +1199,51 @@ const TransactionTable = forwardRef(function TransactionTable(
                 <div
                   className={`flex items-center gap-4 ${isMobile ? 'flex w-full flex-col' : 'flex'}`}
                 >
-                  {/* Botón TOTALES (abre panel) */}
+                  {/* Botón TOTALES: apertura directa de la vista de totales (sin submenú en la tabla principal) */}
                   <div>
                     <button
                       type="button"
-                      onClick={() => {
-                        const willOpen = !totalsModeVisible;
-                        setTotalsModeVisible(willOpen);
-                        if (willOpen) {
-                          // Abrir panel: activar Totales Diarios por defecto en el padre
-                          if (!props.showTotals) props.onToggleTotalsAction();
-                          // Asegurar que monthly esté apagado al abrir (si existe)
-                          if (
-                            props.showMonthlyTotals &&
-                            props.onToggleMonthlyTotalsAction
-                          )
-                            props.onToggleMonthlyTotalsAction();
-                          setShowBoletaTotals(false);
-                        }
+                      onClick={(e) => {
+                        // Solo permite click simple, ignora doble click
+                        if ((e as React.MouseEvent).detail > 1) return;
+                        // Abrir Totales Diarios en el padre
+                        if (!props.showTotals && props.onToggleTotalsAction)
+                          props.onToggleTotalsAction();
+                        // Asegura que otras vistas queden apagadas localmente
+                        if (
+                          props.showMonthlyTotals &&
+                          props.onToggleMonthlyTotalsAction
+                        )
+                          props.onToggleMonthlyTotalsAction();
+                        setShowBoletaTotals(false);
+                        setTotalsModeVisible(false);
+                      }}
+                      onDoubleClick={(e) => {
+                        // Bloquea el doble click para que no navegue ni haga nada
+                        e.stopPropagation();
+                        e.preventDefault();
                       }}
                       className="relative flex h-10 min-w-[140px] items-center justify-center gap-2 rounded-[8px] bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
                     >
                       <AiFillCalculator className="h-6 w-6 text-white" />
                       <span className="mr-1">TOTALES</span>
                     </button>
-                    {totalsModeVisible && (
-                      <div
-                        className={`mt-2 flex gap-2 ${isMobile ? 'flex-col' : ''}`}
-                      >
-                        {/* Totales Diarios */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Asegurar que solo Totales Diarios quede activo
-                            if (
-                              props.showMonthlyTotals &&
-                              props.onToggleMonthlyTotalsAction
-                            )
-                              props.onToggleMonthlyTotalsAction();
-                            if (!props.showTotals) props.onToggleTotalsAction();
-                            setShowBoletaTotals(false);
-                          }}
-                          className={`h-10 rounded border px-4 py-2 font-semibold ${props.showTotals ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`}
-                        >
-                          Totales Diarios
-                        </button>
-                        {/* Totales Mensuales */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Asegurar que solo Mensuales quede activo
-                            if (props.showTotals && props.onToggleTotalsAction)
-                              props.onToggleTotalsAction();
-                            if (props.onToggleMonthlyTotalsAction)
-                              props.onToggleMonthlyTotalsAction();
-                            setShowBoletaTotals(false);
-                          }}
-                          className={`h-10 rounded border px-4 py-2 font-semibold ${props.showMonthlyTotals ? 'bg-indigo-600 text-white' : 'bg-white text-gray-800'}`}
-                        >
-                          Totales Mensuales
-                        </button>
-                        {/* Totales Boletas */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Activar vista Boletas (local) y desactivar otras vistas si es necesario
-                            if (props.showTotals && props.onToggleTotalsAction)
-                              props.onToggleTotalsAction();
-                            if (
-                              props.showMonthlyTotals &&
-                              props.onToggleMonthlyTotalsAction
-                            )
-                              props.onToggleMonthlyTotalsAction();
-                            setShowBoletaTotals(true);
-                          }}
-                          className={`h-10 rounded border px-4 py-2 font-semibold ${showBoletaTotals ? 'bg-green-600 text-white' : 'bg-white text-gray-800'}`}
-                        >
-                          Totales Boletas
-                        </button>
-                        {/* Volver */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Volver: desactivar todas las vistas de totales y cerrar panel
-                            if (props.showTotals && props.onToggleTotalsAction)
-                              props.onToggleTotalsAction();
-                            if (
-                              props.showMonthlyTotals &&
-                              props.onToggleMonthlyTotalsAction
-                            )
-                              props.onToggleMonthlyTotalsAction();
-                            setShowBoletaTotals(false);
-                            setTotalsModeVisible(false);
-                          }}
-                          className="flex h-10 items-center gap-2 rounded border bg-white px-4 py-2 font-semibold text-gray-800"
-                        >
-                          <PiKeyReturnFill className="text-xl" />
-                          Volver a la tabla principal
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   {/* Exportar a Excel (solo admin en vista principal) */}
                   <button
-                    onClick={() => logic.setIsExportModalOpen(true)}
+                    onClick={(e) => {
+                      if (
+                        (e as React.MouseEvent).detail &&
+                        (e as React.MouseEvent).detail > 1
+                      )
+                        return;
+                      logic.setIsExportModalOpen(true);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
                     className="export-excel-button h-10 px-12"
                     type="button"
                   >
@@ -1322,7 +1261,18 @@ const TransactionTable = forwardRef(function TransactionTable(
 
                   {/* Ir al Cuadre (solo admin en vista principal) */}
                   <button
-                    onClick={logic.handleNavigateToCuadre}
+                    onClick={(e) => {
+                      if (
+                        (e as React.MouseEvent).detail &&
+                        (e as React.MouseEvent).detail > 1
+                      )
+                        return;
+                      logic.handleNavigateToCuadre();
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
                     disabled={logic.isNavigatingToCuadre}
                     className="flex h-10 items-center gap-2 rounded-lg bg-orange-500 px-6 py-2 font-bold text-white hover:bg-orange-600 disabled:opacity-50"
                     type="button"

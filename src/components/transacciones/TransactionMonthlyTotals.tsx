@@ -11,7 +11,7 @@ import { calculateFormulas } from '~/utils/formulas';
 
 import type { TransactionRecord } from '~/types';
 
-import "react-datepicker/dist/react-datepicker.css";
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface TotalsByMonth {
   month: string; // YYYY-MM format
@@ -234,12 +234,21 @@ export default function TransactionMonthlyTotals({
       <div className="mb-6 flex flex-wrap gap-3">
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            if (
+              (e as React.MouseEvent).detail &&
+              (e as React.MouseEvent).detail > 1
+            )
+              return;
             if (onToggleTotalsAction) onToggleTotalsAction();
             if (showMonthlyTotals && onToggleMonthlyTotalsAction)
               onToggleMonthlyTotalsAction();
             if (showBoletaTotals && onToggleBoletaTotalsAction)
               onToggleBoletaTotalsAction();
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
           className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${
             showTotals ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-800'
@@ -249,11 +258,20 @@ export default function TransactionMonthlyTotals({
         </button>
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            if (
+              (e as React.MouseEvent).detail &&
+              (e as React.MouseEvent).detail > 1
+            )
+              return;
             if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
             if (onToggleMonthlyTotalsAction) onToggleMonthlyTotalsAction();
             if (showBoletaTotals && onToggleBoletaTotalsAction)
               onToggleBoletaTotalsAction();
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
           className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${
             showMonthlyTotals
@@ -265,11 +283,20 @@ export default function TransactionMonthlyTotals({
         </button>
         <button
           type="button"
-          onClick={() => {
+          onClick={(e) => {
+            if (
+              (e as React.MouseEvent).detail &&
+              (e as React.MouseEvent).detail > 1
+            )
+              return;
             if (showTotals && onToggleTotalsAction) onToggleTotalsAction();
             if (showMonthlyTotals && onToggleMonthlyTotalsAction)
               onToggleMonthlyTotalsAction();
             if (onToggleBoletaTotalsAction) onToggleBoletaTotalsAction();
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
           className={`h-10 rounded px-4 py-2 font-semibold transition-colors ${
             showBoletaTotals
@@ -281,7 +308,18 @@ export default function TransactionMonthlyTotals({
         </button>
         <button
           type="button"
-          onClick={handleBack}
+          onClick={(e) => {
+            if (
+              (e as React.MouseEvent).detail &&
+              (e as React.MouseEvent).detail > 1
+            )
+              return;
+            handleBack();
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           className="flex h-10 items-center gap-2 rounded bg-gray-200 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400 hover:text-white"
         >
           <PiKeyReturnFill className="text-xl" />
