@@ -142,6 +142,64 @@ const TransactionTable = forwardRef(function TransactionTable(
   }>
 ) {
   const logic = useTransactionTableLogic(props);
+  // Restore/persist zoom so changing tabs doesn't reset it
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = 'transactionTableZoom';
+      const raw = window.localStorage.getItem(key);
+      if (raw) {
+        const val = Number(raw);
+        if (!Number.isNaN(val) && val > 0) {
+          // Only set if different to avoid unnecessary state changes
+          if (logic.zoom !== val && typeof logic.setZoom === 'function') {
+            logic.setZoom(val);
+          }
+        }
+      }
+    } catch (_e) {
+      // no-op
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = 'transactionTableZoom';
+      const val = Number(logic.zoom ?? 1);
+      if (!Number.isNaN(val)) {
+        window.localStorage.setItem(key, String(val));
+      }
+    } catch (_e) {
+      // no-op
+    }
+  }, [logic.zoom]);
+
+  // Ensure zoom is restored when returning to the tab (visibilitychange)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const key = 'transactionTableZoom';
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const raw = window.localStorage.getItem(key);
+          if (raw) {
+            const val = Number(raw);
+            if (!Number.isNaN(val) && val > 0) {
+              if (typeof logic.setZoom === 'function') logic.setZoom(val);
+            }
+          }
+        } catch (_e) {
+          // no-op
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+    // logic.setZoom is stable from hook; intentionally omit from deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Crear una referencia para el contenedor de scroll de la tabla
   const tableScrollContainerRef = useRef<HTMLDivElement>(null);
   const topScrollBarRef = useRef<HTMLDivElement>(null);

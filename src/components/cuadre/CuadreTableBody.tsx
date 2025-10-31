@@ -30,6 +30,7 @@ interface CuadreTableBodyProps {
   ) => void;
   getEmitidoPorClass: (emitidoPor: string) => string | undefined;
   onBulkApply?: (srcId: string, targets: string[]) => void;
+  bulkGroups: Record<string, Set<string>>;
 }
 
 const CuadreTableBody: React.FC<CuadreTableBodyProps> = ({
@@ -42,6 +43,7 @@ const CuadreTableBody: React.FC<CuadreTableBodyProps> = ({
   handleBulkEdit,
   getEmitidoPorClass,
   onBulkApply,
+  bulkGroups,
 }) => {
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applySourceId, setApplySourceId] = useState<string | null>(null);
@@ -382,6 +384,82 @@ const CuadreTableBody: React.FC<CuadreTableBodyProps> = ({
                 </React.Fragment>
               );
             })}
+            {/* Totales por generación */}
+            {(() => {
+              const totalExpectedGen = grupo.records.reduce(
+                (acc, rec) =>
+                  acc + ((rec.precioNeto ?? 0) + (rec.tarifaServicio ?? 0)),
+                0
+              );
+
+              const idsInGen = new Set(grupo.records.map((r) => r.id));
+              const allBulkIdsGen = new Set<string>();
+              Object.values(bulkGroups).forEach((s) =>
+                s.forEach((id) => {
+                  if (idsInGen.has(id)) allBulkIdsGen.add(id);
+                })
+              );
+
+              let totalPaidGen = 0;
+              grupo.records.forEach((rec) => {
+                if (!allBulkIdsGen.has(rec.id)) {
+                  totalPaidGen += Number(
+                    editValues[rec.id]?.monto ?? rec.monto ?? 0
+                  );
+                }
+              });
+
+              Object.entries(bulkGroups).forEach(([sourceId, idSet]) => {
+                const relevantTargets = Array.from(idSet).filter((id) =>
+                  idsInGen.has(id)
+                );
+                if (relevantTargets.length > 0) {
+                  let repMonto: number | undefined;
+                  if (
+                    sourceId &&
+                    idsInGen.has(sourceId) &&
+                    (editValues[sourceId]?.monto ?? null) != null
+                  ) {
+                    repMonto = Number(editValues[sourceId]?.monto ?? 0);
+                  } else {
+                    const firstId = relevantTargets[0];
+                    const rec = grupo.records.find((r) => r.id === firstId);
+                    if (rec)
+                      repMonto = Number(
+                        editValues[firstId]?.monto ?? rec.monto ?? 0
+                      );
+                  }
+                  totalPaidGen += Number(repMonto ?? 0);
+                }
+              });
+
+              const faltanteGen = Math.max(0, totalExpectedGen - totalPaidGen);
+
+              return (
+                <tr className="bg-blue-50">
+                  <td colSpan={isDeleteMode ? 12 : 11} className="text-center">
+                    <div className="flex justify-end gap-4 py-2">
+                      <div className="text-sm text-gray-700">
+                        Total esperado (Precio+Tarifa)
+                      </div>
+                      <div className="text-xl font-bold">
+                        $ {totalExpectedGen.toLocaleString('es-CO')}
+                      </div>
+                      <div className="text-sm text-gray-700">Total abonado</div>
+                      <div className="text-xl font-bold">
+                        $ {totalPaidGen.toLocaleString('es-CO')}
+                      </div>
+                      <div className="text-sm text-gray-700">Faltante</div>
+                      <div
+                        className={`text-xl font-bold ${faltanteGen === 0 ? 'text-green-700' : 'text-red-700'}`}
+                      >
+                        $ {faltanteGen.toLocaleString('es-CO')}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })()}
             {/* Total general del grupo de generación eliminado: el total general se muestra en el componente padre */}
           </React.Fragment>
         );

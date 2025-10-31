@@ -79,6 +79,7 @@ export function useTransactionTableLogic(props: {
   const [currentDateDisplay, setCurrentDateDisplay] = useState('');
   const [isLoadingAsesorMode, setIsLoadingAsesorMode] = useState(false);
   const [isNavigatingToCuadre, setIsNavigatingToCuadre] = useState(false);
+  const isNavigatingRef = useRef<boolean>(false);
   const [searchTerm, setSearchTermAction] = useState<string>(
     searchTermProp ?? ''
   );
@@ -211,6 +212,8 @@ export function useTransactionTableLogic(props: {
     total: totalRecords,
     isLoading: _isLoadingPage, // prefijo _ para evitar warning de unused var
   } = useTransactionsByDate(selectedDate, currentPage, 50);
+
+  // Intentionally omit isNavigatingToCuadre from deps to avoid re-subscribing on changes
 
   useEffect(() => {
     if (Object.keys(pendingEdits.current).length === 0) {
@@ -1109,13 +1112,20 @@ export function useTransactionTableLogic(props: {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    // Use the persistent ref `isNavigatingRef` (updated by another effect) to
+    // read the latest `isNavigatingToCuadre` without re-subscribing this effect.
+
     const resetIfNeeded = () => {
       try {
         const path = window.location.pathname || '';
         // Si la ruta actual NO es /cuadre, restablece los flags si estaban activos
         if (path !== '/cuadre') {
           setIsNavigatingToCuadre(false);
-          setZoom(1);
+          // Solo resetear el zoom si realmente veníamos navegando hacia /cuadre
+          // (evita que cambiar de pestaña haga reset del zoom)
+          if (isNavigatingRef.current) {
+            setZoom(1);
+          }
         }
       } catch (_err) {
         // no-op
@@ -1140,6 +1150,11 @@ export function useTransactionTableLogic(props: {
     };
     // isNavigatingToCuadre intentionally omitted to avoid re-subscribing on changes
   }, []);
+
+  // Keep a ref in sync with isNavigatingToCuadre so the effect above can read latest value
+  useEffect(() => {
+    isNavigatingRef.current = isNavigatingToCuadre;
+  }, [isNavigatingToCuadre]);
   // --- NUEVO: Mover automáticamente al día anterior si no hay registros ---
   useEffect(() => {
     // Solo si no está cargando, no está buscando, y no está agregando

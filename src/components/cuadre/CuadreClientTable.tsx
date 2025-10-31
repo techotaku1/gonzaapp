@@ -106,20 +106,6 @@ export default function CuadreClientTable({
     });
   };
 
-  const asesorDeudas = useMemo(() => {
-    const map = new Map<string, number>();
-    summaryData.forEach((rec) => {
-      const key = rec.asesor ?? 'Sin Asesor';
-      const total = (rec.precioNeto ?? 0) + (rec.tarifaServicio ?? 0);
-      const paid = Number(editValues[rec.id]?.monto ?? rec.monto ?? 0);
-      const prev = map.get(key) ?? 0;
-      map.set(key, prev + (total - paid));
-    });
-    return Array.from(map.entries())
-      .map(([asesor, deuda]) => ({ asesor, deuda }))
-      .filter((x) => x.deuda > 0)
-      .sort((a, b) => b.deuda - a.deuda);
-  }, [summaryData, editValues]);
   const [showDeudaList, setShowDeudaList] = useState(false);
 
   // Calcular el total abonado teniendo en cuenta grupos bulk: cada grupo bulk cuenta una sola vez
@@ -212,6 +198,60 @@ export default function CuadreClientTable({
       );
   }, [summaryData]);
 
+  const generationStatuses = useMemo(() => {
+    return groupedRecords.map((g) => {
+      const totalExpected = g.records.reduce(
+        (acc, rec) => acc + ((rec.precioNeto ?? 0) + (rec.tarifaServicio ?? 0)),
+        0
+      );
+
+      const idsInGen = new Set(g.records.map((r) => r.id));
+      const allBulkIdsGen = new Set<string>();
+      Object.values(bulkGroups).forEach((s) =>
+        s.forEach((id) => {
+          if (idsInGen.has(id)) allBulkIdsGen.add(id);
+        })
+      );
+
+      let totalPaid = 0;
+      g.records.forEach((rec) => {
+        if (!allBulkIdsGen.has(rec.id)) {
+          totalPaid += Number(editValues[rec.id]?.monto ?? rec.monto ?? 0);
+        }
+      });
+
+      Object.entries(bulkGroups).forEach(([sourceId, idSet]) => {
+        const relevantTargets = Array.from(idSet).filter((id) =>
+          idsInGen.has(id)
+        );
+        if (relevantTargets.length > 0) {
+          let repMonto: number | undefined;
+          if (
+            sourceId &&
+            idsInGen.has(sourceId) &&
+            (editValues[sourceId]?.monto ?? null) != null
+          ) {
+            repMonto = Number(editValues[sourceId]?.monto ?? 0);
+          } else {
+            const firstId = relevantTargets[0];
+            const rec = g.records.find((r) => r.id === firstId);
+            if (rec)
+              repMonto = Number(editValues[firstId]?.monto ?? rec.monto ?? 0);
+          }
+          totalPaid += Number(repMonto ?? 0);
+        }
+      });
+
+      const faltante = Math.max(0, totalExpected - totalPaid);
+      return {
+        fecha: g.fechaGeneracion.toLocaleDateString('es-CO'),
+        faltante,
+        totalExpected,
+        totalPaid,
+      };
+    });
+  }, [groupedRecords, editValues, bulkGroups]);
+
   function getEmitidoPorClass(emitidoPor: string): string | undefined {
     switch (emitidoPor?.toUpperCase()) {
       case 'GONZAAPP':
@@ -284,36 +324,43 @@ export default function CuadreClientTable({
                 <button
                   type="button"
                   onClick={() => setShowDeudaList((v) => !v)}
-                  className="relative flex items-center gap-3 rounded-md bg-white px-2 py-1 text-gray-800 ring-1 ring-gray-200 hover:shadow-md"
-                  title="Asesores con deuda pendiente"
+                  className={`relative flex items-center gap-3 rounded-md bg-white px-2 py-1 text-gray-800 ring-1 ring-gray-200 hover:shadow-md ${generationStatuses.every((s) => s.faltante === 0) ? 'bg-green-100' : 'bg-amber-100'}`}
+                  title="Generaciones con deuda pendiente"
                 >
-                  <span className="inline-flex items-center justify-center rounded-full bg-amber-100 p-1">
-                    <HiOutlineBell className="h-5 w-5 text-amber-700" />
+                  <span
+                    className={`inline-flex items-center justify-center rounded-full p-1 ${generationStatuses.every((s) => s.faltante === 0) ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                  >
+                    <HiOutlineBell className="h-5 w-5" />
                   </span>
                   <span className="ml-0 text-sm font-bold text-gray-700">
-                    {asesorDeudas.length}
+                    {generationStatuses.filter((s) => s.faltante > 0).length}
                   </span>
-                  {asesorDeudas.length > 0 && (
+                  {generationStatuses.filter((s) => s.faltante > 0).length >
+                    0 && (
                     <span className="absolute -top-1 -right-2 inline-flex items-center justify-center rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                      {asesorDeudas.length}
+                      {generationStatuses.filter((s) => s.faltante > 0).length}
                     </span>
                   )}
                 </button>
 
-                {showDeudaList && asesorDeudas.length > 0 && (
+                {showDeudaList && (
                   <div className="absolute top-full right-0 mt-2 w-72 rounded bg-white p-3 shadow-lg">
                     <h4 className="mb-2 text-sm font-semibold">
-                      Deudas por asesor
+                      Estados de generaciones
                     </h4>
                     <ul className="flex max-h-48 flex-col gap-1 overflow-auto">
-                      {asesorDeudas.map((a) => (
+                      {generationStatuses.map((s) => (
                         <li
-                          key={a.asesor}
+                          key={s.fecha}
                           className="flex justify-between text-sm"
                         >
-                          <span className="font-medium">{a.asesor}</span>
-                          <span className="font-mono text-red-600">
-                            $ {a.deuda.toLocaleString('es-CO')}
+                          <span className="font-medium">{s.fecha}</span>
+                          <span
+                            className={`font-mono ${s.faltante === 0 ? 'text-green-700' : 'text-red-600'}`}
+                          >
+                            {s.faltante === 0
+                              ? 'Pago completo'
+                              : `Falta $ ${s.faltante.toLocaleString('es-CO')}`}
                           </span>
                         </li>
                       ))}
@@ -505,6 +552,7 @@ export default function CuadreClientTable({
                   handleLocalEdit={handleLocalEdit}
                   handleBulkEdit={handleBulkEdit}
                   getEmitidoPorClass={getEmitidoPorClass}
+                  bulkGroups={bulkGroups}
                 />
               </tbody>
             </table>
